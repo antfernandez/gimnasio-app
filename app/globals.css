@@ -2,59 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Paleta "Valinor" (.claude/valinor-sistema-web-claro.html) llevada a tokens shadcn/Tailwind. */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --background: 43 58% 95%; /* --bg #faf6ec */
+    --foreground: 41 34% 13%; /* --cream (texto principal) #2b2415 */
+    --card: 0 0% 100%; /* --card #ffffff */
+    --card-foreground: 41 34% 13%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-  }
-  .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --popover-foreground: 41 34% 13%;
+    --primary: 36 48% 45%; /* --gold #ab7f3c */
+    --primary-foreground: 40 60% 8%; /* texto sobre dorado */
+    --secondary: 42 54% 89%; /* --bg-alt #f2e9d4 */
+    --secondary-foreground: 39 55% 28%; /* --ink-gold #6e5220 */
+    --muted: 42 54% 89%;
+    --muted-foreground: 41 22% 35%; /* --muted #6b5f45 */
+    --accent: 43 70% 93%; /* --card-2 #faf3e2 */
+    --accent-foreground: 39 55% 28%;
+    --destructive: 6 49% 44%; /* --red #a8453a */
+    --destructive-foreground: 0 0% 100%;
+    --success: 107 31% 37%; /* --green #4d7a41 */
+    --success-foreground: 0 0% 100%;
+    --border: 40 33% 79%; /* --line sobre --bg */
+    --input: 40 33% 79%;
+    --ring: 36 48% 45%;
+    --radius: 0.875rem; /* --radius 14px */
   }
 }
 
@@ -64,5 +36,11 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-wide text-secondary-foreground;
   }
 }

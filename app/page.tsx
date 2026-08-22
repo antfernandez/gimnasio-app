@@ -1,58 +1,74 @@
-import { DeployButton } from "@/components/deploy-button";
-import { EnvVarWarning } from "@/components/env-var-warning";
-import { AuthButton } from "@/components/auth-button";
-import { Hero } from "@/components/hero";
-import { ThemeSwitcher } from "@/components/theme-switcher";
-import { ConnectSupabaseSteps } from "@/components/tutorial/connect-supabase-steps";
-import { SignUpUserSteps } from "@/components/tutorial/sign-up-user-steps";
-import { hasEnvVars } from "@/lib/utils";
+import { CalendarCheck, ClipboardList, LineChart, Users } from "lucide-react";
 import Link from "next/link";
-import { Suspense } from "react";
+
+import { BrandMark } from "@/components/brand-mark";
+import { Button } from "@/components/ui/button";
+
+const funciones = [
+  { icon: Users, label: "Alumnos", desc: "Ficha completa, siempre al día." },
+  { icon: CalendarCheck, label: "Pagos", desc: "Quién está al día y quién no." },
+  { icon: ClipboardList, label: "Rutinas", desc: "Asignadas y con historial." },
+  { icon: LineChart, label: "Avances", desc: "Peso y medidas en el tiempo." },
+];
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex flex-col items-center">
-      <div className="flex-1 w-full flex flex-col gap-20 items-center">
-        <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
-          <div className="w-full max-w-5xl flex justify-between items-center p-3 px-5 text-sm">
-            <div className="flex gap-5 items-center font-semibold">
-              <Link href={"/"}>Gimnasio App</Link>
-              <div className="flex items-center gap-2">
-                <DeployButton />
-              </div>
-            </div>
-            {!hasEnvVars ? (
-              <EnvVarWarning />
-            ) : (
-              <Suspense>
-                <AuthButton />
-              </Suspense>
-            )}
-          </div>
-        </nav>
-        <div className="flex-1 flex flex-col gap-20 max-w-5xl p-5">
-          <Hero />
-          <main className="flex-1 flex flex-col gap-6 px-4">
-            <h2 className="font-medium text-xl mb-4">Next steps</h2>
-            {hasEnvVars ? <SignUpUserSteps /> : <ConnectSupabaseSteps />}
-          </main>
+    <div
+      className="flex min-h-svh flex-col"
+      style={{
+        backgroundImage:
+          "radial-gradient(ellipse 70% 60% at 78% 15%, hsl(42 71% 74% / 0.16), transparent 60%), radial-gradient(ellipse 60% 50% at 10% 90%, hsl(42 71% 74% / 0.1), transparent 60%)",
+      }}
+    >
+      <header className="flex items-center justify-between px-6 py-6 md:px-10">
+        <BrandMark />
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/auth/login">Ingresar</Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link href="/auth/sign-up">Crear cuenta</Link>
+          </Button>
+        </div>
+      </header>
+
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center gap-10 px-6 py-16 text-center">
+        <div>
+          <span className="mb-5 inline-block rounded-full border border-border bg-accent px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-secondary-foreground">
+            Gestión para gimnasios pequeños
+          </span>
+          <h1 className="mb-5 text-3xl md:text-4xl">
+            Deja el Excel. Gestiona tu gimnasio desde un solo lugar.
+          </h1>
+          <p className="mx-auto max-w-xl text-muted-foreground">
+            Alumnos, pagos, rutinas y avances, accesibles desde cualquier
+            navegador, con tus datos siempre respaldados.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Button asChild size="lg">
+            <Link href="/auth/sign-up">Crear mi gimnasio</Link>
+          </Button>
+          <Button asChild variant="outline" size="lg">
+            <Link href="/auth/login">Ya tengo cuenta</Link>
+          </Button>
         </div>
 
-        <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-16">
-          <p>
-            Powered by{" "}
-            <a
-              href="https://supabase.com/?utm_source=create-next-app&utm_medium=template&utm_term=nextjs"
-              target="_blank"
-              className="font-bold hover:underline"
-              rel="noreferrer"
+        <div className="grid w-full grid-cols-2 gap-4 pt-6 md:grid-cols-4">
+          {funciones.map(({ icon: Icon, label, desc }) => (
+            <div
+              key={label}
+              className="rounded-2xl border border-border bg-card p-5 text-left shadow-[0_16px_40px_-24px_hsl(36_48%_25%/0.35)]"
             >
-              Supabase
-            </a>
-          </p>
-          <ThemeSwitcher />
-        </footer>
-      </div>
-    </main>
+              <Icon className="mb-3 h-5 w-5 text-primary" />
+              <div className="mb-1 text-sm font-semibold text-foreground">
+                {label}
+              </div>
+              <p className="text-xs text-muted-foreground">{desc}</p>
+            </div>
+          ))}
+        </div>
+      </main>
+    </div>
   );
 }

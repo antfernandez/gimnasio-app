@@ -2,14 +2,9 @@
 
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
@@ -20,6 +15,8 @@ export function SignUpForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
+  const [nombreCompleto, setNombreCompleto] = useState("");
+  const [nombreGimnasio, setNombreGimnasio] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
@@ -34,7 +31,7 @@ export function SignUpForm({
     setError(null);
 
     if (password !== repeatPassword) {
-      setError("Passwords do not match");
+      setError("Las contraseñas no coinciden");
       setIsLoading(false);
       return;
     }
@@ -44,13 +41,19 @@ export function SignUpForm({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/protected`,
+          emailRedirectTo: `${window.location.origin}/protected/alumnos`,
+          data: {
+            nombre_completo: nombreCompleto,
+            nombre_gimnasio: nombreGimnasio,
+          },
         },
       });
       if (error) throw error;
       router.push("/auth/sign-up-success");
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred");
+      setError(
+        error instanceof Error ? error.message : "Ocurrió un error",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -58,29 +61,50 @@ export function SignUpForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
+      <BrandMark className="mx-auto" />
       <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Sign up</CardTitle>
-          <CardDescription>Create a new account</CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-8">
+          <h1 className="mb-1 text-center text-xl">Crear cuenta</h1>
+          <p className="mb-7 text-center text-sm text-muted-foreground">
+            Da de alta tu gimnasio en el sistema
+          </p>
           <form onSubmit={handleSignUp}>
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-5">
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="nombre-gimnasio">Nombre del gimnasio</Label>
+                <Input
+                  id="nombre-gimnasio"
+                  type="text"
+                  placeholder="Ej. Gimnasio Fuerza Total"
+                  required
+                  value={nombreGimnasio}
+                  onChange={(e) => setNombreGimnasio(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="nombre-completo">Tu nombre</Label>
+                <Input
+                  id="nombre-completo"
+                  type="text"
+                  placeholder="Nombre y apellido"
+                  required
+                  value={nombreCompleto}
+                  onChange={(e) => setNombreCompleto(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="email">Correo electrónico</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="m@example.com"
+                  placeholder="tu@correo.cl"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
               <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
-                </div>
+                <Label htmlFor="password">Contraseña</Label>
                 <Input
                   id="password"
                   type="password"
@@ -90,9 +114,7 @@ export function SignUpForm({
                 />
               </div>
               <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="repeat-password">Repeat Password</Label>
-                </div>
+                <Label htmlFor="repeat-password">Repite la contraseña</Label>
                 <Input
                   id="repeat-password"
                   type="password"
@@ -101,17 +123,20 @@ export function SignUpForm({
                   onChange={(e) => setRepeatPassword(e.target.value)}
                 />
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating an account..." : "Sign up"}
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
+                {isLoading ? "Creando cuenta…" : "Crear mi cuenta"}
               </Button>
             </div>
-            <div className="mt-4 text-center text-sm">
-              Already have an account?{" "}
-              <Link href="/auth/login" className="underline underline-offset-4">
-                Login
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              ¿Ya tienes cuenta?{" "}
+              <Link
+                href="/auth/login"
+                className="text-secondary-foreground underline underline-offset-4"
+              >
+                Inicia sesión
               </Link>
-            </div>
+            </p>
           </form>
         </CardContent>
       </Card>
