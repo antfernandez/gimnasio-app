@@ -29,7 +29,7 @@ export default async function ProtectedLayout({
         <div>
           <BrandMark className="mb-8 px-1" />
           <div className="mb-6 border-b border-border pb-6 text-center">
-            <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[hsl(42,71%,74%)] to-[hsl(39,49%,36%)] font-display text-xl font-semibold text-primary-foreground">
+            <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary font-display text-xl text-primary-foreground">
               {inicial}
             </div>
             <h4 className="font-sans text-sm font-semibold text-foreground">

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cinzel, Work_Sans } from "next/font/google";
+import { Bebas_Neue, Inter } from "next/font/google";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -8,23 +8,23 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Gimnasio App — Gestión para tu gimnasio",
+  title: "Valinor Estudio — Gestión para tu gimnasio",
   description:
     "Alumnos, pagos, rutinas y avances de tu gimnasio en un solo lugar.",
 };
 
-const workSans = Work_Sans({
-  variable: "--font-work-sans",
+const inter = Inter({
+  variable: "--font-inter",
   display: "swap",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
-const cinzel = Cinzel({
-  variable: "--font-cinzel",
+const bebasNeue = Bebas_Neue({
+  variable: "--font-bebas-neue",
   display: "swap",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: ["400"],
 });
 
 export default function RootLayout({
@@ -33,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${workSans.variable} ${cinzel.variable}`}>
+    <html lang="es" className={`${inter.variable} ${bebasNeue.variable}`}>
       <body className="font-sans antialiased">{children}</body>
     </html>
   );

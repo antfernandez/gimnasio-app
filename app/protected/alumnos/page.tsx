@@ -117,7 +117,7 @@ export default async function AlumnosPage({
                   className={cn(
                     "rounded-full border border-border px-4 py-1.5 text-xs text-muted-foreground transition-colors",
                     estado === f.value &&
-                      "border-transparent bg-gradient-to-br from-[hsl(42,71%,74%)] to-[hsl(39,49%,36%)] font-semibold text-primary-foreground",
+                      "border-transparent bg-primary font-semibold text-primary-foreground",
                   )}
                 >
                   {f.label}

@@ -48,10 +48,14 @@ export default {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
         },
+        highlight: {
+          DEFAULT: "hsl(var(--highlight))",
+          foreground: "hsl(var(--highlight-foreground))",
+        },
       },
       fontFamily: {
-        sans: ["var(--font-work-sans)", "sans-serif"],
-        display: ["var(--font-cinzel)", "serif"],
+        sans: ["var(--font-inter)", "sans-serif"],
+        display: ["var(--font-bebas-neue)", "Arial Narrow", "sans-serif"],
       },
       borderRadius: {
         lg: "var(--radius)",
