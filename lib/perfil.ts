@@ -2,7 +2,11 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { cache } from "react";
 
 import { createClient } from "@/lib/supabase/server";
+import { slugify, withRandomSuffix } from "@/lib/slug";
 import type { Gimnasio, Perfil } from "@/lib/types";
+
+const UNIQUE_VIOLATION = "23505";
+const MAX_SLUG_ATTEMPTS = 5;
 
 /**
  * Alta de gimnasio + perfil al primer login post-confirmación (no hay trigger en DB,
@@ -34,10 +38,23 @@ async function ensureGymProfile(
   // fila recién insertada aquí (antes de que exista el perfil) fallaría por RLS
   // aunque el INSERT en sí esté permitido. Generamos el id en la app para no
   // necesitar el RETURNING.
+  //
+  // La misma política de SELECT impide "consultar antes" si un slug ya está en
+  // uso por otro gimnasio (no lo veríamos), así que la unicidad se resuelve
+  // dejando que la constraint de la migración 0003 rechace el INSERT (23505) y
+  // reintentando con un sufijo aleatorio.
   const gimnasioId = crypto.randomUUID();
-  const { error: gimError } = await supabase
-    .from("gimnasios")
-    .insert({ id: gimnasioId, nombre: nombreGimnasio });
+  const baseSlug = slugify(nombreGimnasio);
+  let slug = baseSlug;
+  let gimError = null;
+  for (let attempt = 0; attempt < MAX_SLUG_ATTEMPTS; attempt++) {
+    const { error } = await supabase
+      .from("gimnasios")
+      .insert({ id: gimnasioId, nombre: nombreGimnasio, slug });
+    gimError = error;
+    if (!error || error.code !== UNIQUE_VIOLATION) break;
+    slug = withRandomSuffix(baseSlug);
+  }
 
   if (gimError) {
     console.error("No se pudo crear el gimnasio en el onboarding", gimError);

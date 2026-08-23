@@ -126,7 +126,7 @@ export default function Home() {
               <Link href="/auth/login">Ingresar</Link>
             </Button>
             <Button asChild size="sm">
-              <Link href="/auth/sign-up">Crear mi gimnasio</Link>
+              <Link href="/auth/sign-up/dueno">Crear mi gimnasio</Link>
             </Button>
             <details className="relative md:hidden">
               <summary className="flex h-9 w-9 list-none items-center justify-center rounded-full border border-border text-foreground [&::-webkit-details-marker]:hidden">
@@ -173,7 +173,7 @@ export default function Home() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Button asChild size="lg">
-              <Link href="/auth/sign-up">Crear mi gimnasio</Link>
+              <Link href="/auth/sign-up/dueno">Crear mi gimnasio</Link>
             </Button>
             <Button asChild variant="outline" size="lg">
               <Link href="/auth/login">Ya tengo cuenta</Link>
@@ -301,7 +301,7 @@ export default function Home() {
                   variant={plan.destacado ? "default" : "outline"}
                   className="w-full"
                 >
-                  <Link href="/auth/sign-up">Elegir {plan.nombre}</Link>
+                  <Link href="/auth/sign-up/dueno">Elegir {plan.nombre}</Link>
                 </Button>
               </div>
             ))}
@@ -346,8 +346,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* PORTAL: INGRESO Y REGISTRO — solo Dueño por ahora (ver nota de alcance en
-          sprint-4-diseno-template.md). El flujo de Alumno llega en el Sprint 6. */}
+      {/* PORTAL: INGRESO Y REGISTRO — el panel del Dueño (alumnos, pagos, rutinas,
+          avances) ya está disponible; el portal del Alumno llega en el Sprint 6, por
+          eso su CTA enlaza a una pantalla "muy pronto" en vez de un formulario. */}
       <section id="portal" className="bg-card/40 py-20 md:py-24">
         <div className="mx-auto grid max-w-5xl gap-10 px-6 md:grid-cols-2 md:items-center">
           <div>
@@ -382,15 +383,19 @@ export default function Home() {
               Accede a tu panel
             </h3>
             <p className="mb-6 text-sm text-muted-foreground">
-              Por ahora, el ingreso y registro están pensados para el
-              dueño/entrenador de un gimnasio.
+              ¿Eres el dueño/entrenador de un gimnasio, o uno de sus alumnos?
             </p>
             <div className="flex flex-col gap-3">
               <Button asChild size="lg" className="w-full">
-                <Link href="/auth/sign-up">Crear mi cuenta de gimnasio</Link>
+                <Link href="/auth/sign-up/dueno">Crear mi cuenta de gimnasio</Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="w-full">
                 <Link href="/auth/login">Ya tengo cuenta, iniciar sesión</Link>
+              </Button>
+              <Button asChild variant="ghost" size="lg" className="w-full">
+                <Link href="/auth/sign-up/alumno">
+                  Soy alumno, quiero registrarme
+                </Link>
               </Button>
             </div>
           </div>
@@ -414,7 +419,7 @@ export default function Home() {
               </h2>
               <div className="flex flex-wrap justify-center gap-3">
                 <Button asChild size="lg" variant="highlight">
-                  <Link href="/auth/sign-up">Empieza gratis por 30 días</Link>
+                  <Link href="/auth/sign-up/dueno">Empieza gratis por 30 días</Link>
                 </Button>
                 <Button asChild variant="outline" size="lg">
                   <a href="#contacto">Hablar con nosotros</a>
@@ -513,10 +518,18 @@ export default function Home() {
                 </li>
                 <li>
                   <Link
-                    href="/auth/sign-up"
+                    href="/auth/sign-up/dueno"
                     className="text-sm text-muted-foreground hover:text-foreground"
                   >
                     Crear mi gimnasio
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/auth/sign-up/alumno"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Soy alumno
                   </Link>
                 </li>
               </ul>

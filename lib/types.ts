@@ -8,6 +8,7 @@ export type RolPerfil = "dueño" | "entrenador";
 export interface Gimnasio {
   id: string;
   nombre: string;
+  slug: string | null;
   plan: PlanGimnasio;
   estado: EstadoGimnasio;
   fecha_inicio_plan: string;

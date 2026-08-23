@@ -6,11 +6,34 @@ const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : "http://localhost:3000";
 
+const title = "Valinor Estudio — Gestión para tu gimnasio";
+const description =
+  "Alumnos, pagos, rutinas y avances de tu gimnasio en un solo lugar. Deja el Excel: prueba gratis por 30 días.";
+
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Valinor Estudio — Gestión para tu gimnasio",
-  description:
-    "Alumnos, pagos, rutinas y avances de tu gimnasio en un solo lugar.",
+  title,
+  description,
+  keywords: [
+    "software para gimnasios",
+    "gestión de gimnasio",
+    "sistema para gimnasios pequeños",
+    "control de pagos gimnasio",
+    "rutinas de entrenamiento",
+  ],
+  openGraph: {
+    title,
+    description,
+    url: defaultUrl,
+    siteName: "Valinor Estudio",
+    locale: "es_CL",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+  },
 };
 
 const inter = Inter({

@@ -92,7 +92,7 @@ export function LoginForm({
             <p className="mt-6 text-center text-sm text-muted-foreground">
               ¿Aún no tienes cuenta de gimnasio?{" "}
               <Link
-                href="/auth/sign-up"
+                href="/auth/sign-up/dueno"
                 className="text-secondary-foreground underline underline-offset-4"
               >
                 Regístrate aquí

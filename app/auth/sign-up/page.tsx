@@ -1,5 +1,5 @@
-import { SignUpForm } from "@/components/sign-up-form";
+import { SignUpRoleSelector } from "@/components/sign-up-role-selector";
 
 export default function Page() {
-  return <SignUpForm />;
+  return <SignUpRoleSelector />;
 }
