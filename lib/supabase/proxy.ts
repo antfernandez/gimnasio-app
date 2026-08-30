@@ -47,12 +47,18 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
-  ) {
+  // Sprint 7: /g/[slug] es el sitio público de cada gimnasio (CMS) — debe ser
+  // alcanzable sin sesión, igual que /robots.txt y /sitemap.xml (que ahora listan esos
+  // sitios, ver app/sitemap.ts).
+  const esRutaPublica =
+    request.nextUrl.pathname === "/" ||
+    request.nextUrl.pathname.startsWith("/login") ||
+    request.nextUrl.pathname.startsWith("/auth") ||
+    request.nextUrl.pathname.startsWith("/g/") ||
+    request.nextUrl.pathname === "/robots.txt" ||
+    request.nextUrl.pathname === "/sitemap.xml";
+
+  if (!esRutaPublica && !user) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";

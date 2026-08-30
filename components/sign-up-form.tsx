@@ -41,7 +41,7 @@ export function SignUpForm({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/protected/alumnos`,
+          emailRedirectTo: `${window.location.origin}/protected`,
           data: {
             nombre_completo: nombreCompleto,
             nombre_gimnasio: nombreGimnasio,

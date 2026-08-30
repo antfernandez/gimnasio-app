@@ -6,6 +6,7 @@ import type { AlumnoFormState } from "@/app/protected/alumnos/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { formatRut } from "@/lib/rut";
 import type { Alumno } from "@/lib/types";
 
@@ -110,6 +111,54 @@ export function AlumnoForm({ action, alumno, submitLabel }: Props) {
             type="date"
             defaultValue={alumno?.fecha_inicio ?? hoy}
             required
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-5 border-t border-border pt-5 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Ficha de salud
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Alergias y enfermedades quedan visibles como pendientes en el panel mientras
+            no se completen.
+          </p>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="alergias">Alergias</Label>
+          <Textarea
+            id="alergias"
+            name="alergias"
+            placeholder="Ej. Ninguna conocida"
+            defaultValue={alumno?.alergias ?? ""}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="enfermedades">Enfermedades</Label>
+          <Textarea
+            id="enfermedades"
+            name="enfermedades"
+            placeholder="Ej. Hipertensión controlada"
+            defaultValue={alumno?.enfermedades ?? ""}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="lesiones">Lesiones</Label>
+          <Textarea
+            id="lesiones"
+            name="lesiones"
+            placeholder="Ej. Esguince de tobillo derecho (2025)"
+            defaultValue={alumno?.lesiones ?? ""}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="objetivos_salud">Objetivos</Label>
+          <Textarea
+            id="objetivos_salud"
+            name="objetivos_salud"
+            placeholder="Ej. Bajar de peso, mejorar movilidad"
+            defaultValue={alumno?.objetivos_salud ?? ""}
           />
         </div>
       </div>

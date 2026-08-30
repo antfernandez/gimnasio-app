@@ -9,7 +9,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/auth/", "/protected/"],
+      disallow: ["/auth/", "/protected/", "/vista-previa-sitio"],
     },
     sitemap: `${defaultUrl}/sitemap.xml`,
   };

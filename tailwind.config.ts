@@ -54,8 +54,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "sans-serif"],
-        display: ["var(--font-bebas-neue)", "Arial Narrow", "sans-serif"],
+        sans: ["var(--font-work-sans)", "sans-serif"],
+        display: ["var(--font-cinzel)", "serif"],
       },
       borderRadius: {
         lg: "var(--radius)",

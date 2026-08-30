@@ -32,9 +32,10 @@ export function UpdatePasswordForm({
     setError(null);
 
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const { data, error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-      router.push("/protected/alumnos");
+      const esAlumno = data.user?.user_metadata?.rol === "alumno";
+      router.push(esAlumno ? "/portal" : "/protected");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "Ocurrió un error");
     } finally {

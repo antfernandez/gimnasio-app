@@ -18,6 +18,10 @@ type AlumnoInput = {
   telefono: string | null;
   plan_contratado: string;
   fecha_inicio: string | undefined;
+  alergias: string | null;
+  enfermedades: string | null;
+  lesiones: string | null;
+  objetivos_salud: string | null;
 };
 
 function readAlumnoForm(formData: FormData): AlumnoInput {
@@ -29,6 +33,10 @@ function readAlumnoForm(formData: FormData): AlumnoInput {
     telefono: trim("telefono") || null,
     plan_contratado: trim("plan_contratado"),
     fecha_inicio: trim("fecha_inicio") || undefined,
+    alergias: trim("alergias") || null,
+    enfermedades: trim("enfermedades") || null,
+    lesiones: trim("lesiones") || null,
+    objetivos_salud: trim("objetivos_salud") || null,
   };
 }
 
@@ -75,6 +83,7 @@ export async function createAlumno(
   }
 
   revalidatePath("/protected/alumnos");
+  revalidatePath("/protected");
   redirect("/protected/alumnos?creado=1");
 }
 
@@ -96,6 +105,7 @@ export async function updateAlumno(
 
   revalidatePath("/protected/alumnos");
   revalidatePath(`/protected/alumnos/${id}`);
+  revalidatePath("/protected");
   redirect("/protected/alumnos?actualizado=1");
 }
 
@@ -111,5 +121,20 @@ export async function setAlumnoActivo(id: string, activo: boolean) {
   }
 
   revalidatePath("/protected/alumnos");
+  revalidatePath(`/protected/alumnos/${id}`);
+  revalidatePath("/protected");
+}
+
+export async function setPuedeRegistrarAvances(id: string, valor: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("alumnos")
+    .update({ puede_registrar_avances: valor })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error("No se pudo actualizar el permiso de avances.");
+  }
+
   revalidatePath(`/protected/alumnos/${id}`);
 }

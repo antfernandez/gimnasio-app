@@ -28,12 +28,13 @@ export function LoginForm({
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) throw error;
-      router.push("/protected/alumnos");
+      const esAlumno = data.user?.user_metadata?.rol === "alumno";
+      router.push(esAlumno ? "/portal" : "/protected");
       router.refresh();
     } catch (error: unknown) {
       setError(

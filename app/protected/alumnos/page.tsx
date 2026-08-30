@@ -1,6 +1,8 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 
+import { ClasificacionBadge } from "@/components/alumnos/clasificacion-badge";
+import { FichaSaludBadge } from "@/components/alumnos/ficha-salud-badge";
 import { ToggleActivoButton } from "@/components/alumnos/toggle-activo-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,11 +16,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { fichaSaludPendiente } from "@/lib/ficha-salud";
 import { formatFecha } from "@/lib/format";
 import { getPerfilActual } from "@/lib/perfil";
 import { formatRut } from "@/lib/rut";
 import { createClient } from "@/lib/supabase/server";
-import type { Alumno } from "@/lib/types";
+import type { Alumno, ClasificacionAlumnoRow } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const FILTROS = [
@@ -61,8 +64,19 @@ export default async function AlumnosPage({
     query = query.or(`nombres.ilike.%${qSafe}%,apellidos.ilike.%${qSafe}%`);
   }
 
-  const { data: alumnos } = await query;
+  const [{ data: alumnos }, { data: clasificaciones }] = await Promise.all([
+    query,
+    supabase
+      .from("v_clasificacion_alumnos")
+      .select("alumno_id, clasificacion")
+      .eq("gimnasio_id", perfilData.perfil.gimnasio_id),
+  ]);
   const lista = (alumnos ?? []) as Alumno[];
+  const clasificacionPorAlumno = new Map(
+    ((clasificaciones ?? []) as Pick<ClasificacionAlumnoRow, "alumno_id" | "clasificacion">[]).map(
+      (c) => [c.alumno_id, c.clasificacion],
+    ),
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -142,6 +156,8 @@ export default async function AlumnosPage({
                   <TableHead>Plan</TableHead>
                   <TableHead>Inicio</TableHead>
                   <TableHead>Estado</TableHead>
+                  <TableHead>Clasificación</TableHead>
+                  <TableHead>Ficha de salud</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -170,6 +186,16 @@ export default async function AlumnosPage({
                       <Badge variant={alumno.activo ? "success" : "secondary"}>
                         {alumno.activo ? "Activo" : "De baja"}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {clasificacionPorAlumno.has(alumno.id) && (
+                        <ClasificacionBadge
+                          clasificacion={clasificacionPorAlumno.get(alumno.id)!}
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <FichaSaludBadge pendiente={fichaSaludPendiente(alumno)} />
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">

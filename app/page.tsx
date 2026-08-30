@@ -347,8 +347,7 @@ export default function Home() {
       </section>
 
       {/* PORTAL: INGRESO Y REGISTRO — el panel del Dueño (alumnos, pagos, rutinas,
-          avances) ya está disponible; el portal del Alumno llega en el Sprint 6, por
-          eso su CTA enlaza a una pantalla "muy pronto" en vez de un formulario. */}
+          avances) y el registro/portal del Alumno (Sprint 6) ya están disponibles. */}
       <section id="portal" className="bg-card/40 py-20 md:py-24">
         <div className="mx-auto grid max-w-5xl gap-10 px-6 md:grid-cols-2 md:items-center">
           <div>

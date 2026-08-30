@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import type { PagoFormState } from "@/app/protected/pagos/actions";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -30,6 +31,7 @@ type Props = {
 
 export function PagoForm({ action }: Props) {
   const [state, formAction, isPending] = useActionState(action, {});
+  const [crearPaquete, setCrearPaquete] = useState(false);
   const hoy = new Date().toISOString().slice(0, 10);
 
   return (
@@ -91,6 +93,38 @@ export function PagoForm({ action }: Props) {
             required
           />
         </div>
+      </div>
+
+      <div className="rounded-[9px] border border-border bg-secondary/30 p-4">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="crear_paquete"
+            name="crear_paquete"
+            checked={crearPaquete}
+            onCheckedChange={(v) => setCrearPaquete(v === true)}
+          />
+          <Label htmlFor="crear_paquete" className="cursor-pointer">
+            Este pago origina un paquete de clases nuevo
+          </Label>
+        </div>
+        {crearPaquete && (
+          <div className="mt-4 grid gap-2 sm:max-w-[220px]">
+            <Label htmlFor="clases_incluidas">N° de clases incluidas</Label>
+            <Input
+              id="clases_incluidas"
+              name="clases_incluidas"
+              type="number"
+              min="1"
+              step="1"
+              placeholder="8"
+              required={crearPaquete}
+            />
+            <p className="text-xs text-muted-foreground">
+              El paquete queda vigente por 1 mes corrido desde la fecha de pago (no un
+              ciclo calendario fijo).
+            </p>
+          </div>
+        )}
       </div>
 
       {state.error && (

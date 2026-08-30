@@ -4,13 +4,17 @@ import { notFound } from "next/navigation";
 
 import { updateAlumno } from "@/app/protected/alumnos/actions";
 import { AlumnoForm } from "@/components/alumnos/alumno-form";
+import { ClasificacionBadge } from "@/components/alumnos/clasificacion-badge";
+import { FichaSaludBadge } from "@/components/alumnos/ficha-salud-badge";
 import { ToggleActivoButton } from "@/components/alumnos/toggle-activo-button";
+import { ToggleAvancesButton } from "@/components/alumnos/toggle-avances-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { fichaSaludPendiente } from "@/lib/ficha-salud";
 import { formatFecha } from "@/lib/format";
 import { formatRut } from "@/lib/rut";
 import { createClient } from "@/lib/supabase/server";
-import type { Alumno } from "@/lib/types";
+import type { Alumno, ClasificacionAlumnoRow } from "@/lib/types";
 
 export default async function FichaAlumnoPage({
   params,
@@ -30,6 +34,15 @@ export default async function FichaAlumnoPage({
 
   const a = alumno as Alumno;
   const updateAlumnoConId = updateAlumno.bind(null, a.id);
+
+  const { data: clasificacionRow } = await supabase
+    .from("v_clasificacion_alumnos")
+    .select("clasificacion")
+    .eq("alumno_id", a.id)
+    .maybeSingle();
+  const clasificacion = (
+    clasificacionRow as Pick<ClasificacionAlumnoRow, "clasificacion"> | null
+  )?.clasificacion;
 
   return (
     <div className="flex flex-col gap-6">
@@ -66,6 +79,8 @@ export default async function FichaAlumnoPage({
             <Badge variant={a.activo ? "success" : "secondary"}>
               {a.activo ? "Activo" : "De baja"}
             </Badge>
+            {clasificacion && <ClasificacionBadge clasificacion={clasificacion} />}
+            <FichaSaludBadge pendiente={fichaSaludPendiente(a)} />
             <ToggleActivoButton
               id={a.id}
               activo={a.activo}
@@ -77,14 +92,36 @@ export default async function FichaAlumnoPage({
 
       <Card>
         <CardContent className="pt-6">
-          <div className="mb-6 flex flex-wrap gap-x-8 gap-y-1 text-xs text-muted-foreground">
+          <div className="mb-6 flex flex-wrap items-center gap-x-8 gap-y-1 text-xs text-muted-foreground">
             <span>RUT {formatRut(a.rut, a.dig_ver)}</span>
             <span>Alumno desde {formatFecha(a.fecha_inicio)}</span>
+            <Badge variant={a.user_id ? "success" : "secondary"}>
+              {a.user_id ? "Cuenta propia vinculada" : "Sin cuenta propia"}
+            </Badge>
           </div>
           <AlumnoForm
             action={updateAlumnoConId}
             alumno={a}
             submitLabel="Guardar cambios"
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Registro de avances propios
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {a.puede_registrar_avances
+                ? "Este alumno puede registrar sus propios avances desde su portal."
+                : "Solo tú puedes registrar avances para este alumno."}
+            </p>
+          </div>
+          <ToggleAvancesButton
+            id={a.id}
+            puedeRegistrarAvances={a.puede_registrar_avances}
           />
         </CardContent>
       </Card>

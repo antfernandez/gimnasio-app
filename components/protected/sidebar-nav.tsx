@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  CalendarDays,
   CreditCard,
   Dumbbell,
+  Globe,
   LayoutDashboard,
   TrendingUp,
   Users,
@@ -15,9 +17,11 @@ import { cn } from "@/lib/utils";
 const items = [
   { href: "/protected", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/protected/alumnos", label: "Alumnos", icon: Users },
+  { href: "/protected/turnos", label: "Turnos", icon: CalendarDays },
   { href: "/protected/pagos", label: "Pagos", icon: CreditCard },
   { href: "/protected/rutinas", label: "Rutinas", icon: Dumbbell },
   { href: "/protected/avances", label: "Avances", icon: TrendingUp },
+  { href: "/protected/sitio", label: "Sitio público", icon: Globe },
 ];
 
 export function SidebarNav() {

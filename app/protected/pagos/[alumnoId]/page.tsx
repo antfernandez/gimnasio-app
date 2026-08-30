@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { createPago } from "@/app/protected/pagos/actions";
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
+import { EstadoPaqueteBadge } from "@/components/pagos/estado-paquete-badge";
 import { PagoForm } from "@/components/pagos/pago-form";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -16,7 +17,13 @@ import {
 } from "@/components/ui/table";
 import { formatFecha, formatMonto } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import type { Alumno, EstadoPagoAlumno, Pago } from "@/lib/types";
+import type {
+  Alumno,
+  EstadoPagoAlumno,
+  EstadoPaqueteAlumno,
+  Pago,
+  Paquete,
+} from "@/lib/types";
 
 const METODO_LABEL: Record<string, string> = {
   efectivo: "Efectivo",
@@ -45,21 +52,34 @@ export default async function PagosAlumnoPage({
   if (!alumno) notFound();
   const a = alumno as Alumno;
 
-  const [{ data: pagos }, { data: estadoRow }] = await Promise.all([
-    supabase
-      .from("pagos")
-      .select("*")
-      .eq("alumno_id", alumnoId)
-      .order("periodo_hasta", { ascending: false }),
-    supabase
-      .from("v_estado_pago_alumnos")
-      .select("*")
-      .eq("alumno_id", alumnoId)
-      .maybeSingle(),
-  ]);
+  const [{ data: pagos }, { data: estadoRow }, { data: paquetes }, { data: estadoPaqueteRow }] =
+    await Promise.all([
+      supabase
+        .from("pagos")
+        .select("*")
+        .eq("alumno_id", alumnoId)
+        .order("periodo_hasta", { ascending: false }),
+      supabase
+        .from("v_estado_pago_alumnos")
+        .select("*")
+        .eq("alumno_id", alumnoId)
+        .maybeSingle(),
+      supabase
+        .from("paquetes")
+        .select("*")
+        .eq("alumno_id", alumnoId)
+        .order("fecha_vencimiento", { ascending: false }),
+      supabase
+        .from("v_estado_paquetes_alumnos")
+        .select("*")
+        .eq("alumno_id", alumnoId)
+        .maybeSingle(),
+    ]);
 
   const historial = (pagos ?? []) as Pago[];
   const estado = estadoRow as EstadoPagoAlumno | null;
+  const historialPaquetes = (paquetes ?? []) as Paquete[];
+  const estadoPaquete = estadoPaqueteRow as EstadoPaqueteAlumno | null;
   const createPagoConId = createPago.bind(null, a.id);
 
   return (
@@ -81,7 +101,10 @@ export default async function PagosAlumnoPage({
               {a.nombres} {a.apellidos}
             </h2>
           </div>
-          {estado && <EstadoPagoBadge estado={estado.estado_pago} />}
+          <div className="flex items-center gap-2">
+            {estado && <EstadoPagoBadge estado={estado.estado_pago} />}
+            {estadoPaquete && <EstadoPaqueteBadge estado={estadoPaquete.estado_paquete} />}
+          </div>
         </div>
       </div>
 
@@ -131,6 +154,46 @@ export default async function PagosAlumnoPage({
                       {formatMonto(pago.monto)}
                     </TableCell>
                     <TableCell>{METODO_LABEL[pago.metodo]}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="pt-6">
+          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Paquetes de clases
+          </h3>
+          {historialPaquetes.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Este alumno todavía no tiene ningún paquete de clases. Márcalo al
+              registrar un pago con la opción &quot;Este pago origina un paquete de
+              clases nuevo&quot;.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Inicio</TableHead>
+                  <TableHead>Vence</TableHead>
+                  <TableHead>Clases</TableHead>
+                  <TableHead>Consumidas</TableHead>
+                  <TableHead>Restantes</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {historialPaquetes.map((paquete) => (
+                  <TableRow key={paquete.id}>
+                    <TableCell>{formatFecha(paquete.fecha_inicio)}</TableCell>
+                    <TableCell>{formatFecha(paquete.fecha_vencimiento)}</TableCell>
+                    <TableCell>{paquete.clases_incluidas}</TableCell>
+                    <TableCell>{paquete.clases_consumidas}</TableCell>
+                    <TableCell className="font-medium text-foreground">
+                      {paquete.clases_incluidas - paquete.clases_consumidas}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

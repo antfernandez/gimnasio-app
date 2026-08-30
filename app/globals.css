@@ -2,34 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Paleta "Valinor Estudio" (.claude/templates/gimnasio-dark.html) llevada a tokens
-   shadcn/Tailwind. Reemplaza el tema dorado/crema del Sprint 1 (Sprint 4). */
+/* Paleta "Valinor Estudio" (.claude/templates/valinor-sistema-web-claro-v2.html)
+   llevada a tokens shadcn/Tailwind. Reemplaza el tema oscuro naranja/lima del
+   Sprint 4 (que a su vez había reemplazado el dorado/crema del Sprint 1) — Sprint 11
+   vuelve a una base clara dorado/crema/verde/café con tipografía Cinzel + Work Sans. */
 @layer base {
   :root {
-    --background: 240 6% 4%; /* --bg #0a0a0b */
-    --foreground: 60 4% 96%; /* --text #f5f5f4 */
-    --card: 240 5% 8%; /* --surface #141416 */
-    --card-foreground: 60 4% 96%;
-    --popover: 240 5% 8%;
-    --popover-foreground: 60 4% 96%;
-    --primary: 10 100% 57%; /* --brand #ff4b26 */
-    --primary-foreground: 0 0% 100%; /* --brand-ink #ffffff */
-    --secondary: 240 5% 12%; /* --surface-2 #1c1c1f */
-    --secondary-foreground: 60 4% 96%; /* texto de énfasis/títulos sobre fondo oscuro */
-    --muted: 240 5% 8%;
-    --muted-foreground: 60 2% 63%; /* --text-muted #a3a3a0 */
-    --accent: 240 4% 14%; /* --surface-3 #232326 */
-    --accent-foreground: 60 4% 96%;
-    --destructive: 0 70% 55%;
+    --background: 35 58% 94%; /* --bg #f8f0e5 */
+    --foreground: 44 20% 19%; /* --cream (texto) #3a3527 */
+    --card: 38 100% 98%; /* --card #fffcf7 */
+    --card-foreground: 44 20% 19%;
+    --popover: 38 100% 98%;
+    --popover-foreground: 44 20% 19%;
+    --primary: 41 53% 55%; /* --gold #c9a24d */
+    --primary-foreground: 40 68% 6%; /* texto oscuro sobre dorado, como .btn-solid */
+    --secondary: 33 54% 88%; /* --bg-alt #f1e2d0 */
+    --secondary-foreground: 39 49% 36%; /* --ink-gold #8a6a2f, color de títulos */
+    --muted: 33 54% 88%; /* --bg-alt */
+    --muted-foreground: 32 18% 41%; /* --muted #7d6b56 */
+    --accent: 43 64% 76%; /* --gold-light #e9d29a */
+    --accent-foreground: 39 49% 36%; /* --ink-gold */
+    --destructive: 6 40% 58%; /* --red #bf7269 */
     --destructive-foreground: 0 0% 100%;
-    --success: 147 69% 55%; /* --success #3ddc84 */
-    --success-foreground: 0 0% 8%;
-    --highlight: 78 100% 62%; /* --lime #c6ff3d */
-    --highlight-foreground: 0 0% 6%; /* --lime-ink */
-    --border: 240 5% 20%;
-    --input: 240 5% 20%;
-    --ring: 10 100% 57%;
-    --radius: 1rem; /* --radius 16px */
+    --success: 76 24% 41%; /* --green #74824f */
+    --success-foreground: 0 0% 100%;
+    --highlight: 39 49% 36%; /* --ink-gold #8a6a2f, acento dorado secundario */
+    --highlight-foreground: 40 68% 6%;
+    --border: 32 32% 82%; /* --line rgba(150,120,90,.25) sobre --bg */
+    --input: 32 32% 82%;
+    --ring: 41 53% 55%; /* --gold */
+    --radius: 0.875rem; /* --radius 14px */
   }
 }
 
@@ -44,6 +46,6 @@
   h2,
   h3,
   h4 {
-    @apply font-display uppercase leading-tight tracking-wide text-secondary-foreground;
+    @apply font-display font-semibold leading-tight tracking-wide text-secondary-foreground;
   }
 }
