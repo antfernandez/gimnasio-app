@@ -24,6 +24,8 @@ import { createClient } from "@/lib/supabase/server";
 import type { Alumno, ClasificacionAlumnoRow } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+type AlumnoConPlan = Alumno & { plan: { nombre: string } | null };
+
 const FILTROS = [
   { value: "activos", label: "Activos" },
   { value: "inactivos", label: "De baja" },
@@ -53,7 +55,7 @@ export default async function AlumnosPage({
   const supabase = await createClient();
   let query = supabase
     .from("alumnos")
-    .select("*")
+    .select("*, plan:planes(nombre)")
     .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
     .order("apellidos", { ascending: true });
 
@@ -71,7 +73,7 @@ export default async function AlumnosPage({
       .select("alumno_id, clasificacion")
       .eq("gimnasio_id", perfilData.perfil.gimnasio_id),
   ]);
-  const lista = (alumnos ?? []) as Alumno[];
+  const lista = (alumnos ?? []) as AlumnoConPlan[];
   const clasificacionPorAlumno = new Map(
     ((clasificaciones ?? []) as Pick<ClasificacionAlumnoRow, "alumno_id" | "clasificacion">[]).map(
       (c) => [c.alumno_id, c.clasificacion],
@@ -180,7 +182,7 @@ export default async function AlumnosPage({
                         {!alumno.email && !alumno.telefono && <span>—</span>}
                       </div>
                     </TableCell>
-                    <TableCell>{alumno.plan_contratado}</TableCell>
+                    <TableCell>{alumno.plan?.nombre ?? "—"}</TableCell>
                     <TableCell>{formatFecha(alumno.fecha_inicio)}</TableCell>
                     <TableCell>
                       <Badge variant={alumno.activo ? "success" : "secondary"}>

@@ -52,34 +52,47 @@ export default async function PagosAlumnoPage({
   if (!alumno) notFound();
   const a = alumno as Alumno;
 
-  const [{ data: pagos }, { data: estadoRow }, { data: paquetes }, { data: estadoPaqueteRow }] =
-    await Promise.all([
-      supabase
-        .from("pagos")
-        .select("*")
-        .eq("alumno_id", alumnoId)
-        .order("periodo_hasta", { ascending: false }),
-      supabase
-        .from("v_estado_pago_alumnos")
-        .select("*")
-        .eq("alumno_id", alumnoId)
-        .maybeSingle(),
-      supabase
-        .from("paquetes")
-        .select("*")
-        .eq("alumno_id", alumnoId)
-        .order("fecha_vencimiento", { ascending: false }),
-      supabase
-        .from("v_estado_paquetes_alumnos")
-        .select("*")
-        .eq("alumno_id", alumnoId)
-        .maybeSingle(),
-    ]);
+  const [
+    { data: pagos },
+    { data: estadoRow },
+    { data: paquetes },
+    { data: estadoPaqueteRow },
+    { data: planRow },
+  ] = await Promise.all([
+    supabase
+      .from("pagos")
+      .select("*")
+      .eq("alumno_id", alumnoId)
+      .order("periodo_hasta", { ascending: false }),
+    supabase
+      .from("v_estado_pago_alumnos")
+      .select("*")
+      .eq("alumno_id", alumnoId)
+      .maybeSingle(),
+    supabase
+      .from("paquetes")
+      .select("*")
+      .eq("alumno_id", alumnoId)
+      .order("fecha_vencimiento", { ascending: false }),
+    supabase
+      .from("v_estado_paquetes_alumnos")
+      .select("*")
+      .eq("alumno_id", alumnoId)
+      .maybeSingle(),
+    a.plan_id
+      ? supabase
+          .from("planes")
+          .select("dias_por_semana")
+          .eq("id", a.plan_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
 
   const historial = (pagos ?? []) as Pago[];
   const estado = estadoRow as EstadoPagoAlumno | null;
   const historialPaquetes = (paquetes ?? []) as Paquete[];
   const estadoPaquete = estadoPaqueteRow as EstadoPaqueteAlumno | null;
+  const diasPorSemana = (planRow as { dias_por_semana: number } | null)?.dias_por_semana ?? null;
   const createPagoConId = createPago.bind(null, a.id);
 
   return (
@@ -119,7 +132,7 @@ export default async function PagosAlumnoPage({
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Registrar pago
           </h3>
-          <PagoForm action={createPagoConId} />
+          <PagoForm action={createPagoConId} diasPorSemana={diasPorSemana} />
         </CardContent>
       </Card>
 

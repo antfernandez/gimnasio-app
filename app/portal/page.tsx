@@ -2,9 +2,10 @@ import Link from "next/link";
 
 import { createAvancePropio } from "@/app/portal/actions";
 import { AvanceForm } from "@/components/avances/avance-form";
+import { LineChart } from "@/components/charts/line-chart";
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
 import { ContactoForm } from "@/components/portal/contacto-form";
-import { RutinaCard } from "@/components/rutinas/rutina-card";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -14,7 +15,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { EstadoPaqueteBadge } from "@/components/pagos/estado-paquete-badge";
 import { getAlumnoActual } from "@/lib/alumno-portal";
 import { formatFecha } from "@/lib/format";
 import { formatRut } from "@/lib/rut";
@@ -30,8 +30,8 @@ import type {
   EstadoPagoAlumno,
   EstadoPaqueteAlumno,
   MedidasAvance,
+  Plan,
   Reserva,
-  Rutina,
 } from "@/lib/types";
 
 function formatMedidas(medidas: MedidasAvance): string {
@@ -90,9 +90,8 @@ export default async function PortalPage() {
   const [
     { data: estadoRow },
     { data: paqueteRow },
-    { data: proximasReservas },
-    { data: rutinas },
     { data: avances },
+    { data: planRow },
   ] = await Promise.all([
     supabase
       .from("v_estado_pago_alumnos")
@@ -105,32 +104,37 @@ export default async function PortalPage() {
       .eq("alumno_id", alumno.id)
       .maybeSingle(),
     supabase
-      .from("reservas")
-      .select("*")
-      .eq("alumno_id", alumno.id)
-      .eq("estado", "reservada")
-      .gte("fecha", hoyIso())
-      .order("fecha", { ascending: true })
-      .order("hora_inicio", { ascending: true })
-      .limit(5),
-    supabase
-      .from("rutinas")
-      .select("*")
-      .eq("alumno_id", alumno.id)
-      .order("fecha_asignacion", { ascending: false }),
-    supabase
       .from("avances")
       .select("*")
       .eq("alumno_id", alumno.id)
       .order("fecha", { ascending: false }),
+    alumno.plan_id
+      ? supabase.from("planes").select("*").eq("id", alumno.plan_id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   const estado = estadoRow as EstadoPagoAlumno | null;
+  const plan = planRow as Plan | null;
   const paquete = paqueteRow as EstadoPaqueteAlumno | null;
+
+  // Sprint 13, Parte E: acotado al período del paquete vigente (evita que la lista
+  // crezca sin límite si el alumno tiene muchos períodos con muchos turnos). Sin
+  // paquete vigente, se mantiene el límite de 5 como fallback razonable.
+  let proximasReservasQuery = supabase
+    .from("reservas")
+    .select("*")
+    .eq("alumno_id", alumno.id)
+    .eq("estado", "reservada")
+    .gte("fecha", hoyIso())
+    .order("fecha", { ascending: true })
+    .order("hora_inicio", { ascending: true });
+  proximasReservasQuery =
+    paquete && paquete.estado_paquete !== "sin_paquete" && paquete.vencimiento_actual
+      ? proximasReservasQuery.lte("fecha", paquete.vencimiento_actual)
+      : proximasReservasQuery.limit(5);
+  const { data: proximasReservas } = await proximasReservasQuery;
+
   const listaProximasReservas = (proximasReservas ?? []) as Reserva[];
-  const listaRutinas = (rutinas ?? []) as Rutina[];
-  const rutinaActiva = listaRutinas.find((r) => r.activa);
-  const rutinasAnteriores = listaRutinas.filter((r) => !r.activa);
   const historialAvances = (avances ?? []) as Avance[];
 
   return (
@@ -187,10 +191,24 @@ export default async function PortalPage() {
           <CardContent className="pt-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Mi paquete
+                Mi Plan
               </h3>
-              {paquete && <EstadoPaqueteBadge estado={paquete.estado_paquete} />}
+              <div className="flex items-center gap-2">
+                {paquete && (
+                  <Badge variant={paquete.estado_paquete !== "sin_paquete" ? "success" : "secondary"}>
+                    {paquete.estado_paquete !== "sin_paquete" ? "Vigente" : "No vigente"}
+                  </Badge>
+                )}
+                {estado && (
+                  <Badge variant={estado.estado_pago === "al_dia" ? "success" : "destructive"}>
+                    {estado.estado_pago === "al_dia" ? "Pagado" : "No pagado"}
+                  </Badge>
+                )}
+              </div>
             </div>
+            <p className="mb-2 text-sm font-medium text-foreground">
+              {plan ? plan.nombre : "Sin plan asignado"}
+            </p>
             {!paquete || paquete.estado_paquete === "sin_paquete" ? (
               <p className="text-sm text-muted-foreground">
                 No tienes un paquete de clases vigente. Contacta a tu estudio para
@@ -217,7 +235,7 @@ export default async function PortalPage() {
             <div className="flex flex-wrap gap-x-8 gap-y-1 text-xs text-muted-foreground">
               <span>RUT {formatRut(alumno.rut, alumno.dig_ver)}</span>
               <span>Alumno desde {formatFecha(alumno.fecha_inicio)}</span>
-              <span>Plan {alumno.plan_contratado}</span>
+              <span>Plan {plan ? plan.nombre : "Sin plan asignado"}</span>
             </div>
             {estado && <EstadoPagoBadge estado={estado.estado_pago} />}
           </div>
@@ -227,33 +245,6 @@ export default async function PortalPage() {
           <ContactoForm alumno={alumno} />
         </CardContent>
       </Card>
-
-      <div>
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Mi rutina
-        </h3>
-        {rutinaActiva ? (
-          <RutinaCard rutina={rutinaActiva} />
-        ) : (
-          <Card>
-            <CardContent className="py-10 text-center text-sm text-muted-foreground">
-              Tu entrenador aún no te asignó una rutina vigente.
-            </CardContent>
-          </Card>
-        )}
-        {rutinasAnteriores.length > 0 && (
-          <details className="mt-3">
-            <summary className="cursor-pointer text-xs text-muted-foreground hover:text-primary">
-              Ver rutinas anteriores ({rutinasAnteriores.length})
-            </summary>
-            <div className="mt-3 flex flex-col gap-3">
-              {rutinasAnteriores.map((r) => (
-                <RutinaCard key={r.id} rutina={r} />
-              ))}
-            </div>
-          </details>
-        )}
-      </div>
 
       {alumno.puede_registrar_avances && (
         <Card>
@@ -271,6 +262,14 @@ export default async function PortalPage() {
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Mis avances
           </h3>
+          <div className="mb-6">
+            <LineChart
+              data={historialAvances
+                .filter((av) => av.peso_kg != null)
+                .map((av) => ({ x: av.fecha, y: av.peso_kg! }))}
+              unidad=" kg"
+            />
+          </div>
           {historialAvances.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
               {alumno.puede_registrar_avances

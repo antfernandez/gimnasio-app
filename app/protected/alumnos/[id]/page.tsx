@@ -8,13 +8,15 @@ import { ClasificacionBadge } from "@/components/alumnos/clasificacion-badge";
 import { FichaSaludBadge } from "@/components/alumnos/ficha-salud-badge";
 import { ToggleActivoButton } from "@/components/alumnos/toggle-activo-button";
 import { ToggleAvancesButton } from "@/components/alumnos/toggle-avances-button";
+import { ToggleBitacoraButton } from "@/components/alumnos/toggle-bitacora-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { fichaSaludPendiente } from "@/lib/ficha-salud";
 import { formatFecha } from "@/lib/format";
+import { getPerfilActual } from "@/lib/perfil";
 import { formatRut } from "@/lib/rut";
 import { createClient } from "@/lib/supabase/server";
-import type { Alumno, ClasificacionAlumnoRow } from "@/lib/types";
+import type { Alumno, ClasificacionAlumnoRow, Plan } from "@/lib/types";
 
 export default async function FichaAlumnoPage({
   params,
@@ -22,6 +24,9 @@ export default async function FichaAlumnoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
+  const perfilData = await getPerfilActual();
+  if (!perfilData) return null; // el layout ya redirige a /auth/login
 
   const supabase = await createClient();
   const { data: alumno } = await supabase
@@ -35,11 +40,18 @@ export default async function FichaAlumnoPage({
   const a = alumno as Alumno;
   const updateAlumnoConId = updateAlumno.bind(null, a.id);
 
-  const { data: clasificacionRow } = await supabase
-    .from("v_clasificacion_alumnos")
-    .select("clasificacion")
-    .eq("alumno_id", a.id)
-    .maybeSingle();
+  const [{ data: clasificacionRow }, { data: planes }] = await Promise.all([
+    supabase
+      .from("v_clasificacion_alumnos")
+      .select("clasificacion")
+      .eq("alumno_id", a.id)
+      .maybeSingle(),
+    supabase
+      .from("planes")
+      .select("*")
+      .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
+      .order("dias_por_semana", { ascending: true }),
+  ]);
   const clasificacion = (
     clasificacionRow as Pick<ClasificacionAlumnoRow, "clasificacion"> | null
   )?.clasificacion;
@@ -102,6 +114,7 @@ export default async function FichaAlumnoPage({
           <AlumnoForm
             action={updateAlumnoConId}
             alumno={a}
+            planes={(planes ?? []) as Plan[]}
             submitLabel="Guardar cambios"
           />
         </CardContent>
@@ -122,6 +135,25 @@ export default async function FichaAlumnoPage({
           <ToggleAvancesButton
             id={a.id}
             puedeRegistrarAvances={a.puede_registrar_avances}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Registro de bitácora propio
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {a.puede_registrar_bitacora
+                ? "Este alumno puede registrar sus propias sesiones de rutina desde su portal."
+                : "Solo tú puedes registrar sesiones de rutina para este alumno."}
+            </p>
+          </div>
+          <ToggleBitacoraButton
+            id={a.id}
+            puedeRegistrarBitacora={a.puede_registrar_bitacora}
           />
         </CardContent>
       </Card>

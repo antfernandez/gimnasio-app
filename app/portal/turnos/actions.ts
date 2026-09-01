@@ -40,6 +40,9 @@ export async function crearReservaAlumno(
     if (error.message?.includes("cupos")) {
       return { error: "No quedan cupos disponibles para ese turno." };
     }
+    if (error.message?.includes("clases")) {
+      return { error: "Ya usaste todas las clases de tu paquete de este mes." };
+    }
     if (error.code === "23505") {
       return { error: "Ya tienes una reserva vigente en ese turno." };
     }

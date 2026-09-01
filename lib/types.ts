@@ -45,11 +45,15 @@ export interface Alumno {
   apellidos: string;
   email: string | null;
   telefono: string | null;
-  plan_contratado: string;
+  /** Sprint 13: FK a `planes` — reemplaza el texto libre `plan_contratado`. */
+  plan_id: string | null;
   fecha_inicio: string;
   fecha_nacimiento: string | null;
   activo: boolean;
   puede_registrar_avances: boolean;
+  /** Sprint 13: permiso independiente de `puede_registrar_avances` — habilita el
+   * registro propio de sesiones de la bitácora de rutina. */
+  puede_registrar_bitacora: boolean;
   /** Aprobación manual del Admin (Sprint 12) — 'aprobado' por defecto para altas
    * hechas por el dueño; 'pendiente' solo en el autorregistro del propio alumno. */
   estado_aprobacion: EstadoAprobacionAlumno;
@@ -60,6 +64,36 @@ export interface Alumno {
   objetivos_salud: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Sprint 13: catálogo de planes por gimnasio (Básico/Intermedio/Avanzado), separado
+ * de la Rutina — define cuántos días a la semana entrena el alumno, no el contenido
+ * de entrenamiento. */
+export type NivelPlan = "basico" | "intermedio" | "avanzado";
+
+export interface Plan {
+  id: string;
+  gimnasio_id: string;
+  nombre: string;
+  nivel: NivelPlan;
+  precio: number | null;
+  dias_por_semana: number;
+  fecha_vigencia_desde: string;
+  fecha_vigencia_hasta: string | null;
+  creado_por: string | null;
+  modificado_por: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Resultado de la RPC `listar_planes_publico`: solo columnas no sensibles, para el
+ * selector del registro de alumno. */
+export interface PlanPublico {
+  id: string;
+  nombre: string;
+  nivel: NivelPlan;
+  precio: number | null;
+  dias_por_semana: number;
 }
 
 /** Resultado de la función `buscar_gimnasios` (RPC): solo columnas no
@@ -178,6 +212,28 @@ export interface Avance {
   fecha: string;
   peso_kg: number | null;
   medidas: MedidasAvance;
+  notas: string | null;
+  created_at: string;
+}
+
+/** Sprint 13: bitácora de rutina — una fila por ejercicio y sesión. `*_planificadas`
+ * es un snapshot de la rutina al momento del registro (no se reescribe si luego se
+ * edita la rutina); `*_realizadas`/`peso_kg` es lo que efectivamente se hizo. */
+export interface RegistroRutina {
+  id: string;
+  gimnasio_id: string;
+  alumno_id: string;
+  rutina_id: string;
+  ejercicio_index: number;
+  ejercicio: string;
+  series_planificadas: number | null;
+  reps_planificadas: number | null;
+  series_realizadas: number | null;
+  reps_realizadas: number | null;
+  peso_kg: number | null;
+  fecha: string;
+  registrado_por: string | null;
+  origen: OrigenCambio;
   notas: string | null;
   created_at: string;
 }

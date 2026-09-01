@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getAlumnoActual } from "@/lib/alumno-portal";
+import { buildFilasRegistroRutina } from "@/lib/bitacora";
 import { createClient } from "@/lib/supabase/server";
-import type { MedidasAvance } from "@/lib/types";
+import { hoyIso } from "@/lib/turnos";
+import type { MedidasAvance, Rutina } from "@/lib/types";
 
 export type ContactoFormState = {
   error?: string;
@@ -106,5 +108,63 @@ export async function createAvancePropio(
   }
 
   revalidatePath("/portal");
+  return {};
+}
+
+export type BitacoraFormState = {
+  error?: string;
+};
+
+/** Sprint 13, Parte E: registro propio de sesión de bitácora — la fecha se fuerza a
+ * hoy en el servidor (defensa en profundidad junto con la política RLS de
+ * `registros_rutina`, no solo el formulario que ya no muestra selector de fecha). */
+export async function createRegistroRutinaPropio(
+  _prevState: BitacoraFormState,
+  formData: FormData,
+): Promise<BitacoraFormState> {
+  const rutinaId = String(formData.get("rutina_id") ?? "").trim();
+  if (!rutinaId) {
+    return { error: "No se encontró la rutina." };
+  }
+
+  const alumno = await getAlumnoActual();
+  if (!alumno) redirect("/auth/login");
+  if (!alumno.puede_registrar_bitacora) {
+    return { error: "Tu entrenador aún no habilitó el registro de bitácora propio." };
+  }
+
+  const supabase = await createClient();
+  const { data: rutina } = await supabase
+    .from("rutinas")
+    .select("*")
+    .eq("id", rutinaId)
+    .eq("alumno_id", alumno.id)
+    .maybeSingle();
+
+  if (!rutina) {
+    return { error: "No se encontró la rutina." };
+  }
+
+  const filas = buildFilasRegistroRutina((rutina as Rutina).contenido, formData);
+  if (filas.length === 0) {
+    return { error: "Registra al menos un ejercicio de la sesión." };
+  }
+
+  const { error } = await supabase.from("registros_rutina").insert(
+    filas.map((f) => ({
+      gimnasio_id: alumno.gimnasio_id,
+      alumno_id: alumno.id,
+      rutina_id: rutinaId,
+      fecha: hoyIso(),
+      origen: "alumno",
+      ...f,
+    })),
+  );
+
+  if (error) {
+    return { error: "No se pudo registrar la sesión. Intenta de nuevo." };
+  }
+
+  revalidatePath("/portal/rutina");
   return {};
 }

@@ -1,6 +1,13 @@
 # Modelo de tablas — Supabase (proyecto `wslzbejanltdnsbqcfvj`)
 
 > Generado consultando directamente la base de datos Postgres del proyecto (`information_schema`, `pg_catalog`) el 2026-08-21. Refleja el estado **real** en Supabase, no solo lo que hay en `supabase/migrations/`.
+>
+> **Nota (Sprint 13, 2026-09-01):** este documento no se actualizó completo desde el
+> Sprint 5 — no cubre `reservas`/`horarios_disponibles` (Sprint 8), `paquetes`
+> (Sprint 9), `superadmins` (Sprint 12), etc. (ver esas migraciones directamente en
+> `supabase/migrations/`). Solo se actualizaron acá las tablas que tocó el Sprint 13:
+> `planes` (nueva), `registros_rutina` (nueva) y las columnas nuevas/eliminadas de
+> `alumnos`.
 
 ## ⚠️ Drift detectado vs. migraciones locales
 
@@ -132,14 +139,70 @@ Enum: `rol_perfil` = `dueño, entrenador`
 | apellidos | text | no | — |
 | email | text | sí | — |
 | telefono | text | sí | — |
-| plan_contratado | text | no | — |
+| plan_id | uuid (FK → `planes.id`, `on delete set null`) | sí | — |
 | fecha_inicio | date | no | `CURRENT_DATE` |
 | activo | boolean | no | `true` |
+| puede_registrar_bitacora | boolean | no | `false` |
 | created_at | timestamptz | no | `now()` |
 | updated_at | timestamptz | no | `now()` (actualizado por trigger `trg_alumnos_updated_at`) |
 
 Constraint único: `(gimnasio_id, rut)` — un RUT no se repite dentro del mismo gimnasio.
 Índice: `idx_alumnos_gimnasio(gimnasio_id)`.
+
+**Sprint 13:** `plan_contratado` (texto libre) se eliminó y se reemplazó por `plan_id`
+(FK a `planes`) — ver migración `0009_catalogo_planes_bitacora.sql`. También agrega
+`puede_registrar_bitacora` (además de las columnas de roles/aprobación/ficha de salud
+de los Sprints 8/9/12 que este documento tampoco cubre todavía, ver nota arriba).
+
+### `planes` — catálogo de planes por gimnasio (Sprint 13)
+
+| Columna | Tipo | Null | Default |
+|---|---|---|---|
+| id | uuid (PK) | no | `gen_random_uuid()` |
+| gimnasio_id | uuid (FK → `gimnasios.id`) | no | — |
+| nombre | text | no | — |
+| nivel | enum `nivel_plan` | no | — |
+| precio | numeric(10,2) | sí | — |
+| dias_por_semana | smallint (check `> 0`) | no | — |
+| fecha_vigencia_desde | date | no | `CURRENT_DATE` |
+| fecha_vigencia_hasta | date (null = vigente indefinido) | sí | — |
+| creado_por | uuid (FK → `perfiles.id`) | sí | — |
+| modificado_por | uuid (FK → `perfiles.id`) | sí | — |
+| created_at | timestamptz | no | `now()` |
+| updated_at | timestamptz | no | `now()` |
+
+Enum: `nivel_plan` = `basico, intermedio, avanzado`. Define cuántos días a la semana
+entrena el alumno — separado de la Rutina (contenido de entrenamiento), sin pantalla
+combinada. `dias_por_semana` alimenta la sugerencia de clases incluidas al registrar
+un pago (`dias_por_semana × 4`) y el tope de reservas del alumno (trigger
+`reservas_check_paquete` sobre `reservas`, ver migración 0009).
+
+### `registros_rutina` — bitácora de sesiones de rutina (Sprint 13)
+
+| Columna | Tipo | Null | Default |
+|---|---|---|---|
+| id | uuid (PK) | no | `gen_random_uuid()` |
+| gimnasio_id | uuid (FK → `gimnasios.id`) | no | — |
+| alumno_id | uuid (FK → `alumnos.id`) | no | — |
+| rutina_id | uuid (FK → `rutinas.id`) | no | — |
+| ejercicio_index | smallint | no | — |
+| ejercicio | text (snapshot del nombre) | no | — |
+| series_planificadas | smallint (snapshot) | sí | — |
+| reps_planificadas | smallint (snapshot) | sí | — |
+| series_realizadas | smallint | sí | — |
+| reps_realizadas | smallint | sí | — |
+| peso_kg | numeric(6,2) | sí | — |
+| fecha | date | no | `CURRENT_DATE` |
+| registrado_por | uuid (FK → `perfiles.id`, null si lo registró el alumno) | sí | — |
+| origen | enum `origen_cambio` (`dueño, alumno`) | no | `'dueño'` |
+| notas | text | sí | — |
+| created_at | timestamptz | no | `now()` |
+
+Una fila por ejercicio dentro de cada sesión. Lo planificado queda "congelado" como
+snapshot al momento del registro (no se reescribe si luego se edita la rutina).
+Índice: `idx_registros_rutina_alumno_fecha(alumno_id, fecha)`. RLS: el alumno solo
+puede insertar sus propias filas con `origen = 'alumno'`, `fecha = current_date` y
+`puede_registrar_bitacora = true` (reforzado en base, no solo en el formulario).
 
 ### `pagos`
 

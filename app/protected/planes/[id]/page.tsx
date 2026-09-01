@@ -1,47 +1,50 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
-import { createAlumno } from "@/app/protected/alumnos/actions";
-import { AlumnoForm } from "@/components/alumnos/alumno-form";
+import { updatePlan } from "@/app/protected/planes/actions";
+import { PlanForm } from "@/components/planes/plan-form";
 import { Card, CardContent } from "@/components/ui/card";
-import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import type { Plan } from "@/lib/types";
 
-export default async function NuevoAlumnoPage() {
-  const perfilData = await getPerfilActual();
-  if (!perfilData) return null; // el layout ya redirige a /auth/login
+export default async function EditarPlanPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
 
   const supabase = await createClient();
-  const { data: planes } = await supabase
+  const { data: plan } = await supabase
     .from("planes")
     .select("*")
-    .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
-    .order("dias_por_semana", { ascending: true });
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!plan) notFound();
+  const p = plan as Plan;
+  const updatePlanConId = updatePlan.bind(null, p.id);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <Link
-          href="/protected/alumnos"
+          href="/protected/planes"
           className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Volver a alumnos
+          Volver a planes
         </Link>
         <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          Panel del dueño
+          Editar plan
         </div>
-        <h2 className="text-2xl">Nuevo alumno</h2>
+        <h2 className="text-2xl">{p.nombre}</h2>
       </div>
 
       <Card>
         <CardContent className="pt-6">
-          <AlumnoForm
-            action={createAlumno}
-            planes={(planes ?? []) as Plan[]}
-            submitLabel="Crear alumno"
-          />
+          <PlanForm action={updatePlanConId} plan={p} submitLabel="Guardar cambios" />
         </CardContent>
       </Card>
     </div>

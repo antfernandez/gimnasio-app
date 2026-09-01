@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { createAvance } from "@/app/protected/avances/actions";
 import { AvanceForm } from "@/components/avances/avance-form";
+import { LineChart } from "@/components/charts/line-chart";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -93,6 +94,14 @@ export default async function AvancesAlumnoPage({
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Historial de avances
           </h3>
+          <div className="mb-6">
+            <LineChart
+              data={historial
+                .filter((av) => av.peso_kg != null)
+                .map((av) => ({ x: av.fecha, y: av.peso_kg! }))}
+              unidad=" kg"
+            />
+          </div>
           {historial.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
               Aún no hay avances registrados para este alumno.

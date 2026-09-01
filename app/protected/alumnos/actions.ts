@@ -17,7 +17,7 @@ type AlumnoInput = {
   email: string | null;
   telefono: string | null;
   fecha_nacimiento: string | null;
-  plan_contratado: string;
+  plan_id: string | null;
   fecha_inicio: string | undefined;
   alergias: string | null;
   enfermedades: string | null;
@@ -33,7 +33,7 @@ function readAlumnoForm(formData: FormData): AlumnoInput {
     email: trim("email") || null,
     telefono: trim("telefono") || null,
     fecha_nacimiento: trim("fecha_nacimiento") || null,
-    plan_contratado: trim("plan_contratado"),
+    plan_id: trim("plan_id") || null,
     fecha_inicio: trim("fecha_inicio") || undefined,
     alergias: trim("alergias") || null,
     enfermedades: trim("enfermedades") || null,
@@ -45,9 +45,6 @@ function readAlumnoForm(formData: FormData): AlumnoInput {
 function validateAlumnoInput(data: AlumnoInput): string | null {
   if (!data.nombres || !data.apellidos) {
     return "Nombres y apellidos son obligatorios.";
-  }
-  if (!data.plan_contratado) {
-    return "Indica el plan contratado.";
   }
   return null;
 }
@@ -136,6 +133,20 @@ export async function setPuedeRegistrarAvances(id: string, valor: boolean) {
 
   if (error) {
     throw new Error("No se pudo actualizar el permiso de avances.");
+  }
+
+  revalidatePath(`/protected/alumnos/${id}`);
+}
+
+export async function setPuedeRegistrarBitacora(id: string, valor: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("alumnos")
+    .update({ puede_registrar_bitacora: valor })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error("No se pudo actualizar el permiso de bitácora.");
   }
 
   revalidatePath(`/protected/alumnos/${id}`);

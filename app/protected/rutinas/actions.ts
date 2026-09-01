@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { buildFilasRegistroRutina } from "@/lib/bitacora";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
-import type { EjercicioRutina } from "@/lib/types";
+import type { EjercicioRutina, Rutina } from "@/lib/types";
 
 export type RutinaFormState = {
   error?: string;
@@ -81,4 +82,60 @@ export async function createRutina(
   revalidatePath("/protected/rutinas");
   revalidatePath(`/protected/rutinas/${alumnoId}`);
   redirect(`/protected/rutinas/${alumnoId}?creada=1`);
+}
+
+export type BitacoraFormState = {
+  error?: string;
+};
+
+/** Sprint 13, Parte C: registro de sesión de bitácora hecho por el dueño/entrenador —
+ * sin restricción de fecha (a diferencia del registro propio del alumno). */
+export async function createRegistroRutina(
+  alumnoId: string,
+  rutinaId: string,
+  _prevState: BitacoraFormState,
+  formData: FormData,
+): Promise<BitacoraFormState> {
+  const fecha = String(formData.get("fecha") ?? "").trim();
+  if (!fecha) {
+    return { error: "Selecciona una fecha." };
+  }
+
+  const perfilData = await getPerfilActual();
+  if (!perfilData) redirect("/auth/login");
+
+  const supabase = await createClient();
+  const { data: rutina } = await supabase
+    .from("rutinas")
+    .select("*")
+    .eq("id", rutinaId)
+    .maybeSingle();
+
+  if (!rutina) {
+    return { error: "No se encontró la rutina." };
+  }
+
+  const filas = buildFilasRegistroRutina((rutina as Rutina).contenido, formData);
+  if (filas.length === 0) {
+    return { error: "Registra al menos un ejercicio de la sesión." };
+  }
+
+  const { error } = await supabase.from("registros_rutina").insert(
+    filas.map((f) => ({
+      gimnasio_id: perfilData.perfil.gimnasio_id,
+      alumno_id: alumnoId,
+      rutina_id: rutinaId,
+      fecha,
+      registrado_por: perfilData.perfil.id,
+      origen: "dueño",
+      ...f,
+    })),
+  );
+
+  if (error) {
+    return { error: "No se pudo registrar la sesión. Intenta de nuevo." };
+  }
+
+  revalidatePath(`/protected/rutinas/${alumnoId}`);
+  redirect(`/protected/rutinas/${alumnoId}?bitacora=1`);
 }

@@ -45,8 +45,7 @@ async function ensureAlumnoLink(
       email: user.email ?? null,
       telefono: (meta.telefono as string | undefined)?.trim() || null,
       fecha_nacimiento: (meta.fecha_nacimiento as string | undefined) || null,
-      plan_contratado:
-        (meta.plan_interes as string | undefined)?.trim() || "Por definir",
+      plan_id: (meta.plan_id as string | undefined) || null,
       alergias: (meta.alergias as string | undefined)?.trim() || null,
       enfermedades: (meta.enfermedades as string | undefined)?.trim() || null,
       lesiones: (meta.molestias as string | undefined)?.trim() || null,

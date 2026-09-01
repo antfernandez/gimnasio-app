@@ -6,11 +6,10 @@ import type { AlumnoFormState } from "@/app/protected/alumnos/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { formatRut } from "@/lib/rut";
-import type { Alumno } from "@/lib/types";
-
-const PLANES_SUGERIDOS = ["Mensual", "Trimestral", "Semestral", "Anual"];
+import type { Alumno, Plan } from "@/lib/types";
 
 type Props = {
   action: (
@@ -18,10 +17,11 @@ type Props = {
     formData: FormData,
   ) => Promise<AlumnoFormState>;
   alumno?: Alumno;
+  planes: Plan[];
   submitLabel: string;
 };
 
-export function AlumnoForm({ action, alumno, submitLabel }: Props) {
+export function AlumnoForm({ action, alumno, planes, submitLabel }: Props) {
   const [state, formAction, isPending] = useActionState(action, {});
   const hoy = new Date().toISOString().slice(0, 10);
 
@@ -47,20 +47,15 @@ export function AlumnoForm({ action, alumno, submitLabel }: Props) {
           )}
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="plan_contratado">Plan contratado</Label>
-          <Input
-            id="plan_contratado"
-            name="plan_contratado"
-            placeholder="Ej. Mensual"
-            list="planes-sugeridos"
-            defaultValue={alumno?.plan_contratado}
-            required
-          />
-          <datalist id="planes-sugeridos">
-            {PLANES_SUGERIDOS.map((plan) => (
-              <option key={plan} value={plan} />
+          <Label htmlFor="plan_id">Plan</Label>
+          <Select id="plan_id" name="plan_id" defaultValue={alumno?.plan_id ?? ""}>
+            <option value="">— Sin plan asignado —</option>
+            {planes.map((plan) => (
+              <option key={plan.id} value={plan.id}>
+                {plan.nombre} ({plan.dias_por_semana} días/semana)
+              </option>
             ))}
-          </datalist>
+          </Select>
         </div>
 
         <div className="grid gap-2">

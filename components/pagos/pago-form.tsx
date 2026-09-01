@@ -27,12 +27,16 @@ type Props = {
     state: PagoFormState,
     formData: FormData,
   ) => Promise<PagoFormState>;
+  /** Sprint 13: `dias_por_semana` del plan del alumno, si tiene uno asignado —
+   * alimenta la sugerencia de clases incluidas (días × 4). */
+  diasPorSemana?: number | null;
 };
 
-export function PagoForm({ action }: Props) {
+export function PagoForm({ action, diasPorSemana }: Props) {
   const [state, formAction, isPending] = useActionState(action, {});
   const [crearPaquete, setCrearPaquete] = useState(false);
   const hoy = new Date().toISOString().slice(0, 10);
+  const clasesSugeridas = diasPorSemana ? diasPorSemana * 4 : undefined;
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
@@ -117,11 +121,13 @@ export function PagoForm({ action }: Props) {
               min="1"
               step="1"
               placeholder="8"
+              defaultValue={clasesSugeridas}
               required={crearPaquete}
             />
             <p className="text-xs text-muted-foreground">
-              El paquete queda vigente por 1 mes corrido desde la fecha de pago (no un
-              ciclo calendario fijo).
+              {clasesSugeridas
+                ? `Sugerido según el plan del alumno (${diasPorSemana} días/semana × 4). Editable.`
+                : "El paquete queda vigente por 1 mes corrido desde la fecha de pago (no un ciclo calendario fijo)."}
             </p>
           </div>
         )}

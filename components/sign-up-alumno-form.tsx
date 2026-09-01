@@ -10,11 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
 import { parseRut } from "@/lib/rut";
 import { cn } from "@/lib/utils";
-import type { GimnasioPublico } from "@/lib/types";
+import type { GimnasioPublico, PlanPublico } from "@/lib/types";
 
 export function SignUpAlumnoForm({
   className,
@@ -32,7 +33,8 @@ export function SignUpAlumnoForm({
   const [apellidos, setApellidos] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [telefono, setTelefono] = useState("");
-  const [planInteres, setPlanInteres] = useState("");
+  const [planesGimnasio, setPlanesGimnasio] = useState<PlanPublico[]>([]);
+  const [planId, setPlanId] = useState("");
   const [email, setEmail] = useState("");
   const [alergias, setAlergias] = useState("");
   const [enfermedades, setEnfermedades] = useState("");
@@ -58,12 +60,17 @@ export function SignUpAlumnoForm({
     return () => clearTimeout(timeout);
   }, [termino, paso]);
 
-  const handleContinuar = () => {
+  const handleContinuar = async () => {
     if (!gimnasio) {
       setError("Elige tu gimnasio para continuar.");
       return;
     }
     setError(null);
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc("listar_planes_publico", {
+      p_gimnasio_id: gimnasio.id,
+    });
+    if (!error) setPlanesGimnasio((data ?? []) as PlanPublico[]);
     setPaso(2);
   };
 
@@ -107,7 +114,7 @@ export function SignUpAlumnoForm({
             apellidos: apellidos.trim(),
             fecha_nacimiento: fechaNacimiento || null,
             telefono: telefono.trim() || null,
-            plan_interes: planInteres.trim() || null,
+            plan_id: planId || null,
             alergias: alergias.trim() || null,
             enfermedades: enfermedades.trim() || null,
             molestias: molestias.trim() || null,
@@ -239,15 +246,24 @@ export function SignUpAlumnoForm({
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="plan-interes">
-                        Plan de interés (opcional)
-                      </Label>
-                      <Input
-                        id="plan-interes"
-                        placeholder="Ej. Mensual"
-                        value={planInteres}
-                        onChange={(e) => setPlanInteres(e.target.value)}
-                      />
+                      <Label htmlFor="plan-id">Plan (opcional)</Label>
+                      <Select
+                        id="plan-id"
+                        value={planId}
+                        onChange={(e) => setPlanId(e.target.value)}
+                        disabled={planesGimnasio.length === 0}
+                      >
+                        <option value="">
+                          {planesGimnasio.length === 0
+                            ? "Tu estudio aún no configuró planes"
+                            : "— Elige un plan —"}
+                        </option>
+                        {planesGimnasio.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.nombre} ({p.dias_por_semana} días/semana)
+                          </option>
+                        ))}
+                      </Select>
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="nombres">Nombres</Label>
