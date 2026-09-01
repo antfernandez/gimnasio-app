@@ -7,7 +7,6 @@ import {
   Dumbbell,
   Globe,
   LayoutDashboard,
-  TrendingUp,
   UserCheck,
   Users,
 } from "lucide-react";
@@ -24,7 +23,6 @@ const items = [
   { href: "/protected/turnos", label: "Turnos", icon: CalendarDays },
   { href: "/protected/pagos", label: "Pagos", icon: CreditCard },
   { href: "/protected/rutinas", label: "Rutinas", icon: Dumbbell },
-  { href: "/protected/avances", label: "Avances", icon: TrendingUp },
   { href: "/protected/sitio", label: "Sitio público", icon: Globe },
 ];
 

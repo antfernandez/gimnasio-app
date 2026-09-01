@@ -46,22 +46,30 @@ export async function createPago(
     return { error: "El fin del período no puede ser anterior al inicio." };
   }
 
-  // Sprint 9: un pago puede originar un paquete de clases nuevo (checkbox opcional en
-  // el formulario). El vencimiento del paquete lo calcula la base (1 mes corrido desde
-  // `fecha_inicio`, no un ciclo calendario) — acá solo se valida el n° de clases.
-  const crearPaquete = trim("crear_paquete") === "on";
-  let clasesIncluidas: number | null = null;
-  if (crearPaquete) {
-    clasesIncluidas = Number(trim("clases_incluidas"));
-    if (!Number.isInteger(clasesIncluidas) || clasesIncluidas <= 0) {
-      return { error: "Ingresa un número de clases válido para el paquete." };
-    }
-  }
+  // Sprint 14: el pago elige el plan del próximo período en vez de tipear un n° de
+  // clases — el paquete (si el plan viene con valor) se crea con
+  // `dias_por_semana × 4`, mismo cálculo sugerido del Sprint 13. Plan vacío = pago
+  // que no renueva período (ej. un ajuste), sin paquete ni cambio de plan.
+  const planId = trim("plan_id") || null;
 
   const perfilData = await getPerfilActual();
   if (!perfilData) redirect("/auth/login");
 
   const supabase = await createClient();
+
+  let clasesIncluidas: number | null = null;
+  if (planId) {
+    const { data: plan } = await supabase
+      .from("planes")
+      .select("dias_por_semana")
+      .eq("id", planId)
+      .maybeSingle();
+    if (!plan) {
+      return { error: "El plan seleccionado ya no existe. Elige otro." };
+    }
+    clasesIncluidas = (plan as { dias_por_semana: number }).dias_por_semana * 4;
+  }
+
   const { data: pago, error } = await supabase
     .from("pagos")
     .insert({
@@ -72,6 +80,7 @@ export async function createPago(
       metodo,
       periodo_desde: periodoDesde,
       periodo_hasta: periodoHasta,
+      plan_id: planId,
     })
     .select("id")
     .single();
@@ -80,7 +89,7 @@ export async function createPago(
     return { error: "No se pudo registrar el pago. Intenta de nuevo." };
   }
 
-  if (crearPaquete && clasesIncluidas) {
+  if (planId && clasesIncluidas) {
     const { error: errorPaquete } = await supabase.from("paquetes").insert({
       gimnasio_id: perfilData.perfil.gimnasio_id,
       alumno_id: alumnoId,
@@ -94,11 +103,31 @@ export async function createPago(
           "El pago se registró, pero no se pudo crear el paquete de clases. Créalo manualmente.",
       };
     }
+
+    const { data: alumnoActual } = await supabase
+      .from("alumnos")
+      .select("plan_id")
+      .eq("id", alumnoId)
+      .maybeSingle();
+    if ((alumnoActual as { plan_id: string | null } | null)?.plan_id !== planId) {
+      const { error: errorPlan } = await supabase
+        .from("alumnos")
+        .update({ plan_id: planId })
+        .eq("id", alumnoId);
+      if (errorPlan) {
+        return {
+          error:
+            "El pago y el paquete se registraron, pero no se pudo actualizar el plan del alumno. Actualízalo manualmente.",
+        };
+      }
+    }
   }
 
   revalidatePath("/protected/pagos");
   revalidatePath(`/protected/pagos/${alumnoId}`);
   revalidatePath("/protected/alumnos");
+  revalidatePath(`/protected/alumnos/${alumnoId}`);
+  revalidatePath("/protected/planes");
   revalidatePath("/protected");
   redirect(`/protected/pagos/${alumnoId}?registrado=1`);
 }

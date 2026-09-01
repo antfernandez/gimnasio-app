@@ -4,10 +4,10 @@ import { useActionState, useState } from "react";
 
 import type { PagoFormState } from "@/app/protected/pagos/actions";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import type { Plan } from "@/lib/types";
 
 const METODOS: { value: string; label: string }[] = [
   { value: "efectivo", label: "Efectivo" },
@@ -27,16 +27,16 @@ type Props = {
     state: PagoFormState,
     formData: FormData,
   ) => Promise<PagoFormState>;
-  /** Sprint 13: `dias_por_semana` del plan del alumno, si tiene uno asignado —
-   * alimenta la sugerencia de clases incluidas (días × 4). */
-  diasPorSemana?: number | null;
+  /** Sprint 14: planes vigentes del gimnasio, para elegir el plan del próximo
+   * período al registrar el pago. */
+  planes: Plan[];
+  /** Plan que el alumno tiene contratado hoy — preseleccionado por defecto. */
+  planActualId: string | null;
 };
 
-export function PagoForm({ action, diasPorSemana }: Props) {
+export function PagoForm({ action, planes, planActualId }: Props) {
   const [state, formAction, isPending] = useActionState(action, {});
-  const [crearPaquete, setCrearPaquete] = useState(false);
   const hoy = new Date().toISOString().slice(0, 10);
-  const clasesSugeridas = diasPorSemana ? diasPorSemana * 4 : undefined;
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
@@ -99,39 +99,7 @@ export function PagoForm({ action, diasPorSemana }: Props) {
         </div>
       </div>
 
-      <div className="rounded-[9px] border border-border bg-secondary/30 p-4">
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="crear_paquete"
-            name="crear_paquete"
-            checked={crearPaquete}
-            onCheckedChange={(v) => setCrearPaquete(v === true)}
-          />
-          <Label htmlFor="crear_paquete" className="cursor-pointer">
-            Este pago origina un paquete de clases nuevo
-          </Label>
-        </div>
-        {crearPaquete && (
-          <div className="mt-4 grid gap-2 sm:max-w-[220px]">
-            <Label htmlFor="clases_incluidas">N° de clases incluidas</Label>
-            <Input
-              id="clases_incluidas"
-              name="clases_incluidas"
-              type="number"
-              min="1"
-              step="1"
-              placeholder="8"
-              defaultValue={clasesSugeridas}
-              required={crearPaquete}
-            />
-            <p className="text-xs text-muted-foreground">
-              {clasesSugeridas
-                ? `Sugerido según el plan del alumno (${diasPorSemana} días/semana × 4). Editable.`
-                : "El paquete queda vigente por 1 mes corrido desde la fecha de pago (no un ciclo calendario fijo)."}
-            </p>
-          </div>
-        )}
-      </div>
+      <PlanField planes={planes} planActualId={planActualId} />
 
       {state.error && (
         <p className="text-sm text-destructive">{state.error}</p>
@@ -143,5 +111,42 @@ export function PagoForm({ action, diasPorSemana }: Props) {
         </Button>
       </div>
     </form>
+  );
+}
+
+function PlanField({
+  planes,
+  planActualId,
+}: {
+  planes: Plan[];
+  planActualId: string | null;
+}) {
+  const [planId, setPlanId] = useState(planActualId ?? "");
+  const planSeleccionado = planes.find((p) => p.id === planId) ?? null;
+
+  return (
+    <div className="rounded-[9px] border border-border bg-secondary/30 p-4">
+      <div className="grid gap-2 sm:max-w-[280px]">
+        <Label htmlFor="plan_id">Plan para el próximo período</Label>
+        <Select
+          id="plan_id"
+          name="plan_id"
+          value={planId}
+          onChange={(e) => setPlanId(e.target.value)}
+        >
+          <option value="">— No generar paquete este pago —</option>
+          {planes.map((plan) => (
+            <option key={plan.id} value={plan.id}>
+              {plan.nombre} ({plan.dias_por_semana} días/semana)
+            </option>
+          ))}
+        </Select>
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground">
+        {planSeleccionado
+          ? `Genera un paquete de ${planSeleccionado.dias_por_semana * 4} clases (${planSeleccionado.dias_por_semana} días/semana × 4). Si es distinto del plan actual del alumno, también actualiza su plan contratado.`
+          : "Este pago no generará ni actualizará un paquete de clases."}
+      </p>
+    </div>
   );
 }

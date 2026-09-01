@@ -63,6 +63,26 @@ function readPlanForm(formData: FormData): PlanInput | { error: string } {
   };
 }
 
+/** Validación de nombre único (Sprint 14, Parte D): case/espacio-insensible, contra
+ * los demás planes del gimnasio — reforzada también a nivel de base (índice único
+ * `planes_nombre_unq`, migración 0010), acá solo evita el viaje redondo del error
+ * de la base cuando es previsible. */
+async function nombreDuplicado(
+  gimnasioId: string,
+  nombre: string,
+  excluirId?: string,
+): Promise<boolean> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("planes")
+    .select("id")
+    .eq("gimnasio_id", gimnasioId)
+    .ilike("nombre", nombre.trim());
+  if (excluirId) query = query.neq("id", excluirId);
+  const { data } = await query;
+  return (data ?? []).length > 0;
+}
+
 export async function createPlan(
   _prevState: PlanFormState,
   formData: FormData,
@@ -73,6 +93,10 @@ export async function createPlan(
   const perfilData = await getPerfilActual();
   if (!perfilData) redirect("/auth/login");
 
+  if (await nombreDuplicado(perfilData.perfil.gimnasio_id, data.nombre)) {
+    return { error: "Ya existe un plan con ese nombre." };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.from("planes").insert({
     gimnasio_id: perfilData.perfil.gimnasio_id,
@@ -81,6 +105,9 @@ export async function createPlan(
   });
 
   if (error) {
+    if (error.code === "23505") {
+      return { error: "Ya existe un plan con ese nombre." };
+    }
     return { error: "No se pudo guardar el plan. Intenta de nuevo." };
   }
 
@@ -100,6 +127,10 @@ export async function updatePlan(
   const perfilData = await getPerfilActual();
   if (!perfilData) redirect("/auth/login");
 
+  if (await nombreDuplicado(perfilData.perfil.gimnasio_id, data.nombre, id)) {
+    return { error: "Ya existe un plan con ese nombre." };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("planes")
@@ -107,6 +138,9 @@ export async function updatePlan(
     .eq("id", id);
 
   if (error) {
+    if (error.code === "23505") {
+      return { error: "Ya existe un plan con ese nombre." };
+    }
     return { error: "No se pudo guardar el plan. Intenta de nuevo." };
   }
 

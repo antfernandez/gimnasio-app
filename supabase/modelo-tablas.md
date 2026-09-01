@@ -8,6 +8,10 @@
 > `supabase/migrations/`). Solo se actualizaron acá las tablas que tocó el Sprint 13:
 > `planes` (nueva), `registros_rutina` (nueva) y las columnas nuevas/eliminadas de
 > `alumnos`.
+>
+> **Nota (Sprint 14, 2026-09-01):** se agregó `rutina_plantillas` (catálogo,
+> nueva), y las columnas `rutinas.plantilla_id`, `pagos.plan_id` y el índice único
+> `planes_nombre_unq` — ver migración `0010_ajustes_post_sprint_13.sql`.
 
 ## ⚠️ Drift detectado vs. migraciones locales
 
@@ -173,9 +177,37 @@ de los Sprints 8/9/12 que este documento tampoco cubre todavía, ver nota arriba
 
 Enum: `nivel_plan` = `basico, intermedio, avanzado`. Define cuántos días a la semana
 entrena el alumno — separado de la Rutina (contenido de entrenamiento), sin pantalla
-combinada. `dias_por_semana` alimenta la sugerencia de clases incluidas al registrar
+combinada. `dias_por_semana` determina las clases incluidas del paquete que origina
 un pago (`dias_por_semana × 4`) y el tope de reservas del alumno (trigger
 `reservas_check_paquete` sobre `reservas`, ver migración 0009).
+
+**Sprint 14:** nombre único por gimnasio (case/espacio-insensible), reforzado con el
+índice `unique index planes_nombre_unq on planes (gimnasio_id, lower(trim(nombre)))`.
+El pago que renueva un período ahora elige el plan directamente (en vez de tipear un
+n° de clases) — si el plan elegido difiere del que el alumno tiene hoy, el mismo pago
+actualiza `alumnos.plan_id` (upgrade/downgrade).
+
+### `rutina_plantillas` — catálogo de plantillas de rutina por gimnasio (Sprint 14)
+
+| Columna | Tipo | Null | Default |
+|---|---|---|---|
+| id | uuid (PK) | no | `gen_random_uuid()` |
+| gimnasio_id | uuid (FK → `gimnasios.id`) | no | — |
+| nombre | text | no | — |
+| categoria | enum `categoria_rutina_plantilla` | no | `'general'` |
+| objetivo | text | sí | — |
+| contenido | jsonb (array de ejercicios, mismo shape que `rutinas.contenido`) | no | `'[]'` |
+| creado_por | uuid (FK → `perfiles.id`) | sí | — |
+| modificado_por | uuid (FK → `perfiles.id`) | sí | — |
+| created_at | timestamptz | no | `now()` |
+| updated_at | timestamptz | no | `now()` |
+
+Enum: `categoria_rutina_plantilla` = `musculacion, cardio, general`. Es el catálogo
+reutilizable que arma el dueño una vez — sin policy de alumno, no se expone al
+portal. Asignar una plantilla a un alumno (desde su ficha, Alumnos → Editar) copia
+`contenido` como snapshot a una nueva fila de `rutinas` con `plantilla_id` seteado
+(ver abajo) — editar la plantilla después no reescribe el historial de alumnos que
+ya la tuvieron asignada.
 
 ### `registros_rutina` — bitácora de sesiones de rutina (Sprint 13)
 
@@ -221,7 +253,11 @@ puede insertar sus propias filas con `origen = 'alumno'`, `fecha = current_date`
 Enum: `metodo_pago` = `efectivo, transferencia, tarjeta, otro`
 Índice: `idx_pagos_alumno_periodo(alumno_id, periodo_hasta)` — usado por la vista de estado de pago.
 
-### `rutinas`
+**Sprint 14:** agrega `plan_id` (uuid, FK → `planes.id`, `on delete set null`,
+nullable) — snapshot del plan elegido en ese pago; `null` para pagos que no
+originan un paquete (ej. un ajuste).
+
+### `rutinas` — registro de asignación (plantilla copiada a un alumno)
 
 | Columna | Tipo | Null | Default |
 |---|---|---|---|
@@ -229,6 +265,7 @@ Enum: `metodo_pago` = `efectivo, transferencia, tarjeta, otro`
 | gimnasio_id | uuid (FK → `gimnasios.id`) | no | — |
 | alumno_id | uuid (FK → `alumnos.id`) | no | — |
 | creado_por | uuid (FK → `perfiles.id`) | sí | — |
+| plantilla_id | uuid (FK → `rutina_plantillas.id`, `on delete set null`) | sí | — |
 | nombre | text | no | — |
 | objetivo | text | sí | — |
 | contenido | jsonb (array de ejercicios) | no | `'[]'` |
@@ -238,6 +275,13 @@ Enum: `metodo_pago` = `efectivo, transferencia, tarjeta, otro`
 
 Índice: `idx_rutinas_alumno_activa(alumno_id, activa)`.
 Forma de `contenido` observada en datos reales: `[{ ejercicio, series, reps, notas }]`.
+
+**Sprint 14:** `rutinas` deja de ser donde el dueño arma el contenido directamente —
+ahora es el registro de **asignación** de una plantilla de `rutina_plantillas` a un
+alumno en una fecha (snapshot de `contenido`, igual que antes). `plantilla_id` es
+trazabilidad, `null` para rutinas creadas antes de este sprint (quedan "sin
+plantilla de origen", sin perder su snapshot). La bitácora (`registros_rutina`) y el
+portal del alumno siguen leyendo `rutinas` sin cambios.
 
 ### `avances` — seguimiento físico del alumno
 

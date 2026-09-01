@@ -34,14 +34,27 @@ export default async function PlanesPage({
   if (!perfilData) return null; // el layout ya redirige a /auth/login
 
   const supabase = await createClient();
-  const { data: planes } = await supabase
-    .from("planes")
-    .select("*")
-    .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
-    .order("dias_por_semana", { ascending: true });
+  const [{ data: planes }, { data: alumnos }] = await Promise.all([
+    supabase
+      .from("planes")
+      .select("*")
+      .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
+      .order("dias_por_semana", { ascending: true }),
+    supabase
+      .from("alumnos")
+      .select("plan_id, activo")
+      .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
+      .eq("activo", true),
+  ]);
 
   const lista = (planes ?? []) as Plan[];
   const hoy = new Date().toISOString().slice(0, 10);
+
+  const alumnosPorPlan = new Map<string, number>();
+  for (const { plan_id } of (alumnos ?? []) as { plan_id: string | null }[]) {
+    if (!plan_id) continue;
+    alumnosPorPlan.set(plan_id, (alumnosPorPlan.get(plan_id) ?? 0) + 1);
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -87,6 +100,7 @@ export default async function PlanesPage({
                   <TableHead>Días/semana</TableHead>
                   <TableHead>Precio</TableHead>
                   <TableHead>Vigencia</TableHead>
+                  <TableHead>Alumnos</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -121,6 +135,7 @@ export default async function PlanesPage({
                           </Badge>
                         </div>
                       </TableCell>
+                      <TableCell>{alumnosPorPlan.get(plan.id) ?? 0}</TableCell>
                       <TableCell className="text-right">
                         <Button asChild variant="outline" size="sm">
                           <Link href={`/protected/planes/${plan.id}`}>Editar</Link>

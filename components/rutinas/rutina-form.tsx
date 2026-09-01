@@ -7,23 +7,45 @@ import type { RutinaFormState } from "@/app/protected/rutinas/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import type { RutinaPlantilla } from "@/lib/types";
+
+const CATEGORIAS: { value: string; label: string }[] = [
+  { value: "musculacion", label: "Musculación" },
+  { value: "cardio", label: "Cardio" },
+  { value: "general", label: "General" },
+];
 
 type Props = {
   action: (
     state: RutinaFormState,
     formData: FormData,
   ) => Promise<RutinaFormState>;
+  plantilla?: RutinaPlantilla;
+  submitLabel: string;
 };
 
 let nextRowId = 1;
 
-export function RutinaForm({ action }: Props) {
-  const [state, formAction, isPending] = useActionState(action, {});
-  const [filas, setFilas] = useState([{ id: nextRowId++ }]);
-  const hoy = new Date().toISOString().slice(0, 10);
+type Fila = {
+  id: number;
+  ejercicio: string;
+  series: number | string;
+  reps: number | string;
+  notas: string;
+};
 
-  const agregarFila = () => setFilas((f) => [...f, { id: nextRowId++ }]);
+export function RutinaForm({ action, plantilla, submitLabel }: Props) {
+  const [state, formAction, isPending] = useActionState(action, {});
+  const [filas, setFilas] = useState<Fila[]>(
+    plantilla && plantilla.contenido.length > 0
+      ? plantilla.contenido.map((ej) => ({ id: nextRowId++, ...ej }))
+      : [{ id: nextRowId++, ejercicio: "", series: "", reps: "", notas: "" }],
+  );
+
+  const agregarFila = () =>
+    setFilas((f) => [...f, { id: nextRowId++, ejercicio: "", series: "", reps: "", notas: "" }]);
   const quitarFila = (id: number) =>
     setFilas((f) => (f.length > 1 ? f.filter((fila) => fila.id !== id) : f));
 
@@ -31,32 +53,39 @@ export function RutinaForm({ action }: Props) {
     <form action={formAction} className="flex flex-col gap-6">
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="grid gap-2">
-          <Label htmlFor="nombre">Nombre de la rutina</Label>
+          <Label htmlFor="nombre">Nombre de la plantilla</Label>
           <Input
             id="nombre"
             name="nombre"
-            placeholder="Ej. Rutina fuerza — nivel 1"
+            placeholder="Ej. Musculación — full body"
+            defaultValue={plantilla?.nombre}
             required
             autoFocus
           />
         </div>
         <div className="grid gap-2">
+          <Label htmlFor="categoria">Categoría</Label>
+          <Select
+            id="categoria"
+            name="categoria"
+            defaultValue={plantilla?.categoria ?? "general"}
+            required
+          >
+            {CATEGORIAS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="grid gap-2 sm:col-span-2">
           <Label htmlFor="objetivo">Objetivo</Label>
           <Textarea
             id="objetivo"
             name="objetivo"
             placeholder="Ej. Hipertrofia, baja de peso…"
+            defaultValue={plantilla?.objetivo ?? ""}
             className="min-h-[44px]"
-          />
-        </div>
-        <div className="grid gap-2 sm:max-w-[240px]">
-          <Label htmlFor="fecha_asignacion">Fecha de asignación</Label>
-          <Input
-            id="fecha_asignacion"
-            name="fecha_asignacion"
-            type="date"
-            defaultValue={hoy}
-            required
           />
         </div>
       </div>
@@ -74,25 +103,42 @@ export function RutinaForm({ action }: Props) {
                   Ejercicio
                 </span>
               )}
-              <Input name="ejercicio" placeholder="Sentadilla" required />
+              <Input
+                name="ejercicio"
+                placeholder="Sentadilla"
+                defaultValue={fila.ejercicio}
+                required
+              />
             </div>
             <div className="grid gap-1.5">
               {i === 0 && (
                 <span className="text-xs text-muted-foreground">Series</span>
               )}
-              <Input name="series" type="number" min="1" placeholder="4" />
+              <Input
+                name="series"
+                type="number"
+                min="1"
+                placeholder="4"
+                defaultValue={fila.series || undefined}
+              />
             </div>
             <div className="grid gap-1.5">
               {i === 0 && (
                 <span className="text-xs text-muted-foreground">Reps</span>
               )}
-              <Input name="reps" type="number" min="1" placeholder="12" />
+              <Input
+                name="reps"
+                type="number"
+                min="1"
+                placeholder="12"
+                defaultValue={fila.reps || undefined}
+              />
             </div>
             <div className="grid gap-1.5">
               {i === 0 && (
                 <span className="text-xs text-muted-foreground">Notas</span>
               )}
-              <Input name="notas" placeholder="Opcional" />
+              <Input name="notas" placeholder="Opcional" defaultValue={fila.notas} />
             </div>
             <div className="flex items-end">
               <Button
@@ -126,7 +172,7 @@ export function RutinaForm({ action }: Props) {
 
       <div className="flex gap-3">
         <Button type="submit" size="lg" disabled={isPending}>
-          {isPending ? "Guardando…" : "Asignar rutina"}
+          {isPending ? "Guardando…" : submitLabel}
         </Button>
       </div>
     </form>

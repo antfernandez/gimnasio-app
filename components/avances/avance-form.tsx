@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 
-import type { AvanceFormState } from "@/app/protected/avances/actions";
+import type { AvanceFormState } from "@/app/protected/alumnos/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

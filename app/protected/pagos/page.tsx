@@ -1,8 +1,6 @@
 import Link from "next/link";
 
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
-import { EstadoPaqueteBadge } from "@/components/pagos/estado-paquete-badge";
-import { MercadoPagoToggle } from "@/components/pagos/mercado-pago-toggle";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,7 +14,9 @@ import {
 import { formatFecha } from "@/lib/format";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
-import type { EstadoPagoAlumno, EstadoPaqueteAlumno, Gimnasio } from "@/lib/types";
+import type { Alumno, EstadoPagoAlumno } from "@/lib/types";
+
+type AlumnoConPlan = Pick<Alumno, "id"> & { plan: { nombre: string } | null };
 
 export default async function PagosPage({
   searchParams,
@@ -42,26 +42,19 @@ export default async function PagosPage({
     query = query.or(`nombres.ilike.%${qSafe}%,apellidos.ilike.%${qSafe}%`);
   }
 
-  const [{ data }, { data: gimnasio }, { data: paquetes }] = await Promise.all([
+  const [{ data }, { data: alumnosConPlan }] = await Promise.all([
     query,
     supabase
-      .from("gimnasios")
-      .select("*")
-      .eq("id", perfilData.perfil.gimnasio_id)
-      .single(),
-    supabase
-      .from("v_estado_paquetes_alumnos")
-      .select("alumno_id, estado_paquete")
+      .from("alumnos")
+      .select("*, plan:planes(nombre)")
       .eq("gimnasio_id", perfilData.perfil.gimnasio_id),
   ]);
   const lista = ((data ?? []) as EstadoPagoAlumno[]).sort((a, b) => {
     const orden = { atrasado: 0, sin_pagos: 1, al_dia: 2 };
     return orden[a.estado_pago] - orden[b.estado_pago];
   });
-  const estadoPaquetePorAlumno = new Map(
-    ((paquetes ?? []) as Pick<EstadoPaqueteAlumno, "alumno_id" | "estado_paquete">[]).map(
-      (p) => [p.alumno_id, p.estado_paquete],
-    ),
+  const planPorAlumno = new Map(
+    ((alumnosConPlan ?? []) as AlumnoConPlan[]).map((a) => [a.id, a.plan?.nombre ?? null]),
   );
 
   return (
@@ -72,24 +65,6 @@ export default async function PagosPage({
         </div>
         <h2 className="text-2xl">Pagos</h2>
       </div>
-
-      <Card>
-        <CardContent className="flex flex-col gap-2 pt-6">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Medios de pago
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Efectivo, transferencia y tarjeta ya están disponibles al registrar un pago.
-            Mercado Pago es una opción configurable, no obligatoria — el cobro
-            automático llega más adelante; por ahora esto solo guarda tu preferencia.
-          </p>
-          <div className="mt-2">
-            <MercadoPagoToggle
-              habilitado={((gimnasio as Gimnasio | null)?.mercado_pago_habilitado) ?? false}
-            />
-          </div>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardContent className="pt-6">
@@ -117,7 +92,7 @@ export default async function PagosPage({
                   <TableHead>Alumno</TableHead>
                   <TableHead>Vencimiento</TableHead>
                   <TableHead>Estado</TableHead>
-                  <TableHead>Paquete</TableHead>
+                  <TableHead>Plan</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -140,13 +115,7 @@ export default async function PagosPage({
                     <TableCell>
                       <EstadoPagoBadge estado={row.estado_pago} />
                     </TableCell>
-                    <TableCell>
-                      {estadoPaquetePorAlumno.has(row.alumno_id) && (
-                        <EstadoPaqueteBadge
-                          estado={estadoPaquetePorAlumno.get(row.alumno_id)!}
-                        />
-                      )}
-                    </TableCell>
+                    <TableCell>{planPorAlumno.get(row.alumno_id) ?? "—"}</TableCell>
                     <TableCell className="text-right">
                       <Link
                         href={`/protected/pagos/${row.alumno_id}`}

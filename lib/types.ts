@@ -115,6 +115,9 @@ export interface Pago {
   metodo: MetodoPago;
   periodo_desde: string;
   periodo_hasta: string;
+  /** Sprint 14: snapshot del plan elegido en ese pago — `null` para pagos que no
+   * generan paquete (ej. un ajuste). */
+  plan_id: string | null;
   created_at: string;
 }
 
@@ -184,6 +187,24 @@ export interface EjercicioRutina {
   notas: string;
 }
 
+/** Sprint 14: catálogo de plantillas de rutina por gimnasio, reutilizable entre
+ * alumnos — separado de `Rutina`, que sigue siendo el registro de asignación
+ * (snapshot copiado de una plantilla a un alumno en una fecha). */
+export type CategoriaRutinaPlantilla = "musculacion" | "cardio" | "general";
+
+export interface RutinaPlantilla {
+  id: string;
+  gimnasio_id: string;
+  nombre: string;
+  categoria: CategoriaRutinaPlantilla;
+  objetivo: string | null;
+  contenido: EjercicioRutina[];
+  creado_por: string | null;
+  modificado_por: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Rutina {
   id: string;
   gimnasio_id: string;
@@ -194,6 +215,9 @@ export interface Rutina {
   contenido: EjercicioRutina[];
   fecha_asignacion: string;
   activa: boolean;
+  /** Sprint 14: trazabilidad de qué plantilla originó esta asignación — `null`
+   * para rutinas creadas antes de este sprint o sin plantilla de origen. */
+  plantilla_id: string | null;
   created_at: string;
 }
 
