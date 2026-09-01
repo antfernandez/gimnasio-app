@@ -41,22 +41,27 @@ export function SitioPublicoView({
       className="min-h-svh bg-[var(--sitio-bg)] font-sans text-[var(--sitio-text)]"
     >
       <header className="border-b border-[var(--sitio-line)] px-6 py-5">
-        <div className="mx-auto flex max-w-5xl items-center justify-between">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
           <span className="text-lg font-bold">{nombreGimnasio}</span>
-          {c.contacto.whatsapp && (
-            <a
-              href={waHref(c.contacto.whatsapp)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full px-4 py-2 text-sm font-bold"
-              style={{
-                backgroundColor: "var(--sitio-accent)",
-                color: "var(--sitio-accent-ink)",
-              }}
-            >
-              Escríbenos
+          <div className="flex items-center gap-4">
+            <a href="/auth/login" className="text-sm underline underline-offset-4">
+              Iniciar sesión
             </a>
-          )}
+            {c.contacto.whatsapp && (
+              <a
+                href={waHref(c.contacto.whatsapp)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-full px-4 py-2 text-sm font-bold"
+                style={{
+                  backgroundColor: "var(--sitio-accent)",
+                  color: "var(--sitio-accent-ink)",
+                }}
+              >
+                Escríbenos
+              </a>
+            )}
+          </div>
         </div>
       </header>
 

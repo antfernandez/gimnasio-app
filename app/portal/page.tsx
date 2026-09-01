@@ -47,6 +47,45 @@ export default async function PortalPage() {
   const alumno = await getAlumnoActual();
   if (!alumno) return null; // el layout ya redirige a /auth/login
 
+  if (alumno.estado_aprobacion !== "aprobado") {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            Portal del alumno
+          </div>
+          <h2 className="text-2xl">
+            Hola, {alumno.nombres} {alumno.apellidos}
+          </h2>
+        </div>
+        <Card>
+          <CardContent className="py-10 text-center">
+            {alumno.estado_aprobacion === "pendiente" ? (
+              <>
+                <p className="text-base font-semibold text-foreground">
+                  Tu solicitud está pendiente de aprobación
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Tu estudio todavía no aprueba tu registro. Cuando lo haga vas a
+                  poder reservar turnos y ver tu paquete acá.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-base font-semibold text-foreground">
+                  Tu solicitud fue rechazada
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Contacta directamente a tu estudio para más información.
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const supabase = await createClient();
   const [
     { data: estadoRow },

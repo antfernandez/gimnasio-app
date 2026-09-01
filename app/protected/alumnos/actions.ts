@@ -16,6 +16,7 @@ type AlumnoInput = {
   apellidos: string;
   email: string | null;
   telefono: string | null;
+  fecha_nacimiento: string | null;
   plan_contratado: string;
   fecha_inicio: string | undefined;
   alergias: string | null;
@@ -31,6 +32,7 @@ function readAlumnoForm(formData: FormData): AlumnoInput {
     apellidos: trim("apellidos"),
     email: trim("email") || null,
     telefono: trim("telefono") || null,
+    fecha_nacimiento: trim("fecha_nacimiento") || null,
     plan_contratado: trim("plan_contratado"),
     fecha_inicio: trim("fecha_inicio") || undefined,
     alergias: trim("alergias") || null,
@@ -137,4 +139,38 @@ export async function setPuedeRegistrarAvances(id: string, valor: boolean) {
   }
 
   revalidatePath(`/protected/alumnos/${id}`);
+}
+
+/** Cola de aprobación (Sprint 12, Parte D): alumnos que se autorregistraron y
+ * todavía no fueron revisados por el Admin. */
+export async function aprobarAlumno(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("alumnos")
+    .update({ estado_aprobacion: "aprobado" })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error("No se pudo aprobar al alumno.");
+  }
+
+  revalidatePath("/protected/alumnos/pendientes");
+  revalidatePath("/protected/alumnos");
+  revalidatePath("/protected");
+}
+
+export async function rechazarAlumno(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("alumnos")
+    .update({ estado_aprobacion: "rechazado" })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error("No se pudo rechazar al alumno.");
+  }
+
+  revalidatePath("/protected/alumnos/pendientes");
+  revalidatePath("/protected/alumnos");
+  revalidatePath("/protected");
 }

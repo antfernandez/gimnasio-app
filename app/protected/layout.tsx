@@ -10,6 +10,7 @@ export const instant = false;
 import { LogoutButton } from "@/components/logout-button";
 import { SidebarNav } from "@/components/protected/sidebar-nav";
 import { getPerfilActual } from "@/lib/perfil";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function ProtectedLayout({
   children,
@@ -21,6 +22,16 @@ export default async function ProtectedLayout({
     redirect("/auth/login");
   }
   const { perfil, gimnasio } = data;
+
+  // "Dar de baja" (Sprint 12, Parte C) bloquea el acceso al panel — lo hace el
+  // Superadmin cambiando `gimnasios.estado` (app/superadmin/actions.ts). Se
+  // revisa acá, no solo en el login, porque una sesión ya abierta debe cortarse
+  // también.
+  if (gimnasio.estado === "cancelado") {
+    const supabase = await createClient();
+    await supabase.auth.signOut();
+    redirect("/auth/login/dueno?baja=1");
+  }
   const inicial = perfil.nombre_completo.trim().charAt(0).toUpperCase() || "?";
 
   return (

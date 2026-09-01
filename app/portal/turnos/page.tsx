@@ -35,6 +35,18 @@ export default async function PortalTurnosPage({
   const alumno = await getAlumnoActual();
   if (!alumno) return null; // el layout ya redirige a /auth/login
 
+  if (alumno.estado_aprobacion !== "aprobado") {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center text-sm text-muted-foreground">
+          {alumno.estado_aprobacion === "pendiente"
+            ? "Tu solicitud está pendiente de aprobación — todavía no puedes reservar turnos."
+            : "Tu solicitud fue rechazada. Contacta directamente a tu estudio."}
+        </CardContent>
+      </Card>
+    );
+  }
+
   const rango = rangoDeFechas(vista, fecha);
   const supabase = await createClient();
 

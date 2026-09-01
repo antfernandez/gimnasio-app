@@ -26,6 +26,15 @@ export interface Perfil {
   created_at: string;
 }
 
+/** Fila en `superadmins` (Sprint 12) — sin `gimnasio_id`: no pertenece a ningún
+ * tenant, ver rationale en `supabase/migrations/0008_roles_superadmin_aprobacion.sql`. */
+export interface Superadmin {
+  id: string;
+  created_at: string;
+}
+
+export type EstadoAprobacionAlumno = "pendiente" | "aprobado" | "rechazado";
+
 export interface Alumno {
   id: string;
   gimnasio_id: string;
@@ -38,8 +47,12 @@ export interface Alumno {
   telefono: string | null;
   plan_contratado: string;
   fecha_inicio: string;
+  fecha_nacimiento: string | null;
   activo: boolean;
   puede_registrar_avances: boolean;
+  /** Aprobación manual del Admin (Sprint 12) — 'aprobado' por defecto para altas
+   * hechas por el dueño; 'pendiente' solo en el autorregistro del propio alumno. */
+  estado_aprobacion: EstadoAprobacionAlumno;
   /** Ficha de salud (Sprint 9) — todas opcionales, `null` cuando aún no se cargan. */
   alergias: string | null;
   enfermedades: string | null;

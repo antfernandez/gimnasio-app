@@ -1,4 +1,4 @@
-import { ArrowRight, Dumbbell, UserRound } from "lucide-react";
+import { ArrowRight, Dumbbell, ShieldCheck, UserRound } from "lucide-react";
 import Link from "next/link";
 
 import { BrandMark } from "@/components/brand-mark";
@@ -6,20 +6,24 @@ import { Card, CardContent } from "@/components/ui/card";
 
 const roles = [
   {
-    href: "/auth/sign-up/dueno",
+    href: "/auth/login/dueno",
     icon: Dumbbell,
-    titulo: "Soy dueño/a de un gimnasio",
-    desc: "Da de alta tu gimnasio y gestiona alumnos, pagos, rutinas y avances.",
+    titulo: "Soy dueño/a",
+    desc: "Panel de administración de Valinor Estudio.",
   },
   {
-    href: "/auth/sign-up/alumno",
+    href: "/auth/login/alumno",
     icon: UserRound,
-    titulo: "Soy alumno de un gimnasio",
-    desc: "Ingresa a tu portal para ver tu rutina y tus avances.",
+    titulo: "Soy alumno",
+    desc: "Portal de turnos, rutina y avances.",
   },
 ];
 
-export function SignUpRoleSelector({
+// Selección manual del tipo de acceso al ingresar (Parte B del Sprint 12). El
+// Superadmin es un tercer camino separado y deliberadamente menos protagónico
+// (no se autoregistra, ver Parte C) — mismo formulario de login, solo un enlace
+// discreto abajo en vez de una tarjeta igual de grande que Dueño/Alumno.
+export function LoginRoleSelector({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
@@ -28,9 +32,9 @@ export function SignUpRoleSelector({
       <BrandMark className="mx-auto" />
       <div className="mt-6 flex flex-col gap-4">
         <div className="text-center">
-          <h1 className="mb-1 text-xl">Crear cuenta</h1>
+          <h1 className="mb-1 text-xl">Iniciar sesión</h1>
           <p className="text-sm text-muted-foreground">
-            ¿Cómo quieres usar el sistema?
+            ¿Cómo quieres ingresar?
           </p>
         </div>
         {roles.map(({ href, icon: Icon, titulo, desc }) => (
@@ -53,12 +57,12 @@ export function SignUpRoleSelector({
         ))}
       </div>
       <p className="mt-6 text-center text-sm text-muted-foreground">
-        ¿Ya tienes cuenta?{" "}
         <Link
-          href="/auth/login"
-          className="text-secondary-foreground underline underline-offset-4"
+          href="/auth/login/superadmin"
+          className="inline-flex items-center gap-1 underline underline-offset-4 hover:text-primary"
         >
-          Inicia sesión
+          <ShieldCheck className="h-3.5 w-3.5" />
+          Acceso Superadmin
         </Link>
       </p>
     </div>

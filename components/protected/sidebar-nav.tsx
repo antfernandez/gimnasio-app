@@ -7,6 +7,7 @@ import {
   Globe,
   LayoutDashboard,
   TrendingUp,
+  UserCheck,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 const items = [
   { href: "/protected", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/protected/alumnos", label: "Alumnos", icon: Users },
+  { href: "/protected/alumnos/pendientes", label: "Pendientes de aprobación", icon: UserCheck },
   { href: "/protected/turnos", label: "Turnos", icon: CalendarDays },
   { href: "/protected/pagos", label: "Pagos", icon: CreditCard },
   { href: "/protected/rutinas", label: "Rutinas", icon: Dumbbell },

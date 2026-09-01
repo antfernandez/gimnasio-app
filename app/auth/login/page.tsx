@@ -1,5 +1,5 @@
-import { LoginForm } from "@/components/login-form";
+import { LoginRoleSelector } from "@/components/login-role-selector";
 
 export default function Page() {
-  return <LoginForm />;
+  return <LoginRoleSelector />;
 }

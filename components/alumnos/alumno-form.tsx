@@ -102,6 +102,15 @@ export function AlumnoForm({ action, alumno, submitLabel }: Props) {
             defaultValue={alumno?.telefono ?? ""}
           />
         </div>
+        <div className="grid gap-2">
+          <Label htmlFor="fecha_nacimiento">Fecha de nacimiento</Label>
+          <Input
+            id="fecha_nacimiento"
+            name="fecha_nacimiento"
+            type="date"
+            defaultValue={alumno?.fecha_nacimiento ?? ""}
+          />
+        </div>
 
         <div className="grid gap-2 sm:col-span-2 sm:max-w-[240px]">
           <Label htmlFor="fecha_inicio">Fecha de inicio</Label>

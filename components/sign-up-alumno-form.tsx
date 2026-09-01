@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
 import { parseRut } from "@/lib/rut";
 import { cn } from "@/lib/utils";
@@ -29,9 +30,14 @@ export function SignUpAlumnoForm({
   const [rutInput, setRutInput] = useState("");
   const [nombres, setNombres] = useState("");
   const [apellidos, setApellidos] = useState("");
+  const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [telefono, setTelefono] = useState("");
   const [planInteres, setPlanInteres] = useState("");
   const [email, setEmail] = useState("");
+  const [alergias, setAlergias] = useState("");
+  const [enfermedades, setEnfermedades] = useState("");
+  const [molestias, setMolestias] = useState("");
+  const [objetivoEjercicio, setObjetivoEjercicio] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -99,8 +105,13 @@ export function SignUpAlumnoForm({
             dig_ver: parsedRut.dv,
             nombres: nombres.trim(),
             apellidos: apellidos.trim(),
+            fecha_nacimiento: fechaNacimiento || null,
             telefono: telefono.trim() || null,
             plan_interes: planInteres.trim() || null,
+            alergias: alergias.trim() || null,
+            enfermedades: enfermedades.trim() || null,
+            molestias: molestias.trim() || null,
+            objetivo_ejercicio: objetivoEjercicio.trim() || null,
           },
         },
       });
@@ -196,7 +207,7 @@ export function SignUpAlumnoForm({
 
               <p className="mt-6 text-center text-sm text-muted-foreground">
                 <Link
-                  href="/auth/sign-up"
+                  href="/auth/login"
                   className="inline-flex items-center gap-1 text-secondary-foreground underline underline-offset-4"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
@@ -256,7 +267,18 @@ export function SignUpAlumnoForm({
                         onChange={(e) => setApellidos(e.target.value)}
                       />
                     </div>
-                    <div className="grid gap-2 sm:col-span-2">
+                    <div className="grid gap-2">
+                      <Label htmlFor="fecha-nacimiento">
+                        Fecha de nacimiento (opcional)
+                      </Label>
+                      <Input
+                        id="fecha-nacimiento"
+                        type="date"
+                        value={fechaNacimiento}
+                        onChange={(e) => setFechaNacimiento(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid gap-2">
                       <Label htmlFor="telefono">Teléfono (opcional)</Label>
                       <Input
                         id="telefono"
@@ -264,6 +286,56 @@ export function SignUpAlumnoForm({
                         placeholder="+56 9 0000 0000"
                         value={telefono}
                         onChange={(e) => setTelefono(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-5 border-t border-border pt-5 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                        Ficha de salud (opcional)
+                      </h3>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Ayuda a tu estudio a entrenarte de forma segura. Puedes
+                        completarla después.
+                      </p>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="alergias">Alergias</Label>
+                      <Textarea
+                        id="alergias"
+                        placeholder="Ej. Ninguna conocida"
+                        value={alergias}
+                        onChange={(e) => setAlergias(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="enfermedades">Enfermedades</Label>
+                      <Textarea
+                        id="enfermedades"
+                        placeholder="Ej. Hipertensión controlada"
+                        value={enfermedades}
+                        onChange={(e) => setEnfermedades(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="molestias">Molestias o lesiones</Label>
+                      <Textarea
+                        id="molestias"
+                        placeholder="Ej. Esguince de tobillo derecho (2025)"
+                        value={molestias}
+                        onChange={(e) => setMolestias(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="objetivo-ejercicio">
+                        Objetivo con el ejercicio
+                      </Label>
+                      <Textarea
+                        id="objetivo-ejercicio"
+                        placeholder="Ej. Bajar de peso, ganar masa muscular"
+                        value={objetivoEjercicio}
+                        onChange={(e) => setObjetivoEjercicio(e.target.value)}
                       />
                     </div>
                   </div>

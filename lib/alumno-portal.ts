@@ -44,8 +44,18 @@ async function ensureAlumnoLink(
       apellidos: (meta.apellidos as string | undefined)?.trim() || "",
       email: user.email ?? null,
       telefono: (meta.telefono as string | undefined)?.trim() || null,
+      fecha_nacimiento: (meta.fecha_nacimiento as string | undefined) || null,
       plan_contratado:
         (meta.plan_interes as string | undefined)?.trim() || "Por definir",
+      alergias: (meta.alergias as string | undefined)?.trim() || null,
+      enfermedades: (meta.enfermedades as string | undefined)?.trim() || null,
+      lesiones: (meta.molestias as string | undefined)?.trim() || null,
+      objetivos_salud: (meta.objetivo_ejercicio as string | undefined)?.trim() || null,
+      // Hardcoded, nunca leído de `meta`: el alumno auto-registrado siempre queda
+      // pendiente de aprobación del Admin (Parte D), sin importar qué mande el
+      // cliente en `user_metadata` (que el propio usuario controla vía
+      // `auth.signUp`) — así se cierra cualquier intento de auto-aprobarse.
+      estado_aprobacion: "pendiente",
     })
     .select()
     .single();

@@ -34,8 +34,18 @@ export function UpdatePasswordForm({
     try {
       const { data, error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-      const esAlumno = data.user?.user_metadata?.rol === "alumno";
-      router.push(esAlumno ? "/portal" : "/protected");
+      const userId = data.user?.id;
+      // No confiar solo en `user_metadata.rol` (Sprint 12): confirmar contra las
+      // tablas reales, igual que hace `login-form.tsx`, para que el superadmin
+      // también caiga en su propio destino en vez de en `/protected`.
+      const [{ data: superadmin }, { data: alumno }] = userId
+        ? await Promise.all([
+            supabase.from("superadmins").select("id").eq("id", userId).maybeSingle(),
+            supabase.from("alumnos").select("id").eq("user_id", userId).maybeSingle(),
+          ])
+        : [{ data: null }, { data: null }];
+      const destino = superadmin ? "/superadmin" : alumno ? "/portal" : "/protected";
+      router.push(destino);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "Ocurrió un error");
     } finally {
