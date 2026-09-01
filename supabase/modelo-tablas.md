@@ -12,6 +12,14 @@
 > **Nota (Sprint 14, 2026-09-01):** se agregó `rutina_plantillas` (catálogo,
 > nueva), y las columnas `rutinas.plantilla_id`, `pagos.plan_id` y el índice único
 > `planes_nombre_unq` — ver migración `0010_ajustes_post_sprint_13.sql`.
+>
+> **Nota (Sprint 15, 2026-09-01):** se agregó `registros_rutina.peso_planificado` y
+> la función `asignar_rutina_alumno` (RPC transaccional, reemplaza las dos llamadas
+> separadas que hacía `asignarRutina` para desactivar la rutina vigente e insertar
+> la nueva) — ver migración `0011_ajustes_post_sprint_14.sql`. La bitácora del
+> dueño pasó de la ficha del alumno a su propia pantalla (`/protected/bitacora`,
+> organizada por fecha + bloque horario); el portal del alumno renombró
+> `/portal/rutina` a `/portal/bitacora`.
 
 ## ⚠️ Drift detectado vs. migraciones locales
 
@@ -224,6 +232,7 @@ ya la tuvieron asignada.
 | series_realizadas | smallint | sí | — |
 | reps_realizadas | smallint | sí | — |
 | peso_kg | numeric(6,2) | sí | — |
+| peso_planificado | text (snapshot del campo `peso` de la plantilla, Sprint 15) | sí | — |
 | fecha | date | no | `CURRENT_DATE` |
 | registrado_por | uuid (FK → `perfiles.id`, null si lo registró el alumno) | sí | — |
 | origen | enum `origen_cambio` (`dueño, alumno`) | no | `'dueño'` |
@@ -274,7 +283,10 @@ originan un paquete (ej. un ajuste).
 | created_at | timestamptz | no | `now()` |
 
 Índice: `idx_rutinas_alumno_activa(alumno_id, activa)`.
-Forma de `contenido` observada en datos reales: `[{ ejercicio, series, reps, notas }]`.
+Forma de `contenido` observada en datos reales: `[{ ejercicio, series, reps, notas }]`
+— **Sprint 15:** cada ejercicio suma un campo opcional `peso` (texto libre corto, ej.
+"40 kg", "corporal"), tanto en `rutina_plantillas.contenido` como en el snapshot que
+copia `rutinas.contenido`; no es una columna, no requirió migración de esquema.
 
 **Sprint 14:** `rutinas` deja de ser donde el dueño arma el contenido directamente —
 ahora es el registro de **asignación** de una plantilla de `rutina_plantillas` a un
@@ -337,6 +349,8 @@ Calcula el estado de pago de cada alumno (`al_dia` / `atrasado` / `sin_pagos`) t
 ## Función / trigger
 
 `set_updated_at()` — trigger `BEFORE UPDATE` en `alumnos` que fija `updated_at = now()` en cada modificación.
+
+`asignar_rutina_alumno(p_alumno_id, p_gimnasio_id, p_plantilla_id, p_creado_por, p_fecha_asignacion)` (Sprint 15, `security invoker`) — desactiva la rutina vigente del alumno e inserta la nueva asignación como una sola operación transaccional (invocada vía `supabase.rpc(...)` desde `asignarRutina`); lanza una excepción legible si `p_plantilla_id` no existe o no pertenece al gimnasio, en vez de dejar al alumno sin rutina activa.
 
 ## Seguridad — Row Level Security (RLS)
 

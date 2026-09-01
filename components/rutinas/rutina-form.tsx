@@ -33,6 +33,7 @@ type Fila = {
   ejercicio: string;
   series: number | string;
   reps: number | string;
+  peso: string;
   notas: string;
 };
 
@@ -40,12 +41,15 @@ export function RutinaForm({ action, plantilla, submitLabel }: Props) {
   const [state, formAction, isPending] = useActionState(action, {});
   const [filas, setFilas] = useState<Fila[]>(
     plantilla && plantilla.contenido.length > 0
-      ? plantilla.contenido.map((ej) => ({ id: nextRowId++, ...ej }))
-      : [{ id: nextRowId++, ejercicio: "", series: "", reps: "", notas: "" }],
+      ? plantilla.contenido.map((ej) => ({ id: nextRowId++, peso: "", ...ej }))
+      : [{ id: nextRowId++, ejercicio: "", series: "", reps: "", peso: "", notas: "" }],
   );
 
   const agregarFila = () =>
-    setFilas((f) => [...f, { id: nextRowId++, ejercicio: "", series: "", reps: "", notas: "" }]);
+    setFilas((f) => [
+      ...f,
+      { id: nextRowId++, ejercicio: "", series: "", reps: "", peso: "", notas: "" },
+    ]);
   const quitarFila = (id: number) =>
     setFilas((f) => (f.length > 1 ? f.filter((fila) => fila.id !== id) : f));
 
@@ -95,7 +99,7 @@ export function RutinaForm({ action, plantilla, submitLabel }: Props) {
         {filas.map((fila, i) => (
           <div
             key={fila.id}
-            className="grid gap-3 rounded-[9px] border border-border p-4 sm:grid-cols-[1fr_5rem_5rem_1fr_auto]"
+            className="grid gap-3 rounded-[9px] border border-border p-4 sm:grid-cols-[1fr_5rem_5rem_6rem_1fr_auto]"
           >
             <div className="grid gap-1.5">
               {i === 0 && (
@@ -133,6 +137,12 @@ export function RutinaForm({ action, plantilla, submitLabel }: Props) {
                 placeholder="12"
                 defaultValue={fila.reps || undefined}
               />
+            </div>
+            <div className="grid gap-1.5">
+              {i === 0 && (
+                <span className="text-xs text-muted-foreground">Peso</span>
+              )}
+              <Input name="peso" placeholder="40 kg" defaultValue={fila.peso} />
             </div>
             <div className="grid gap-1.5">
               {i === 0 && (

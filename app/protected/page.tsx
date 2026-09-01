@@ -1,4 +1,4 @@
-import { DollarSign, type LucideIcon, Package } from "lucide-react";
+import { DollarSign, type LucideIcon, Package, Users } from "lucide-react";
 import Link from "next/link";
 
 import { EstadoPaqueteBadge } from "@/components/pagos/estado-paquete-badge";
@@ -82,6 +82,8 @@ export default async function DashboardPage() {
     { data: estadoPaquetes },
     { data: pagosDelMes },
     { count: planesVendidos },
+    { count: alumnosActivos },
+    { count: alumnosInactivos },
   ] = await Promise.all([
     supabase.from("horarios_disponibles").select("*").eq("gimnasio_id", gimnasioId),
     supabase
@@ -108,6 +110,16 @@ export default async function DashboardPage() {
       .eq("gimnasio_id", gimnasioId)
       .gte("fecha_inicio", inicioMes)
       .lte("fecha_inicio", finMes),
+    supabase
+      .from("alumnos")
+      .select("*", { count: "exact", head: true })
+      .eq("gimnasio_id", gimnasioId)
+      .eq("activo", true),
+    supabase
+      .from("alumnos")
+      .select("*", { count: "exact", head: true })
+      .eq("gimnasio_id", gimnasioId)
+      .eq("activo", false),
   ]);
 
   const listaHorarios = (horarios ?? []) as HorarioDisponible[];
@@ -142,6 +154,15 @@ export default async function DashboardPage() {
         </div>
         <h2 className="text-2xl">Dashboard</h2>
       </div>
+
+      {/* Sprint 15, Parte D: único indicador genuinamente nuevo — dinero recaudado y
+          turnos de la semana ya están cubiertos más abajo ("Cobrado este mes",
+          "Ocupación semanal"). */}
+      <StatCard
+        icon={Users}
+        label="Alumnos"
+        value={`${alumnosActivos ?? 0} activos · ${alumnosInactivos ?? 0} inactivos`}
+      />
 
       {/* 1. Indicadores de pagos */}
       <StatCard icon={DollarSign} label="Cobrado este mes" value={formatMonto(ingresosMes)} />

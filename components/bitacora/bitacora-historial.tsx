@@ -10,13 +10,15 @@ import { formatFecha } from "@/lib/format";
 import type { RegistroRutina } from "@/lib/types";
 
 function formatPlanificado(r: RegistroRutina): string {
-  if (!r.series_planificadas && !r.reps_planificadas) return "—";
-  return `${r.series_planificadas ?? "—"} × ${r.reps_planificadas ?? "—"}`;
+  if (!r.series_planificadas && !r.reps_planificadas && !r.peso_planificado) return "—";
+  const base = `${r.series_planificadas ?? "—"} × ${r.reps_planificadas ?? "—"}`;
+  return r.peso_planificado ? `${base} · ${r.peso_planificado}` : base;
 }
 
 function formatRealizado(r: RegistroRutina): string {
-  if (!r.series_realizadas && !r.reps_realizadas) return "—";
-  return `${r.series_realizadas ?? "—"} × ${r.reps_realizadas ?? "—"}`;
+  if (!r.series_realizadas && !r.reps_realizadas && !r.peso_kg) return "—";
+  const base = `${r.series_realizadas ?? "—"} × ${r.reps_realizadas ?? "—"}`;
+  return r.peso_kg ? `${base} · ${r.peso_kg} kg` : base;
 }
 
 export function BitacoraHistorial({ registros }: { registros: RegistroRutina[] }) {
@@ -36,7 +38,6 @@ export function BitacoraHistorial({ registros }: { registros: RegistroRutina[] }
           <TableHead>Ejercicio</TableHead>
           <TableHead>Planificado</TableHead>
           <TableHead>Realizado</TableHead>
-          <TableHead>Peso</TableHead>
           <TableHead>Notas</TableHead>
         </TableRow>
       </TableHeader>
@@ -47,7 +48,6 @@ export function BitacoraHistorial({ registros }: { registros: RegistroRutina[] }
             <TableCell className="font-medium text-foreground">{r.ejercicio}</TableCell>
             <TableCell className="text-muted-foreground">{formatPlanificado(r)}</TableCell>
             <TableCell>{formatRealizado(r)}</TableCell>
-            <TableCell>{r.peso_kg ? `${r.peso_kg} kg` : "—"}</TableCell>
             <TableCell className="max-w-[220px] truncate text-muted-foreground">
               {r.notas || "—"}
             </TableCell>

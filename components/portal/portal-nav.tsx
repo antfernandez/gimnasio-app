@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 const items = [
   { href: "/portal", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/portal/turnos", label: "Mis turnos", icon: CalendarDays },
-  { href: "/portal/rutina", label: "Rutina", icon: Dumbbell },
+  { href: "/portal/bitacora", label: "Bitácora", icon: Dumbbell },
 ];
 
 export function PortalNav() {

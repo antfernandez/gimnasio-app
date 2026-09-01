@@ -5,6 +5,7 @@ export type FilaRegistroRutina = {
   ejercicio: string;
   series_planificadas: number | null;
   reps_planificadas: number | null;
+  peso_planificado: string | null;
   series_realizadas: number | null;
   reps_realizadas: number | null;
   peso_kg: number | null;
@@ -36,6 +37,7 @@ export function buildFilasRegistroRutina(
       ejercicio: ej.ejercicio,
       series_planificadas: ej.series || null,
       reps_planificadas: ej.reps || null,
+      peso_planificado: ej.peso ?? null,
       series_realizadas: numeroONulo(seriesRealizadas[i] ?? ""),
       reps_realizadas: numeroONulo(repsRealizadas[i] ?? ""),
       peso_kg: numeroONulo(pesoKg[i] ?? ""),

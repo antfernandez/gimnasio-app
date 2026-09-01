@@ -43,6 +43,8 @@ export function RutinaCard({ rutina }: { rutina: Rutina }) {
                   {ej.series ? `${ej.series} series` : null}
                   {ej.series && ej.reps ? " · " : null}
                   {ej.reps ? `${ej.reps} reps` : null}
+                  {(ej.series || ej.reps) && ej.peso ? " · " : null}
+                  {ej.peso ? ej.peso : null}
                 </span>
                 {ej.notas && (
                   <span className="text-muted-foreground">— {ej.notas}</span>

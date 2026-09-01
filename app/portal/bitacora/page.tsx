@@ -1,14 +1,17 @@
 import { createRegistroRutinaPropio } from "@/app/portal/actions";
 import { BitacoraForm } from "@/components/bitacora/bitacora-form";
 import { BitacoraHistorial } from "@/components/bitacora/bitacora-historial";
-import { ProgresoRutina } from "@/components/bitacora/progreso-rutina";
-import { RutinaCard } from "@/components/rutinas/rutina-card";
+import { ResumenEvolucionRutina } from "@/components/bitacora/resumen-evolucion-rutina";
 import { Card, CardContent } from "@/components/ui/card";
 import { getAlumnoActual } from "@/lib/alumno-portal";
 import { createClient } from "@/lib/supabase/server";
 import type { RegistroRutina, Rutina } from "@/lib/types";
 
-export default async function PortalRutinaPage() {
+/** Sprint 15, Parte F: renombrada desde `/portal/rutina` — la tarjeta superior deja
+ * de mostrar el detalle completo de la rutina y el desplegable de rutinas
+ * anteriores, mostrando solo el nombre de la vigente (el detalle de ejercicios
+ * planificados lo sigue viendo el alumno al abrir "Registrar sesión de hoy"). */
+export default async function PortalBitacoraPage() {
   const alumno = await getAlumnoActual();
   if (!alumno) return null; // el layout ya redirige a /auth/login
 
@@ -19,7 +22,7 @@ export default async function PortalRutinaPage() {
           <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
             Portal del alumno
           </div>
-          <h2 className="text-2xl">Rutina</h2>
+          <h2 className="text-2xl">Bitácora</h2>
         </div>
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
@@ -46,7 +49,6 @@ export default async function PortalRutinaPage() {
 
   const listaRutinas = (rutinas ?? []) as Rutina[];
   const rutinaActiva = listaRutinas.find((r) => r.activa);
-  const rutinasAnteriores = listaRutinas.filter((r) => !r.activa);
   const listaRegistros = (registros ?? []) as RegistroRutina[];
 
   return (
@@ -55,32 +57,19 @@ export default async function PortalRutinaPage() {
         <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
           Portal del alumno
         </div>
-        <h2 className="text-2xl">Rutina</h2>
+        <h2 className="text-2xl">Bitácora</h2>
       </div>
 
-      <div>
-        {rutinaActiva ? (
-          <RutinaCard rutina={rutinaActiva} />
-        ) : (
-          <Card>
-            <CardContent className="py-10 text-center text-sm text-muted-foreground">
-              Tu entrenador aún no te asignó una rutina vigente.
-            </CardContent>
-          </Card>
-        )}
-        {rutinasAnteriores.length > 0 && (
-          <details className="mt-3">
-            <summary className="cursor-pointer text-xs text-muted-foreground hover:text-primary">
-              Ver rutinas anteriores ({rutinasAnteriores.length})
-            </summary>
-            <div className="mt-3 flex flex-col gap-3">
-              {rutinasAnteriores.map((r) => (
-                <RutinaCard key={r.id} rutina={r} />
-              ))}
-            </div>
-          </details>
-        )}
-      </div>
+      <Card>
+        <CardContent className="pt-6">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Rutina vigente
+          </h3>
+          <p className="mt-2 text-base text-foreground">
+            {rutinaActiva ? rutinaActiva.nombre : "Tu entrenador aún no te asignó una rutina vigente."}
+          </p>
+        </CardContent>
+      </Card>
 
       {rutinaActiva && alumno.puede_registrar_bitacora && (
         <Card>
@@ -117,7 +106,7 @@ export default async function PortalRutinaPage() {
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Mi progreso de rutina
           </h3>
-          <ProgresoRutina registros={listaRegistros} />
+          <ResumenEvolucionRutina registros={listaRegistros} rutinas={listaRutinas} />
         </CardContent>
       </Card>
     </div>

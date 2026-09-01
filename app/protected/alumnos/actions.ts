@@ -3,11 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { buildFilasRegistroRutina } from "@/lib/bitacora";
 import { getPerfilActual } from "@/lib/perfil";
 import { parseRut } from "@/lib/rut";
 import { createClient } from "@/lib/supabase/server";
-import type { MedidasAvance, Rutina, RutinaPlantilla } from "@/lib/types";
+import type { MedidasAvance } from "@/lib/types";
 
 export type AlumnoFormState = {
   error?: string;
@@ -196,14 +195,19 @@ export type AsignarRutinaFormState = {
  * alumno — copia el contenido como snapshot a una nueva fila de `rutinas` (mismo
  * criterio de snapshot que ya usaba la rutina antes de este sprint, para que editar
  * la plantilla después no reescriba el historial de alumnos que ya la tuvieron
- * asignada). */
+ * asignada).
+ *
+ * Sprint 15, Parte A: la desactivación de la rutina vigente y la inserción de la
+ * nueva pasan por la función transaccional `asignar_rutina_alumno` (RPC) en vez de
+ * dos llamadas separadas — si `plantilla_id` ya no existe o no pertenece al
+ * gimnasio, la función lanza una excepción y el alumno no queda sin rutina activa. */
 export async function asignarRutina(
   alumnoId: string,
   _prevState: AsignarRutinaFormState,
   formData: FormData,
 ): Promise<AsignarRutinaFormState> {
   const plantillaId = String(formData.get("plantilla_id") ?? "").trim();
-  const fechaAsignacion = String(formData.get("fecha_asignacion") ?? "").trim() || undefined;
+  const fechaAsignacion = String(formData.get("fecha_asignacion") ?? "").trim() || null;
 
   if (!plantillaId) {
     return { error: "Selecciona una plantilla." };
@@ -213,43 +217,16 @@ export async function asignarRutina(
   if (!perfilData) redirect("/auth/login");
 
   const supabase = await createClient();
-  const { data: plantilla } = await supabase
-    .from("rutina_plantillas")
-    .select("*")
-    .eq("id", plantillaId)
-    .maybeSingle();
-
-  if (!plantilla) {
-    return { error: "No se encontró la plantilla seleccionada." };
-  }
-  const p = plantilla as RutinaPlantilla;
-
-  // Solo puede haber una rutina activa por alumno: se desactiva la vigente antes de
-  // insertar la nueva.
-  const { error: desactivarError } = await supabase
-    .from("rutinas")
-    .update({ activa: false })
-    .eq("alumno_id", alumnoId)
-    .eq("activa", true);
-
-  if (desactivarError) {
-    return { error: "No se pudo asignar la rutina. Intenta de nuevo." };
-  }
-
-  const { error } = await supabase.from("rutinas").insert({
-    gimnasio_id: perfilData.perfil.gimnasio_id,
-    alumno_id: alumnoId,
-    creado_por: perfilData.perfil.id,
-    plantilla_id: p.id,
-    nombre: p.nombre,
-    objetivo: p.objetivo,
-    contenido: p.contenido,
-    fecha_asignacion: fechaAsignacion,
-    activa: true,
+  const { error } = await supabase.rpc("asignar_rutina_alumno", {
+    p_alumno_id: alumnoId,
+    p_gimnasio_id: perfilData.perfil.gimnasio_id,
+    p_plantilla_id: plantillaId,
+    p_creado_por: perfilData.perfil.id,
+    p_fecha_asignacion: fechaAsignacion,
   });
 
   if (error) {
-    return { error: "No se pudo asignar la rutina. Intenta de nuevo." };
+    return { error: error.message || "No se pudo asignar la rutina. Intenta de nuevo." };
   }
 
   revalidatePath(`/protected/alumnos/${alumnoId}`);
@@ -329,61 +306,4 @@ export async function createAvance(
 
   revalidatePath(`/protected/alumnos/${alumnoId}`);
   redirect(`/protected/alumnos/${alumnoId}?avance=1`);
-}
-
-export type BitacoraFormState = {
-  error?: string;
-};
-
-/** Movido tal cual desde `app/protected/rutinas/actions.ts` (Sprint 14, Parte C):
- * registro de sesión de bitácora hecho por el dueño/entrenador, sin restricción de
- * fecha (a diferencia del registro propio del alumno). */
-export async function createRegistroRutina(
-  alumnoId: string,
-  rutinaId: string,
-  _prevState: BitacoraFormState,
-  formData: FormData,
-): Promise<BitacoraFormState> {
-  const fecha = String(formData.get("fecha") ?? "").trim();
-  if (!fecha) {
-    return { error: "Selecciona una fecha." };
-  }
-
-  const perfilData = await getPerfilActual();
-  if (!perfilData) redirect("/auth/login");
-
-  const supabase = await createClient();
-  const { data: rutina } = await supabase
-    .from("rutinas")
-    .select("*")
-    .eq("id", rutinaId)
-    .maybeSingle();
-
-  if (!rutina) {
-    return { error: "No se encontró la rutina." };
-  }
-
-  const filas = buildFilasRegistroRutina((rutina as Rutina).contenido, formData);
-  if (filas.length === 0) {
-    return { error: "Registra al menos un ejercicio de la sesión." };
-  }
-
-  const { error } = await supabase.from("registros_rutina").insert(
-    filas.map((f) => ({
-      gimnasio_id: perfilData.perfil.gimnasio_id,
-      alumno_id: alumnoId,
-      rutina_id: rutinaId,
-      fecha,
-      registrado_por: perfilData.perfil.id,
-      origen: "dueño",
-      ...f,
-    })),
-  );
-
-  if (error) {
-    return { error: "No se pudo registrar la sesión. Intenta de nuevo." };
-  }
-
-  revalidatePath(`/protected/alumnos/${alumnoId}`);
-  redirect(`/protected/alumnos/${alumnoId}?bitacora=1`);
 }

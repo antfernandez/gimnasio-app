@@ -21,6 +21,7 @@ import { formatRut } from "@/lib/rut";
 import { createClient } from "@/lib/supabase/server";
 import {
   diaSemanaDeFecha,
+  diasDelMes,
   formatHora,
   hoyIso,
   NOMBRES_DIA_CORTO,
@@ -31,7 +32,9 @@ import type {
   EstadoPaqueteAlumno,
   MedidasAvance,
   Plan,
+  RegistroRutina,
   Reserva,
+  Rutina,
 } from "@/lib/types";
 
 function formatMedidas(medidas: MedidasAvance): string {
@@ -86,12 +89,18 @@ export default async function PortalPage() {
     );
   }
 
+  const mesDias = diasDelMes(hoyIso());
+  const inicioMes = mesDias[0];
+  const finMes = mesDias[mesDias.length - 1];
+
   const supabase = await createClient();
   const [
     { data: estadoRow },
     { data: paqueteRow },
     { data: avances },
     { data: planRow },
+    { data: rutinaRow },
+    { data: registrosMes },
   ] = await Promise.all([
     supabase
       .from("v_estado_pago_alumnos")
@@ -111,11 +120,39 @@ export default async function PortalPage() {
     alumno.plan_id
       ? supabase.from("planes").select("*").eq("id", alumno.plan_id).maybeSingle()
       : Promise.resolve({ data: null }),
+    supabase
+      .from("rutinas")
+      .select("*")
+      .eq("alumno_id", alumno.id)
+      .eq("activa", true)
+      .maybeSingle(),
+    supabase
+      .from("registros_rutina")
+      .select("fecha")
+      .eq("alumno_id", alumno.id)
+      .gte("fecha", inicioMes)
+      .lte("fecha", finMes),
   ]);
 
   const estado = estadoRow as EstadoPagoAlumno | null;
   const plan = planRow as Plan | null;
   const paquete = paqueteRow as EstadoPaqueteAlumno | null;
+  const rutinaActiva = rutinaRow as Rutina | null;
+  const sesionesBitacoraMes = new Set(
+    ((registrosMes ?? []) as Pick<RegistroRutina, "fecha">[]).map((r) => r.fecha),
+  ).size;
+
+  let ultimaSesionBitacora: string | null = null;
+  if (rutinaActiva) {
+    const { data: ultimoRegistro } = await supabase
+      .from("registros_rutina")
+      .select("fecha")
+      .eq("alumno_id", alumno.id)
+      .order("fecha", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    ultimaSesionBitacora = (ultimoRegistro as Pick<RegistroRutina, "fecha"> | null)?.fecha ?? null;
+  }
 
   // Sprint 13, Parte E: acotado al período del paquete vigente (evita que la lista
   // crezca sin límite si el alumno tiene muchos períodos con muchos turnos). Sin
@@ -229,6 +266,75 @@ export default async function PortalPage() {
         </Card>
       </div>
 
+      {/* Sprint 15, Parte G: nuevos resúmenes de rutina y progreso, sin entrar en el
+          detalle que ya vive en Bitácora. */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Mi rutina
+              </h3>
+              <Link
+                href="/portal/bitacora"
+                className="text-xs text-muted-foreground hover:text-primary hover:underline"
+              >
+                Ver Bitácora
+              </Link>
+            </div>
+            {rutinaActiva ? (
+              <div className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-foreground">{rutinaActiva.nombre}</span>
+                <span className="text-muted-foreground">
+                  {ultimaSesionBitacora
+                    ? `Última sesión: ${formatFecha(ultimaSesionBitacora)}`
+                    : "Todavía no registras sesiones."}
+                </span>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Tu entrenador aún no te asignó una rutina vigente.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Mi progreso
+              </h3>
+              <Link
+                href="/portal/bitacora"
+                className="text-xs text-muted-foreground hover:text-primary hover:underline"
+              >
+                Ver detalle
+              </Link>
+            </div>
+            <div className="flex flex-col gap-1 text-sm">
+              {historialAvances.length === 0 ? (
+                <span className="text-muted-foreground">Sin avances corporales registrados.</span>
+              ) : (
+                <span className="text-foreground">
+                  Último avance: {formatFecha(historialAvances[0].fecha)}
+                  {historialAvances[0].peso_kg != null && ` · ${historialAvances[0].peso_kg} kg`}
+                  {historialAvances[0].peso_kg != null &&
+                    historialAvances[1]?.peso_kg != null &&
+                    ` (${
+                      historialAvances[0].peso_kg - historialAvances[1].peso_kg >= 0 ? "+" : ""
+                    }${(historialAvances[0].peso_kg - historialAvances[1].peso_kg).toFixed(1)} kg)`}
+                </span>
+              )}
+              <span className="text-muted-foreground">
+                {sesionesBitacoraMes} {sesionesBitacoraMes === 1 ? "sesión" : "sesiones"} de
+                bitácora este mes
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardContent className="pt-6">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
@@ -262,14 +368,6 @@ export default async function PortalPage() {
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Mis avances
           </h3>
-          <div className="mb-6">
-            <LineChart
-              data={historialAvances
-                .filter((av) => av.peso_kg != null)
-                .map((av) => ({ x: av.fecha, y: av.peso_kg! }))}
-              unidad=" kg"
-            />
-          </div>
           {historialAvances.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
               {alumno.puede_registrar_avances
@@ -277,30 +375,43 @@ export default async function PortalPage() {
                 : "Tu entrenador aún no registró avances para ti."}
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Peso</TableHead>
-                  <TableHead>Medidas</TableHead>
-                  <TableHead>Notas</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {historialAvances.map((avance) => (
-                  <TableRow key={avance.id}>
-                    <TableCell>{formatFecha(avance.fecha)}</TableCell>
-                    <TableCell className="font-medium text-foreground">
-                      {avance.peso_kg ? `${avance.peso_kg} kg` : "—"}
-                    </TableCell>
-                    <TableCell>{formatMedidas(avance.medidas)}</TableCell>
-                    <TableCell className="max-w-[220px] truncate text-muted-foreground">
-                      {avance.notas || "—"}
-                    </TableCell>
+            <details>
+              <summary className="cursor-pointer text-xs text-muted-foreground hover:text-primary">
+                Ver detalle completo ({historialAvances.length})
+              </summary>
+              <div className="mt-4 mb-6">
+                <LineChart
+                  data={historialAvances
+                    .filter((av) => av.peso_kg != null)
+                    .map((av) => ({ x: av.fecha, y: av.peso_kg! }))}
+                  unidad=" kg"
+                />
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Peso</TableHead>
+                    <TableHead>Medidas</TableHead>
+                    <TableHead>Notas</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {historialAvances.map((avance) => (
+                    <TableRow key={avance.id}>
+                      <TableCell>{formatFecha(avance.fecha)}</TableCell>
+                      <TableCell className="font-medium text-foreground">
+                        {avance.peso_kg ? `${avance.peso_kg} kg` : "—"}
+                      </TableCell>
+                      <TableCell>{formatMedidas(avance.medidas)}</TableCell>
+                      <TableCell className="max-w-[220px] truncate text-muted-foreground">
+                        {avance.notas || "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </details>
           )}
         </CardContent>
       </Card>

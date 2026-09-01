@@ -165,6 +165,6 @@ export async function createRegistroRutinaPropio(
     return { error: "No se pudo registrar la sesión. Intenta de nuevo." };
   }
 
-  revalidatePath("/portal/rutina");
+  revalidatePath("/portal/bitacora");
   return {};
 }

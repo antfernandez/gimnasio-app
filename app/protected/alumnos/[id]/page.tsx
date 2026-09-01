@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import {
   asignarRutina,
   createAvance,
-  createRegistroRutina,
   updateAlumno,
 } from "@/app/protected/alumnos/actions";
 import { AlumnoForm } from "@/components/alumnos/alumno-form";
@@ -15,9 +14,6 @@ import { ToggleActivoButton } from "@/components/alumnos/toggle-activo-button";
 import { ToggleAvancesButton } from "@/components/alumnos/toggle-avances-button";
 import { ToggleBitacoraButton } from "@/components/alumnos/toggle-bitacora-button";
 import { AvanceForm } from "@/components/avances/avance-form";
-import { BitacoraForm } from "@/components/bitacora/bitacora-form";
-import { BitacoraHistorial } from "@/components/bitacora/bitacora-historial";
-import { ProgresoRutina } from "@/components/bitacora/progreso-rutina";
 import { LineChart } from "@/components/charts/line-chart";
 import { AsignarRutinaForm } from "@/components/rutinas/asignar-rutina-form";
 import { RutinaCard } from "@/components/rutinas/rutina-card";
@@ -42,7 +38,6 @@ import type {
   ClasificacionAlumnoRow,
   MedidasAvance,
   Plan,
-  RegistroRutina,
   Rutina,
   RutinaPlantilla,
 } from "@/lib/types";
@@ -61,10 +56,10 @@ export default async function FichaAlumnoPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ rutina?: string; avance?: string; bitacora?: string }>;
+  searchParams: Promise<{ rutina?: string; avance?: string }>;
 }) {
   const { id } = await params;
-  const { rutina: rutinaOk, avance: avanceOk, bitacora: bitacoraOk } = await searchParams;
+  const { rutina: rutinaOk, avance: avanceOk } = await searchParams;
 
   const perfilData = await getPerfilActual();
   if (!perfilData) return null; // el layout ya redirige a /auth/login
@@ -124,15 +119,6 @@ export default async function FichaAlumnoPage({
   const listaRutinas = (rutinas ?? []) as Rutina[];
   const rutinaActiva = listaRutinas.find((r) => r.activa);
   const historialAvances = (avances ?? []) as Avance[];
-
-  const { data: registros } = rutinaActiva
-    ? await supabase
-        .from("registros_rutina")
-        .select("*")
-        .eq("alumno_id", a.id)
-        .order("fecha", { ascending: false })
-    : { data: null };
-  const listaRegistros = (registros ?? []) as RegistroRutina[];
 
   return (
     <div className="flex flex-col gap-6">
@@ -308,40 +294,6 @@ export default async function FichaAlumnoPage({
           </div>
         </CardContent>
       </Card>
-
-      {/* Bitácora de rutina — solo si hay rutina activa */}
-      {rutinaActiva && (
-        <Card>
-          <CardContent className="pt-6">
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Registrar sesión de bitácora
-            </h3>
-            {bitacoraOk === "1" && (
-              <div className="mb-4 rounded-[9px] border border-success/35 bg-success/10 px-4 py-3 text-sm text-success">
-                Sesión registrada en la bitácora.
-              </div>
-            )}
-            <BitacoraForm
-              action={createRegistroRutina.bind(null, a.id, rutinaActiva.id)}
-              rutina={rutinaActiva}
-            />
-
-            <div className="mt-6 border-t border-border pt-6">
-              <h4 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Historial de bitácora
-              </h4>
-              <BitacoraHistorial registros={listaRegistros} />
-            </div>
-
-            <div className="mt-6 border-t border-border pt-6">
-              <h4 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Progreso de rutina
-              </h4>
-              <ProgresoRutina registros={listaRegistros} />
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

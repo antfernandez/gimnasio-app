@@ -184,6 +184,9 @@ export interface EjercicioRutina {
   ejercicio: string;
   series: number;
   reps: number;
+  /** Sprint 15: peso sugerido/planificado, texto libre corto (ej. "40 kg",
+   * "corporal", "barra vacía") — no numérico estricto. Opcional. */
+  peso?: string;
   notas: string;
 }
 
@@ -255,6 +258,9 @@ export interface RegistroRutina {
   series_realizadas: number | null;
   reps_realizadas: number | null;
   peso_kg: number | null;
+  /** Sprint 15: snapshot del peso planificado (campo `peso` de la plantilla) al
+   * momento de registrar la sesión — mismo criterio que `*_planificadas`. */
+  peso_planificado: string | null;
   fecha: string;
   registrado_por: string | null;
   origen: OrigenCambio;

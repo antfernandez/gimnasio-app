@@ -51,6 +51,7 @@ export function BitacoraForm({ action, rutina, fechaFija }: Props) {
               </div>
               <span className="text-xs text-muted-foreground">
                 Plan: {ej.series || "—"} series × {ej.reps || "—"} reps
+                {ej.peso ? ` · ${ej.peso}` : ""}
               </span>
             </div>
             <div className="grid gap-1.5">

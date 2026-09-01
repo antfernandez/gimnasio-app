@@ -7,6 +7,7 @@ import {
   Dumbbell,
   Globe,
   LayoutDashboard,
+  NotebookPen,
   UserCheck,
   Users,
 } from "lucide-react";
@@ -15,14 +16,18 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
+// Sprint 15, Parte E: orden pedido por el dueño — Bitácora se inserta justo después
+// de Rutinas (misma cercanía temática que usa el resto del sprint al describir ambas
+// pantallas juntas).
 const items = [
   { href: "/protected", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/protected/alumnos", label: "Alumnos", icon: Users },
-  { href: "/protected/planes", label: "Planes", icon: ClipboardList },
-  { href: "/protected/alumnos/pendientes", label: "Pendientes de aprobación", icon: UserCheck },
   { href: "/protected/turnos", label: "Turnos", icon: CalendarDays },
   { href: "/protected/pagos", label: "Pagos", icon: CreditCard },
+  { href: "/protected/planes", label: "Planes", icon: ClipboardList },
   { href: "/protected/rutinas", label: "Rutinas", icon: Dumbbell },
+  { href: "/protected/bitacora", label: "Bitácora", icon: NotebookPen },
+  { href: "/protected/alumnos/pendientes", label: "Pendientes de aprobación", icon: UserCheck },
   { href: "/protected/sitio", label: "Sitio público", icon: Globe },
 ];
 

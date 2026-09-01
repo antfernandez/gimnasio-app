@@ -21,6 +21,7 @@ function readEjercicios(formData: FormData): EjercicioRutina[] {
   const ejercicios = formData.getAll("ejercicio").map((v) => String(v).trim());
   const series = formData.getAll("series").map((v) => String(v).trim());
   const reps = formData.getAll("reps").map((v) => String(v).trim());
+  const peso = formData.getAll("peso").map((v) => String(v).trim());
   const notas = formData.getAll("notas").map((v) => String(v).trim());
 
   return ejercicios
@@ -28,6 +29,7 @@ function readEjercicios(formData: FormData): EjercicioRutina[] {
       ejercicio,
       series: Number(series[i]) || 0,
       reps: Number(reps[i]) || 0,
+      peso: peso[i] || undefined,
       notas: notas[i] ?? "",
     }))
     .filter((e) => e.ejercicio.length > 0);
@@ -121,14 +123,20 @@ export async function aplicarPresetRutinas(): Promise<RutinaFormState> {
   if (!perfilData) redirect("/auth/login");
 
   const musculacion: EjercicioRutina[] = [
-    { ejercicio: "Sentadilla", series: 4, reps: 10, notas: "" },
-    { ejercicio: "Peso muerto", series: 4, reps: 8, notas: "" },
-    { ejercicio: "Press de banca", series: 4, reps: 10, notas: "" },
-    { ejercicio: "Press inclinado", series: 3, reps: 10, notas: "" },
-    { ejercicio: "Press militar", series: 3, reps: 10, notas: "" },
-    { ejercicio: "Búlgaras", series: 3, reps: 12, notas: "Por pierna" },
-    { ejercicio: "Remo con barra", series: 4, reps: 10, notas: "" },
-    { ejercicio: "Dominadas", series: 3, reps: 8, notas: "Asistidas si es necesario" },
+    { ejercicio: "Sentadilla", series: 4, reps: 10, peso: "40 kg", notas: "" },
+    { ejercicio: "Peso muerto", series: 4, reps: 8, peso: "50 kg", notas: "" },
+    { ejercicio: "Press de banca", series: 4, reps: 10, peso: "30 kg", notas: "" },
+    { ejercicio: "Press inclinado", series: 3, reps: 10, peso: "20 kg", notas: "" },
+    { ejercicio: "Press militar", series: 3, reps: 10, peso: "15 kg", notas: "" },
+    { ejercicio: "Búlgaras", series: 3, reps: 12, peso: "corporal", notas: "Por pierna" },
+    { ejercicio: "Remo con barra", series: 4, reps: 10, peso: "30 kg", notas: "" },
+    {
+      ejercicio: "Dominadas",
+      series: 3,
+      reps: 8,
+      peso: "corporal",
+      notas: "Asistidas si es necesario",
+    },
   ];
 
   const cardio: EjercicioRutina[] = [
