@@ -2,9 +2,15 @@ import type { Metadata } from "next";
 import { Cinzel, Work_Sans } from "next/font/google";
 import "./globals.css";
 
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
+// `NEXT_PUBLIC_SITE_URL` es el dominio estable de producción; `VERCEL_URL` es la URL
+// efímera de cada deployment (cambia en cada deploy) — solo sirve como respaldo en
+// preview/local. Ver hallazgo secundario del Sprint 16 (SEO: sitemap/metadata apuntaban
+// a la URL efímera).
+const defaultUrl = process.env.NEXT_PUBLIC_SITE_URL
+  ? process.env.NEXT_PUBLIC_SITE_URL
+  : process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "http://localhost:3000";
 
 const title = "Valinor Estudio — Gestión para tu gimnasio";
 const description =

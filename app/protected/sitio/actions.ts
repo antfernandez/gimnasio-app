@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getPerfilActual } from "@/lib/perfil";
@@ -88,7 +88,9 @@ export async function publicarSitio(): Promise<PublicarResult> {
   }
 
   revalidatePath("/protected/sitio");
-  revalidatePath("/g", "layout");
+  // Invalida el `fetchSitio` cacheado de app/g/[slug]/page.tsx (Sprint 16) para que el
+  // sitio público refleje esta publicación sin esperar a un redeploy.
+  updateTag(`sitio:${perfilData.gimnasio.slug}`);
   return { ok: true, publicadoAt };
 }
 

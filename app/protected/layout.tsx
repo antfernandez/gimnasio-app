@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 
 import { BrandMark } from "@/components/brand-mark";
 
@@ -6,6 +7,11 @@ import { BrandMark } from "@/components/brand-mark";
 // datos del gimnasio) sin valor real en un "shell" estático — lo dejamos bloqueante
 // en vez de forzar streaming/Suspense por cada página. Ver guía de Cache Components
 // en node_modules/next/dist/docs/01-app/02-guides/migrating-to-cache-components.md.
+// `export const instant = false` (abajo) NO fuerza esto por sí solo — solo desactiva la
+// validación de navegación instantánea; hoy la ruta queda dinámica porque
+// `getPerfilActual()` lee `cookies()` (API de tiempo de request) antes de renderizar. El
+// `await connection()` explícito de abajo es la red de seguridad si ese camino cambia
+// (mismo bug que tenía app/g/[slug]/page.tsx, Sprint 16, cuando dejó de tocar cookies()).
 export const instant = false;
 import { LogoutButton } from "@/components/logout-button";
 import { SidebarNav } from "@/components/protected/sidebar-nav";
@@ -17,6 +23,7 @@ export default async function ProtectedLayout({
 }: {
   children: React.ReactNode;
 }) {
+  await connection();
   const data = await getPerfilActual();
   if (!data) {
     redirect("/auth/login");

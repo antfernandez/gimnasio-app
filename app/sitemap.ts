@@ -2,9 +2,14 @@ import type { MetadataRoute } from "next";
 
 import { createClient } from "@/lib/supabase/server";
 
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
+// Mismo criterio que app/layout.tsx (Sprint 16): `NEXT_PUBLIC_SITE_URL` es el dominio
+// estable de producción; `VERCEL_URL` (efímero, cambia en cada deploy) queda solo como
+// respaldo en preview/local.
+const defaultUrl = process.env.NEXT_PUBLIC_SITE_URL
+  ? process.env.NEXT_PUBLIC_SITE_URL
+  : process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "http://localhost:3000";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = await createClient();
