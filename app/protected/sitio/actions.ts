@@ -4,7 +4,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getPerfilActual } from "@/lib/perfil";
-import type { ContenidoSitio, TemaSitio } from "@/lib/sitio";
+import { normalizarContenido, type ContenidoSitio, type TemaSitio } from "@/lib/sitio";
 import { createClient } from "@/lib/supabase/server";
 
 const MAX_VERSIONES = 10;
@@ -114,7 +114,13 @@ export async function listarVersiones(): Promise<VersionSitio[]> {
     .order("created_at", { ascending: false })
     .limit(MAX_VERSIONES);
 
-  return (data ?? []) as VersionSitio[];
+  // Sprint 21 Parte D: versiones publicadas antes de este sprint no tienen los campos
+  // nuevos — normalizar acá cubre tanto el listado como el `setContenido(version.contenido)`
+  // que hace el editor al restaurar (ver `handleRestaurar` en editor-sitio.tsx).
+  return ((data ?? []) as VersionSitio[]).map((v) => ({
+    ...v,
+    contenido: normalizarContenido(v.contenido),
+  }));
 }
 
 /** Restaura una versión publicada anterior AL BORRADOR (no la vuelve a publicar sola
@@ -142,7 +148,7 @@ export async function restaurarVersion(
     .update({
       tema: version.tema,
       color_acento: version.color_acento,
-      contenido_borrador: version.contenido,
+      contenido_borrador: normalizarContenido(version.contenido),
     })
     .eq("gimnasio_id", perfilData.perfil.gimnasio_id);
 

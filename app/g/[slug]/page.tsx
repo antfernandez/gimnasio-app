@@ -5,7 +5,7 @@ import { cacheTag } from "next/cache";
 import { createClient as createPublicClient } from "@supabase/supabase-js";
 
 import { SitioPublicoView } from "@/components/sitio/sitio-publico-view";
-import type { ContenidoSitio, TemaSitio } from "@/lib/sitio";
+import { normalizarContenido, type ContenidoSitio, type TemaSitio } from "@/lib/sitio";
 
 // `connection()` (abajo, en el componente) marca la ruta como dinámica — sin RLS/cookies
 // de sesión que la Cache Components API pueda detectar, es la única señal de que este
@@ -39,7 +39,11 @@ async function fetchSitio(slug: string): Promise<SitioPublicoRow | null> {
   const { data } = await supabase
     .rpc("obtener_sitio_publico", { p_slug: slug })
     .maybeSingle();
-  return (data as SitioPublicoRow | null) ?? null;
+  if (!data) return null;
+  const fila = data as SitioPublicoRow;
+  // Sprint 21 Parte D: el RPC devuelve el jsonb tal cual quedó guardado — puede
+  // faltarle campos agregados después de la última publicación de este gimnasio.
+  return { ...fila, contenido: normalizarContenido(fila.contenido) };
 }
 
 export async function generateMetadata({

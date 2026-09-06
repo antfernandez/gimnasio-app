@@ -14,6 +14,7 @@ import {
 import { BotonSubirAGaleria, ImageUploader } from "@/components/sitio/image-uploader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,6 +23,7 @@ import {
   type ContenidoSitio,
   type ItemEquipo,
   type ItemHorario,
+  type ItemPorQueElegirnos,
   type ItemServicio,
   type ItemTarifa,
   type ItemTestimonio,
@@ -460,11 +462,14 @@ export function EditorSitio({
         </ListaEditable>
       </Seccion>
 
-      <Seccion titulo="Planes y tarifas">
+      <Seccion
+        titulo="Planes y tarifas"
+        descripcion="En “Qué incluye” puedes escribir una línea (se muestra como descripción) o varias (se muestran como lista de beneficios con check)."
+      >
         <ListaEditable<ItemTarifa>
           items={contenido.tarifas}
           onChange={(tarifas) => setContenido({ ...contenido, tarifas })}
-          nuevoItem={() => ({ plan: "", precio: "", descripcion: "" })}
+          nuevoItem={() => ({ plan: "", precio: "", descripcion: "", destacado: false })}
           addLabel="Agregar plan"
         >
           {(item, update) => (
@@ -485,32 +490,75 @@ export function EditorSitio({
                 value={item.descripcion}
                 onChange={(e) => update({ descripcion: e.target.value })}
               />
+              <label className="flex items-center gap-2 text-sm text-muted-foreground sm:col-span-2">
+                <Checkbox
+                  checked={item.destacado ?? false}
+                  onCheckedChange={(v) => update({ destacado: v === true })}
+                />
+                Destacar como &ldquo;Más elegido&rdquo;
+              </label>
             </div>
           )}
         </ListaEditable>
       </Seccion>
 
-      <Seccion titulo="Galería de fotos">
+      <Seccion titulo="Por qué elegirnos" descripcion="3 razones cortas que aparecen junto a “Sobre nosotros”.">
+        <ListaEditable<ItemPorQueElegirnos>
+          items={contenido.por_que_elegirnos}
+          onChange={(por_que_elegirnos) => setContenido({ ...contenido, por_que_elegirnos })}
+          nuevoItem={() => ({ titulo: "", texto: "" })}
+          addLabel="Agregar razón"
+        >
+          {(item, update) => (
+            <div className="grid gap-3">
+              <Input
+                placeholder="Título (ej. Coaching real)"
+                value={item.titulo}
+                onChange={(e) => update({ titulo: e.target.value })}
+              />
+              <Textarea
+                placeholder="Texto breve"
+                className="min-h-[60px]"
+                value={item.texto}
+                onChange={(e) => update({ texto: e.target.value })}
+              />
+            </div>
+          )}
+        </ListaEditable>
+      </Seccion>
+
+      <Seccion titulo="Galería de fotos" descripcion="El texto (caption) aparece sobre la foto en el carrusel del sitio.">
         <div className="flex flex-col gap-4">
           {contenido.galeria.length > 0 && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {contenido.galeria.map((url, i) => (
-                <div key={i} className="relative aspect-square overflow-hidden rounded-[9px] border border-input">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- host de Supabase Storage no está allowlisteado para next/image */}
-                  <img src={url} alt="" className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setContenido({
-                        ...contenido,
-                        galeria: contenido.galeria.filter((_, idx) => idx !== i),
-                      })
-                    }
-                    className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-background/80 text-foreground hover:bg-destructive hover:text-destructive-foreground"
-                    aria-label="Quitar foto"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+              {contenido.galeria.map((foto, i) => (
+                <div key={i} className="relative flex flex-col gap-2">
+                  <div className="relative aspect-square overflow-hidden rounded-[9px] border border-input">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- host de Supabase Storage no está allowlisteado para next/image */}
+                    <img src={foto.url} alt="" className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setContenido({
+                          ...contenido,
+                          galeria: contenido.galeria.filter((_, idx) => idx !== i),
+                        })
+                      }
+                      className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-background/80 text-foreground hover:bg-destructive hover:text-destructive-foreground"
+                      aria-label="Quitar foto"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <Input
+                    placeholder="Caption (opcional)"
+                    value={foto.caption}
+                    onChange={(e) => {
+                      const galeria = contenido.galeria.slice();
+                      galeria[i] = { ...galeria[i], caption: e.target.value };
+                      setContenido({ ...contenido, galeria });
+                    }}
+                  />
                 </div>
               ))}
             </div>
@@ -518,7 +566,7 @@ export function EditorSitio({
           <BotonSubirAGaleria
             gimnasioId={gimnasioId}
             onUploaded={(url) =>
-              setContenido({ ...contenido, galeria: [...contenido.galeria, url] })
+              setContenido({ ...contenido, galeria: [...contenido.galeria, { url, caption: "" }] })
             }
           />
         </div>

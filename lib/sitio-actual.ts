@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { cache } from "react";
 
 import { getPerfilActual } from "@/lib/perfil";
-import { contenidoVacio, type Sitio } from "@/lib/sitio";
+import { contenidoVacio, normalizarContenido, type Sitio } from "@/lib/sitio";
 import { createClient } from "@/lib/supabase/server";
 
 async function ensureSitio(
@@ -16,7 +16,12 @@ async function ensureSitio(
     .eq("gimnasio_id", gimnasioId)
     .maybeSingle();
 
-  if (existente) return existente as Sitio;
+  // `normalizarContenido` rellena campos agregados después de que el gimnasio guardó su
+  // borrador (ver Sprint 21 Parte D) — sin esto, abrir el editor de un gimnasio con
+  // contenido viejo revienta al leer `contenido.galeria[i].url` sobre un string.
+  if (existente) {
+    return { ...existente, contenido_borrador: normalizarContenido(existente.contenido_borrador) } as Sitio;
+  }
 
   const { data: creado, error } = await supabase
     .from("sitios")
