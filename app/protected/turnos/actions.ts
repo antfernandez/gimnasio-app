@@ -82,6 +82,127 @@ export async function alternarHorarioActivo(
   revalidatePath("/protected/turnos");
 }
 
+/** Sprint 18, Parte 3: "semana tipo de una vez" — carga varios bloques del mismo
+ * día en un solo submit (filas dinámicas, mismo patrón `getAll` que
+ * `buildFilasRegistroRutina`), en vez de repetir el formulario "Agregar" bloque
+ * por bloque. Filas sin hora quedan descartadas silenciosamente (fila vacía al
+ * final de la lista, por ejemplo). */
+export async function crearHorariosMasivo(
+  _prevState: HorarioFormState,
+  formData: FormData,
+): Promise<HorarioFormState> {
+  const diaSemana = Number(String(formData.get("dia_semana") ?? "").trim());
+  if (!Number.isInteger(diaSemana) || diaSemana < 0 || diaSemana > 6) {
+    return { error: "Selecciona un día de la semana válido." };
+  }
+
+  const horas = formData.getAll("hora_inicio").map((v) => String(v).trim());
+  const duraciones = formData.getAll("duracion_min").map((v) => String(v).trim());
+  const cuposLista = formData.getAll("cupos").map((v) => String(v).trim());
+
+  const filas = horas
+    .map((horaInicio, i) => ({
+      horaInicio,
+      duracionMin: Number(duraciones[i] ?? ""),
+      cupos: Number(cuposLista[i] ?? ""),
+    }))
+    .filter(
+      (f) =>
+        f.horaInicio &&
+        Number.isFinite(f.duracionMin) &&
+        f.duracionMin > 0 &&
+        Number.isInteger(f.cupos) &&
+        f.cupos > 0,
+    );
+
+  if (filas.length === 0) {
+    return { error: "Agrega al menos un bloque con hora, duración y cupos válidos." };
+  }
+
+  const perfilData = await getPerfilActual();
+  if (!perfilData) redirect("/auth/login");
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("horarios_disponibles").upsert(
+    filas.map((f) => ({
+      gimnasio_id: perfilData.perfil.gimnasio_id,
+      dia_semana: diaSemana,
+      hora_inicio: f.horaInicio,
+      duracion_min: f.duracionMin,
+      cupos: f.cupos,
+    })),
+    { onConflict: "gimnasio_id,dia_semana,hora_inicio", ignoreDuplicates: true },
+  );
+
+  if (error) {
+    return { error: "No se pudo guardar la semana tipo. Intenta de nuevo." };
+  }
+
+  revalidatePath("/protected/turnos/horario");
+  revalidatePath("/protected/turnos");
+  return {};
+}
+
+/** Sprint 18, Parte 3: duplica todos los bloques ya configurados de un día hacia
+ * otros días elegidos — evita repetir el formulario "Agregar" para cada día que
+ * comparte el mismo horario (caso típico: lunes a viernes idénticos). Usa
+ * `ignoreDuplicates` para no fallar si algún bloque ya existe en el día destino. */
+export async function duplicarHorarioDia(
+  _prevState: HorarioFormState,
+  formData: FormData,
+): Promise<HorarioFormState> {
+  const diaOrigen = Number(String(formData.get("dia_origen") ?? "").trim());
+  if (!Number.isInteger(diaOrigen) || diaOrigen < 0 || diaOrigen > 6) {
+    return { error: "Selecciona el día que quieres copiar." };
+  }
+
+  const diasDestino = formData
+    .getAll("dias_destino")
+    .map((v) => Number(String(v)))
+    .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6 && n !== diaOrigen);
+
+  if (diasDestino.length === 0) {
+    return { error: "Elige al menos un día destino distinto del día de origen." };
+  }
+
+  const perfilData = await getPerfilActual();
+  if (!perfilData) redirect("/auth/login");
+
+  const supabase = await createClient();
+  const { data: bloquesOrigen, error: errorLectura } = await supabase
+    .from("horarios_disponibles")
+    .select("hora_inicio, duracion_min, cupos, activo")
+    .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
+    .eq("dia_semana", diaOrigen);
+
+  if (errorLectura || !bloquesOrigen || bloquesOrigen.length === 0) {
+    return { error: "El día de origen no tiene bloques configurados." };
+  }
+
+  const filas = diasDestino.flatMap((diaDestino) =>
+    bloquesOrigen.map((b) => ({
+      gimnasio_id: perfilData.perfil.gimnasio_id,
+      dia_semana: diaDestino,
+      hora_inicio: b.hora_inicio,
+      duracion_min: b.duracion_min,
+      cupos: b.cupos,
+      activo: b.activo,
+    })),
+  );
+
+  const { error } = await supabase
+    .from("horarios_disponibles")
+    .upsert(filas, { onConflict: "gimnasio_id,dia_semana,hora_inicio", ignoreDuplicates: true });
+
+  if (error) {
+    return { error: "No se pudo duplicar el día. Intenta de nuevo." };
+  }
+
+  revalidatePath("/protected/turnos/horario");
+  revalidatePath("/protected/turnos");
+  return {};
+}
+
 /** Carga de una vez el horario real de Valinor (informe de la dueña) como punto de
  * partida editable — no reemplaza lo ya configurado, usa `on conflict do nothing`
  * sobre el mismo horario/día para no duplicar si se aplica más de una vez. */

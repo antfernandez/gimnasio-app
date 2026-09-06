@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ExportMenu } from "@/components/export/export-menu";
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -59,11 +60,14 @@ export default async function PagosPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          Panel del dueño
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            Panel del dueño
+          </div>
+          <h2 className="text-2xl">Pagos</h2>
         </div>
-        <h2 className="text-2xl">Pagos</h2>
+        <ExportMenu resource="pagos" />
       </div>
 
       <Card>

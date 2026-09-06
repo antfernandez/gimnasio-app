@@ -1,19 +1,18 @@
 import Link from "next/link";
 
-import { createRegistroRutina } from "@/app/protected/bitacora/actions";
+import { createRegistroRutina, marcarAsistencia } from "@/app/protected/bitacora/actions";
 import { BitacoraForm } from "@/components/bitacora/bitacora-form";
-import { BitacoraHistorial } from "@/components/bitacora/bitacora-historial";
 import { ListaAlumnosBloque } from "@/components/bitacora/lista-alumnos-bloque";
-import { ProgresoRutina } from "@/components/bitacora/progreso-rutina";
 import { SelectorFechaHora } from "@/components/bitacora/selector-fecha-hora";
+import { ExportMenu } from "@/components/export/export-menu";
 import { RutinaCard } from "@/components/rutinas/rutina-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import { diaSemanaDeFecha, hoyIso } from "@/lib/turnos";
 import type {
+  EstadoPaqueteAlumno,
   HorarioDisponible,
-  RegistroRutina,
   ReservaConAlumno,
   Rutina,
 } from "@/lib/types";
@@ -38,19 +37,31 @@ export default async function BitacoraPage({
 
   const supabase = await createClient();
 
-  const [{ data: horarios }, { data: reservasDelDia }] = await Promise.all([
-    supabase
-      .from("horarios_disponibles")
-      .select("*")
-      .eq("gimnasio_id", gimnasioId)
-      .eq("activo", true),
-    supabase
-      .from("reservas")
-      .select("*, alumno:alumnos(nombres, apellidos)")
-      .eq("gimnasio_id", gimnasioId)
-      .eq("fecha", fecha)
-      .neq("estado", "cancelada"),
-  ]);
+  const [{ data: horarios }, { data: reservasDelDia }, { data: estadoPaquetes }] =
+    await Promise.all([
+      supabase
+        .from("horarios_disponibles")
+        .select("*")
+        .eq("gimnasio_id", gimnasioId)
+        .eq("activo", true),
+      supabase
+        .from("reservas")
+        .select("*, alumno:alumnos(nombres, apellidos)")
+        .eq("gimnasio_id", gimnasioId)
+        .eq("fecha", fecha)
+        .neq("estado", "cancelada"),
+      // Sprint 19, Parte 2: contador de clases restantes junto a cada alumno citado.
+      supabase
+        .from("v_estado_paquetes_alumnos")
+        .select("alumno_id, clases_restantes")
+        .eq("gimnasio_id", gimnasioId),
+    ]);
+
+  const clasesRestantesPorAlumno = new Map(
+    (
+      (estadoPaquetes ?? []) as Pick<EstadoPaqueteAlumno, "alumno_id" | "clases_restantes">[]
+    ).map((e) => [e.alumno_id, e.clases_restantes]),
+  );
 
   const diaSemana = diaSemanaDeFecha(fecha);
   const bloquesDelDia = ((horarios ?? []) as HorarioDisponible[])
@@ -68,8 +79,12 @@ export default async function BitacoraPage({
         .filter((r) => r.hora_inicio === hora)
         .map((r) => ({
           id: r.alumno_id,
+          reservaId: r.id,
           nombres: r.alumno?.nombres ?? "",
           apellidos: r.alumno?.apellidos ?? "",
+          estado: r.estado,
+          asistencia: r.asistencia,
+          clasesRestantes: clasesRestantesPorAlumno.get(r.alumno_id) ?? null,
         }))
     : [];
 
@@ -77,7 +92,6 @@ export default async function BitacoraPage({
     alumnoId && hora ? (alumnosDelBloque.find((a) => a.id === alumnoId) ?? null) : null;
 
   let rutinaActiva: Rutina | null = null;
-  let listaRegistros: RegistroRutina[] = [];
 
   if (alumnoSeleccionado) {
     const { data: rutina } = await supabase
@@ -87,24 +101,18 @@ export default async function BitacoraPage({
       .eq("activa", true)
       .maybeSingle();
     rutinaActiva = (rutina as Rutina | null) ?? null;
-
-    if (rutinaActiva) {
-      const { data: registros } = await supabase
-        .from("registros_rutina")
-        .select("*")
-        .eq("alumno_id", alumnoSeleccionado.id)
-        .order("fecha", { ascending: false });
-      listaRegistros = (registros ?? []) as RegistroRutina[];
-    }
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          Panel del dueño
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            Panel del dueño
+          </div>
+          <h2 className="text-2xl">Bitácora</h2>
         </div>
-        <h2 className="text-2xl">Bitácora</h2>
+        <ExportMenu resource="bitacora" />
       </div>
 
       <Card>
@@ -124,6 +132,7 @@ export default async function BitacoraPage({
               hora={hora}
               alumnos={alumnosDelBloque}
               alumnoSeleccionadoId={alumnoId}
+              marcarAsistencia={marcarAsistencia}
             />
           </CardContent>
         </Card>
@@ -160,9 +169,17 @@ export default async function BitacoraPage({
             <RutinaCard rutina={rutinaActiva} />
 
             <div className="mt-6 border-t border-border pt-6">
-              <h4 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Registrar sesión de bitácora
-              </h4>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Registrar sesión de bitácora
+                </h4>
+                <Link
+                  href={`/protected/alumnos/${alumnoSeleccionado.id}?vista=progreso`}
+                  className="shrink-0 text-xs text-muted-foreground hover:text-primary hover:underline"
+                >
+                  Ver historial y progreso →
+                </Link>
+              </div>
               <BitacoraForm
                 action={createRegistroRutina.bind(
                   null,
@@ -173,20 +190,6 @@ export default async function BitacoraPage({
                 )}
                 rutina={rutinaActiva}
               />
-            </div>
-
-            <div className="mt-6 border-t border-border pt-6">
-              <h4 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Historial de bitácora
-              </h4>
-              <BitacoraHistorial registros={listaRegistros} />
-            </div>
-
-            <div className="mt-6 border-t border-border pt-6">
-              <h4 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Progreso de rutina
-              </h4>
-              <ProgresoRutina registros={listaRegistros} />
             </div>
           </CardContent>
         </Card>

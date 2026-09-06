@@ -1,9 +1,13 @@
 import { Badge } from "@/components/ui/badge";
 import type { EstadoPaquete } from "@/lib/types";
 
-const CONFIG: Record<EstadoPaquete, { label: string; variant: "success" | "default" | "secondary" }> = {
+const CONFIG: Record<
+  EstadoPaquete,
+  { label: string; variant: "success" | "default" | "secondary" | "destructive" }
+> = {
   vigente: { label: "Vigente", variant: "success" },
   por_vencer: { label: "Por vencer", variant: "default" },
+  atrasado: { label: "Atrasado", variant: "destructive" },
   sin_paquete: { label: "Sin paquete", variant: "secondary" },
 };
 

@@ -147,11 +147,11 @@ export interface Paquete {
   updated_at: string;
 }
 
-export type EstadoPaquete = "vigente" | "por_vencer" | "sin_paquete";
+export type EstadoPaquete = "vigente" | "por_vencer" | "atrasado" | "sin_paquete";
 
 /** Fila de la vista `v_estado_paquetes_alumnos` — equivalente para paquetes a
  * `EstadoPagoAlumno`. Los campos de paquete son `null` cuando `estado_paquete` es
- * `sin_paquete` y el alumno nunca tuvo ninguno. */
+ * `atrasado` (el paquete ya venció) o `sin_paquete` (nunca tuvo uno). */
 export interface EstadoPaqueteAlumno {
   alumno_id: string;
   gimnasio_id: string;
@@ -285,6 +285,10 @@ export interface HorarioDisponible {
 
 export type EstadoReserva = "reservada" | "realizada" | "cancelada";
 export type OrigenCambio = "dueño" | "alumno";
+/** Sprint 19, Parte 1: asistencia real del alumno al bloque, independiente de
+ * `estado` — ver migración `0014_asistencia_reservas.sql`. `null` mientras nadie la
+ * registra todavía. */
+export type Asistencia = "presente" | "ausente" | "justificado";
 
 export interface Reserva {
   id: string;
@@ -294,6 +298,7 @@ export interface Reserva {
   hora_inicio: string; // "HH:MM:SS"
   duracion_min: number;
   estado: EstadoReserva;
+  asistencia: Asistencia | null;
   creado_por: OrigenCambio;
   cancelado_por: OrigenCambio | null;
   cancelado_dentro_ventana: boolean | null;

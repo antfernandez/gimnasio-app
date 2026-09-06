@@ -14,6 +14,7 @@ import { BrandMark } from "@/components/brand-mark";
 // (mismo bug que tenía app/g/[slug]/page.tsx, Sprint 16, cuando dejó de tocar cookies()).
 export const instant = false;
 import { LogoutButton } from "@/components/logout-button";
+import { SidebarMobileToggle } from "@/components/protected/sidebar-mobile-toggle";
 import { SidebarNav } from "@/components/protected/sidebar-nav";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
@@ -43,29 +44,31 @@ export default async function ProtectedLayout({
 
   return (
     <div className="grid min-h-svh grid-cols-1 md:grid-cols-[260px_1fr]">
-      <aside className="flex flex-col border-b border-border bg-secondary/40 px-5 py-7 md:border-b-0 md:border-r">
-        <BrandMark className="mb-8 px-1" />
-        {/* Sprint 15, Parte E: nombre de usuario → nombre del gimnasio → botón
-            "Cerrar sesión", en ese orden — el badge de plan se conserva pero pasa a
-            mostrarse debajo del botón, no encima. */}
-        <div className="mb-6 border-b border-border pb-6 text-center">
-          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary font-display text-xl text-primary-foreground">
-            {inicial}
+      <aside className="flex flex-col border-b border-border bg-secondary/40 px-5 py-5 md:border-b-0 md:border-r md:py-7">
+        <BrandMark className="mb-2 px-1 md:mb-8" />
+        <SidebarMobileToggle>
+          {/* Sprint 15, Parte E: nombre de usuario → nombre del gimnasio → botón
+              "Cerrar sesión", en ese orden — el badge de plan se conserva pero pasa a
+              mostrarse debajo del botón, no encima. */}
+          <div className="mb-6 border-b border-border pb-6 text-center">
+            <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary font-display text-xl text-primary-foreground">
+              {inicial}
+            </div>
+            <h4 className="font-sans text-sm font-semibold text-foreground">
+              {perfil.nombre_completo}
+            </h4>
+            <span className="text-xs text-muted-foreground">
+              {gimnasio.nombre}
+            </span>
+            <div className="mt-3">
+              <LogoutButton />
+            </div>
+            <div className="mx-auto mt-3 inline-block rounded-full border border-border bg-primary/10 px-3 py-1 text-[0.66rem] uppercase tracking-wide text-secondary-foreground">
+              Plan {gimnasio.plan}
+            </div>
           </div>
-          <h4 className="font-sans text-sm font-semibold text-foreground">
-            {perfil.nombre_completo}
-          </h4>
-          <span className="text-xs text-muted-foreground">
-            {gimnasio.nombre}
-          </span>
-          <div className="mt-3">
-            <LogoutButton />
-          </div>
-          <div className="mx-auto mt-3 inline-block rounded-full border border-border bg-primary/10 px-3 py-1 text-[0.66rem] uppercase tracking-wide text-secondary-foreground">
-            Plan {gimnasio.plan}
-          </div>
-        </div>
-        <SidebarNav />
+          <SidebarNav />
+        </SidebarMobileToggle>
       </aside>
 
       <main className="px-6 py-8 md:px-10 md:py-10">

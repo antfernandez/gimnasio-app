@@ -165,8 +165,10 @@ export default async function PortalPage() {
     .gte("fecha", hoyIso())
     .order("fecha", { ascending: true })
     .order("hora_inicio", { ascending: true });
+  const tienePaqueteVigente =
+    paquete?.estado_paquete === "vigente" || paquete?.estado_paquete === "por_vencer";
   proximasReservasQuery =
-    paquete && paquete.estado_paquete !== "sin_paquete" && paquete.vencimiento_actual
+    tienePaqueteVigente && paquete?.vencimiento_actual
       ? proximasReservasQuery.lte("fecha", paquete.vencimiento_actual)
       : proximasReservasQuery.limit(5);
   const { data: proximasReservas } = await proximasReservasQuery;
@@ -232,8 +234,8 @@ export default async function PortalPage() {
               </h3>
               <div className="flex items-center gap-2">
                 {paquete && (
-                  <Badge variant={paquete.estado_paquete !== "sin_paquete" ? "success" : "secondary"}>
-                    {paquete.estado_paquete !== "sin_paquete" ? "Vigente" : "No vigente"}
+                  <Badge variant={tienePaqueteVigente ? "success" : "secondary"}>
+                    {tienePaqueteVigente ? "Vigente" : "No vigente"}
                   </Badge>
                 )}
                 {estado && (
@@ -246,7 +248,7 @@ export default async function PortalPage() {
             <p className="mb-2 text-sm font-medium text-foreground">
               {plan ? plan.nombre : "Sin plan asignado"}
             </p>
-            {!paquete || paquete.estado_paquete === "sin_paquete" ? (
+            {!tienePaqueteVigente ? (
               <p className="text-sm text-muted-foreground">
                 No tienes un paquete de clases vigente. Contacta a tu estudio para
                 renovarlo.

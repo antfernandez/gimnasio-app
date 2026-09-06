@@ -2,6 +2,7 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 
 import { ToggleActivoButton } from "@/components/alumnos/toggle-activo-button";
+import { ExportMenu } from "@/components/export/export-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,6 +66,16 @@ export default async function AlumnosPage({
   const { data: alumnos } = await query;
   const lista = (alumnos ?? []) as AlumnoConPlan[];
 
+  // Sprint 19, Parte 4: "Pendientes de aprobación" deja de ser un ítem fijo del
+  // menú principal y pasa a un badge acá, visible solo cuando hay algo que
+  // revisar — antes ocupaba espacio de navegación permanente sin aportar nada
+  // mientras no había solicitudes (auditoría UX 2026-09-04, sección 5).
+  const { count: pendientesCount } = await supabase
+    .from("alumnos")
+    .select("*", { count: "exact", head: true })
+    .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
+    .eq("estado_aprobacion", "pendiente");
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -74,12 +85,23 @@ export default async function AlumnosPage({
           </div>
           <h2 className="text-2xl">Alumnos</h2>
         </div>
-        <Button asChild size="lg">
-          <Link href="/protected/alumnos/nuevo">
-            <Plus className="h-4 w-4" />
-            Nuevo alumno
-          </Link>
-        </Button>
+        <div className="flex items-center gap-3">
+          {!!pendientesCount && (
+            <Link
+              href="/protected/alumnos/pendientes"
+              className="flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-secondary-foreground hover:bg-primary/20"
+            >
+              {pendientesCount} pendiente{pendientesCount === 1 ? "" : "s"} de aprobación
+            </Link>
+          )}
+          <ExportMenu resource="alumnos" />
+          <Button asChild size="lg">
+            <Link href="/protected/alumnos/nuevo">
+              <Plus className="h-4 w-4" />
+              Nuevo alumno
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {params.creado === "1" && (

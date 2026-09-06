@@ -1,8 +1,10 @@
 import Link from "next/link";
 
 import { AplicarPresetButton } from "@/components/turnos/aplicar-preset-button";
+import { DuplicarDiaForm } from "@/components/turnos/duplicar-dia-form";
 import { HorarioForm } from "@/components/turnos/horario-form";
 import { HorarioRowActions } from "@/components/turnos/horario-row-actions";
+import { SemanaTipoForm } from "@/components/turnos/semana-tipo-form";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -15,7 +17,7 @@ import {
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import { formatHora, NOMBRES_DIA } from "@/lib/turnos";
-import type { HorarioDisponible } from "@/lib/types";
+import type { DiaSemana, HorarioDisponible } from "@/lib/types";
 
 export default async function HorarioPage() {
   const perfilData = await getPerfilActual();
@@ -30,6 +32,9 @@ export default async function HorarioPage() {
     .order("hora_inicio", { ascending: true });
 
   const lista = (horarios ?? []) as HorarioDisponible[];
+  const diasConHorario = [...new Set(lista.map((h) => h.dia_semana))].sort(
+    (a, b) => a - b,
+  ) as DiaSemana[];
 
   return (
     <div className="flex flex-col gap-6">
@@ -61,10 +66,39 @@ export default async function HorarioPage() {
         </Card>
       )}
 
+      {/* Sprint 18, Parte 3: "semana tipo de una vez" + "duplicar día" — pensado
+          para armar una grilla real (ej. 15 bloques × 6 días) en minutos en vez de
+          repetir el formulario "Agregar" bloque por bloque. */}
+      <Card>
+        <CardContent className="pt-6">
+          <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Cargar varios bloques de un día
+          </h3>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Arma de una vez todos los bloques de un día (tu &quot;semana tipo&quot;) y
+            después duplícalo a los demás días con el mismo horario.
+          </p>
+          <SemanaTipoForm />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="pt-6">
+          <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Duplicar un día a otros
+          </h3>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Copia todos los bloques de un día ya configurado hacia otros días (ej.
+            lunes a viernes con el mismo horario).
+          </p>
+          <DuplicarDiaForm diasConHorario={diasConHorario} />
+        </CardContent>
+      </Card>
+
       <Card>
         <CardContent className="pt-6">
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Agregar horario
+            Agregar un bloque suelto
           </h3>
           <HorarioForm />
         </CardContent>
