@@ -3,7 +3,6 @@
 import { LogOut } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 
 export function LogoutButton() {
@@ -16,14 +15,13 @@ export function LogoutButton() {
   };
 
   return (
-    <Button
+    <button
+      type="button"
       onClick={logout}
-      variant="ghost"
-      size="sm"
-      className="w-full justify-start gap-3 rounded-[9px] px-3.5 text-muted-foreground"
+      className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-primary/10 px-4 py-2 text-[0.7rem] font-medium uppercase tracking-wide text-secondary-foreground transition-colors hover:bg-primary/20"
     >
-      <LogOut className="h-4 w-4" />
+      <LogOut className="h-3.5 w-3.5" />
       Cerrar sesión
-    </Button>
+    </button>
   );
 }
