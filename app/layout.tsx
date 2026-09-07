@@ -27,6 +27,10 @@ export const metadata: Metadata = {
     "control de pagos gimnasio",
     "rutinas de entrenamiento",
   ],
+  icons: {
+    icon: "/logo-valinor.png",
+    apple: "/apple-touch-icon.png",
+  },
   openGraph: {
     title,
     description,
@@ -34,11 +38,13 @@ export const metadata: Metadata = {
     siteName: "Valinor Estudio",
     locale: "es_CL",
     type: "website",
+    images: ["/logo-valinor.png"],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
+    images: ["/logo-valinor.png"],
   },
 };
 

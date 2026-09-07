@@ -47,9 +47,6 @@ export default async function ProtectedLayout({
       <aside className="flex flex-col border-b border-border bg-secondary/40 px-5 py-5 md:border-b-0 md:border-r md:py-7">
         <BrandMark className="mb-2 px-1 md:mb-8" />
         <SidebarMobileToggle>
-          {/* Sprint 15, Parte E: nombre de usuario → nombre del gimnasio → botón
-              "Cerrar sesión", en ese orden — el badge de plan se conserva pero pasa a
-              mostrarse debajo del botón, no encima. */}
           <div className="mb-6 border-b border-border pb-6 text-center">
             <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary font-display text-xl text-primary-foreground">
               {inicial}
@@ -57,17 +54,11 @@ export default async function ProtectedLayout({
             <h4 className="font-sans text-sm font-semibold text-foreground">
               {perfil.nombre_completo}
             </h4>
-            <span className="text-xs text-muted-foreground">
-              {gimnasio.nombre}
-            </span>
-            <div className="mt-3">
-              <LogoutButton />
-            </div>
-            <div className="mx-auto mt-3 inline-block rounded-full border border-border bg-primary/10 px-3 py-1 text-[0.66rem] uppercase tracking-wide text-secondary-foreground">
-              Plan {gimnasio.plan}
-            </div>
           </div>
           <SidebarNav />
+          <div className="mt-8 flex justify-center">
+            <LogoutButton />
+          </div>
         </SidebarMobileToggle>
       </aside>
 
