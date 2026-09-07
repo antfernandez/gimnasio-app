@@ -8,7 +8,6 @@ import {
   Dumbbell,
   Globe,
   NotebookPen,
-  Sun,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -16,20 +15,18 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
-// Sprint 19, Parte 3: reordenado según la frecuencia de uso real de un coach
-// (auditoría UX 2026-09-04, sección 6) — Hoy y Bitácora primero (uso diario en
-// clase), Estadísticas (antes "Dashboard" de métricas) baja al final como vista de
-// análisis bajo demanda, y "Pendientes de aprobación" se fusiona como badge dentro
-// de Alumnos en vez de ocupar un ítem fijo del menú (Sprint 19, Parte 4).
+// Sprint 22, Parte B: "Hoy" y "Estadísticas" (dos rutas separadas desde el
+// Sprint 19, Parte 3) se fusionaron de vuelta en una sola página/ítem —
+// "Estadísticas" queda al principio del menú porque es la página de aterrizaje
+// del dueño (agenda del día + métricas), no al final como vista bajo demanda.
 const items = [
-  { href: "/protected", label: "Hoy", icon: Sun, exact: true },
+  { href: "/protected", label: "Estadísticas", icon: BarChart3, exact: true },
   { href: "/protected/bitacora", label: "Bitácora", icon: NotebookPen },
   { href: "/protected/alumnos", label: "Alumnos", icon: Users },
   { href: "/protected/rutinas", label: "Rutinas", icon: Dumbbell },
   { href: "/protected/turnos", label: "Turnos", icon: CalendarDays },
   { href: "/protected/pagos", label: "Pagos", icon: CreditCard },
   { href: "/protected/planes", label: "Planes", icon: ClipboardList },
-  { href: "/protected/estadisticas", label: "Estadísticas", icon: BarChart3 },
   { href: "/protected/sitio", label: "Sitio público", icon: Globe },
 ];
 

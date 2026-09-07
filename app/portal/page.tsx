@@ -43,6 +43,9 @@ function formatMedidas(medidas: MedidasAvance): string {
   if (medidas.cadera_cm) partes.push(`Cadera ${medidas.cadera_cm}cm`);
   if (medidas.pecho_cm) partes.push(`Pecho ${medidas.pecho_cm}cm`);
   if (medidas.brazo_cm) partes.push(`Brazo ${medidas.brazo_cm}cm`);
+  if (medidas.cuello_cm) partes.push(`Cuello ${medidas.cuello_cm}cm`);
+  if (medidas.muslos_cm) partes.push(`Muslos ${medidas.muslos_cm}cm`);
+  if (medidas.pantorrillas_cm) partes.push(`Pantorrillas ${medidas.pantorrillas_cm}cm`);
   return partes.length > 0 ? partes.join(" · ") : "—";
 }
 

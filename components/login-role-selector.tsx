@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { BrandMark } from "@/components/brand-mark";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 const roles = [
   {
@@ -28,7 +29,7 @@ export function LoginRoleSelector({
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
   return (
-    <div className={className} {...props}>
+    <div className={cn("flex flex-col", className)} {...props}>
       <BrandMark className="mx-auto" />
       <div className="mt-6 flex flex-col gap-4">
         <div className="text-center">

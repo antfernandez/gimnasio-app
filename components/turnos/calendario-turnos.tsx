@@ -142,7 +142,7 @@ function NavegacionCalendario({ vista, fecha }: { vista: Vista; fecha: string })
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button asChild variant="outline" size="sm">
           <Link href={hrefVista(vista, anterior)}>← Anterior</Link>
         </Button>
@@ -152,7 +152,7 @@ function NavegacionCalendario({ vista, fecha }: { vista: Vista; fecha: string })
         <Button asChild variant="outline" size="sm">
           <Link href={hrefVista(vista, siguiente)}>Siguiente →</Link>
         </Button>
-        <span className="ml-2 text-sm font-medium text-foreground">
+        <span className="basis-full text-sm font-medium text-foreground sm:ml-2 sm:basis-auto">
           {vista === "mes" ? tituloMes : formatFechaLarga(fecha)}
         </span>
       </div>

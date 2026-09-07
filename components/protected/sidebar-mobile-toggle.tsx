@@ -19,10 +19,22 @@ export function SidebarMobileToggle({ children }: { children: React.ReactNode })
 
   // Cierra el menú al navegar a otra pantalla — el layout no se remonta entre
   // rutas de `/protected/*`, así que sin esto el menú quedaba abierto tapando la
-  // pantalla después de tocar un ítem.
+  // pantalla después de tocar un ítem. Se mantiene como red de seguridad, pero
+  // el cierre real ahora lo dispara el click (ver más abajo).
   useEffect(() => {
     setAbierto(false);
   }, [pathname]);
+
+  // Sprint 22, Parte C: en "Sitio público" el menú quedaba visible tras hacer
+  // scroll porque esa pantalla hace dos consultas a Supabase en paralelo antes de
+  // poder renderizar — la navegación tarda más y da tiempo a scrollear mientras
+  // `pathname` todavía no cambia. Cerrar de forma optimista al tocar cualquier
+  // link del menú, sin esperar a que la transición de ruta termine.
+  const cerrarAlHacerClickEnLink = (e: React.MouseEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest("a")) {
+      setAbierto(false);
+    }
+  };
 
   return (
     <>
@@ -38,7 +50,12 @@ export function SidebarMobileToggle({ children }: { children: React.ReactNode })
           {abierto ? "Cerrar menú" : "Menú"}
         </Button>
       </div>
-      <div className={cn(abierto ? "block" : "hidden", "md:block")}>{children}</div>
+      <div
+        onClick={cerrarAlHacerClickEnLink}
+        className={cn(abierto ? "block" : "hidden", "md:block")}
+      >
+        {children}
+      </div>
     </>
   );
 }

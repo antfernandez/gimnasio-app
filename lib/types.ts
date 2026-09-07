@@ -229,6 +229,9 @@ export interface MedidasAvance {
   cadera_cm?: number;
   pecho_cm?: number;
   brazo_cm?: number;
+  cuello_cm?: number;
+  muslos_cm?: number;
+  pantorrillas_cm?: number;
 }
 
 export interface Avance {

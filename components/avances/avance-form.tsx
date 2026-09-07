@@ -89,6 +89,36 @@ export function AvanceForm({ action }: Props) {
               placeholder="32"
             />
           </div>
+          <div className="grid gap-1.5">
+            <span className="text-xs text-muted-foreground">Cuello</span>
+            <Input
+              name="cuello_cm"
+              type="number"
+              min="1"
+              step="0.1"
+              placeholder="35"
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <span className="text-xs text-muted-foreground">Muslos</span>
+            <Input
+              name="muslos_cm"
+              type="number"
+              min="1"
+              step="0.1"
+              placeholder="55"
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <span className="text-xs text-muted-foreground">Pantorrillas</span>
+            <Input
+              name="pantorrillas_cm"
+              type="number"
+              min="1"
+              step="0.1"
+              placeholder="36"
+            />
+          </div>
         </div>
       </div>
 

@@ -498,7 +498,15 @@ export function SitioPublicoView({
         )}
         style={{ background: "color-mix(in srgb, var(--sitio-bg) 96%, transparent)" }}
       >
-        <span className={cn("text-[1.05rem] tracking-[.1em]", TITULO)}>{nombreGimnasio}</span>
+        <span className="flex items-center gap-2.5">
+          <span
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--sitio-accent-ink)]"
+            style={{ background: "var(--sitio-accent)" }}
+          >
+            <Dumbbell className="h-4 w-4" strokeWidth={2.25} />
+          </span>
+          <span className={cn("text-[1.05rem] tracking-[.1em]", TITULO)}>{nombreGimnasio}</span>
+        </span>
         {navLinks.length > 0 && (
           <nav className="hidden gap-8 min-[981px]:flex">
             {navLinks.map((l) => (

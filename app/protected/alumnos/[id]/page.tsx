@@ -54,6 +54,9 @@ function formatMedidas(medidas: MedidasAvance): string {
   if (medidas.cadera_cm) partes.push(`Cadera ${medidas.cadera_cm}cm`);
   if (medidas.pecho_cm) partes.push(`Pecho ${medidas.pecho_cm}cm`);
   if (medidas.brazo_cm) partes.push(`Brazo ${medidas.brazo_cm}cm`);
+  if (medidas.cuello_cm) partes.push(`Cuello ${medidas.cuello_cm}cm`);
+  if (medidas.muslos_cm) partes.push(`Muslos ${medidas.muslos_cm}cm`);
+  if (medidas.pantorrillas_cm) partes.push(`Pantorrillas ${medidas.pantorrillas_cm}cm`);
   return partes.length > 0 ? partes.join(" · ") : "—";
 }
 
@@ -168,9 +171,16 @@ export default async function FichaAlumnoPage({
             </h2>
           </div>
           <div className="flex items-center gap-3">
+            {/* Sprint 22, Parte C: en mobile la cabecera amontonaba hasta 5-6
+                elementos (uno quedaba cortado fuera de pantalla). Se deja a
+                simple vista solo lo imprescindible — estado de cuenta y estado
+                de paquete —, el resto ("Ver pagos", clases restantes, ficha de
+                salud) se mueve a la pestaña "Datos" (ver más abajo) y solo
+                reaparece acá desde `sm:` en adelante, sin sacar nada de la
+                versión desktop. */}
             <Link
               href={`/protected/pagos/${a.id}`}
-              className="text-xs text-muted-foreground hover:text-primary hover:underline"
+              className="hidden text-xs text-muted-foreground hover:text-primary hover:underline sm:inline"
             >
               Ver pagos
             </Link>
@@ -183,7 +193,7 @@ export default async function FichaAlumnoPage({
             {clasificacion && <ClasificacionBadge clasificacion={clasificacion} />}
             {estadoPaquete && estadoPaquete.estado_paquete !== "sin_paquete" && (
               <>
-                <span className="text-xs text-muted-foreground">
+                <span className="hidden text-xs text-muted-foreground sm:inline">
                   {estadoPaquete.clases_restantes} clase
                   {estadoPaquete.clases_restantes === 1 ? "" : "s"} restante
                   {estadoPaquete.clases_restantes === 1 ? "" : "s"}
@@ -191,7 +201,9 @@ export default async function FichaAlumnoPage({
                 <EstadoPaqueteBadge estado={estadoPaquete.estado_paquete} />
               </>
             )}
-            <FichaSaludBadge pendiente={fichaSaludPendiente(a)} />
+            <span className="hidden sm:inline-flex">
+              <FichaSaludBadge pendiente={fichaSaludPendiente(a)} />
+            </span>
             <ToggleActivoButton
               id={a.id}
               activo={a.activo}
@@ -224,6 +236,28 @@ export default async function FichaAlumnoPage({
                 <Badge variant={a.user_id ? "success" : "secondary"}>
                   {a.user_id ? "Cuenta propia vinculada" : "Sin cuenta propia"}
                 </Badge>
+              </div>
+
+              {/* Sprint 22, Parte C: versión mobile de lo que la cabecera oculta
+                  desde `sm:` hacia abajo ("Ver pagos", clases restantes, ficha de
+                  salud) — nada se pierde, solo cambia de lugar en pantallas
+                  angostas. */}
+              <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:hidden">
+                <Link
+                  href={`/protected/pagos/${a.id}`}
+                  className="text-muted-foreground hover:text-primary hover:underline"
+                >
+                  Ver pagos
+                </Link>
+                {estadoPaquete && estadoPaquete.estado_paquete !== "sin_paquete" && (
+                  <span className="text-muted-foreground">
+                    {estadoPaquete.clases_restantes} clase
+                    {estadoPaquete.clases_restantes === 1 ? "" : "s"} restante
+                    {estadoPaquete.clases_restantes === 1 ? "" : "s"}
+                  </span>
+                )}
+                <span className="text-muted-foreground">Ficha de salud:</span>
+                <FichaSaludBadge pendiente={fichaSaludPendiente(a)} />
               </div>
               <AlumnoForm
                 action={updateAlumnoConId}

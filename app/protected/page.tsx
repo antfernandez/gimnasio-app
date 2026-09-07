@@ -1,14 +1,26 @@
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, DollarSign, type LucideIcon, Package, Users } from "lucide-react";
 import Link from "next/link";
 
 import { EstadoPaqueteBadge } from "@/components/pagos/estado-paquete-badge";
+import { OcupacionSemanal } from "@/components/turnos/ocupacion-semanal";
 import { Card, CardContent } from "@/components/ui/card";
 import { fichaSaludPendiente } from "@/lib/ficha-salud";
-import { formatFecha } from "@/lib/format";
+import { formatFecha, formatMonto } from "@/lib/format";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
-import { construirSlots, formatHora, hoyIso } from "@/lib/turnos";
-import type { Alumno, EstadoPaqueteAlumno, HorarioDisponible, ReservaConAlumno } from "@/lib/types";
+import {
+  construirSlots,
+  diasDeLaSemana,
+  diasDelMes,
+  formatHora,
+  hoyIso,
+} from "@/lib/turnos";
+import type {
+  Alumno,
+  EstadoPaqueteAlumno,
+  HorarioDisponible,
+  ReservaConAlumno,
+} from "@/lib/types";
 
 function Bloque({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
@@ -23,17 +35,54 @@ function Bloque({ titulo, children }: { titulo: string; children: React.ReactNod
   );
 }
 
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: number | string;
+}) {
+  return (
+    <Card>
+      <CardContent className="flex items-center gap-4 pt-6">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-secondary-foreground">
+          <Icon className="h-5 w-5" />
+        </div>
+        <div>
+          <div className="font-display text-2xl font-semibold text-foreground">
+            {value}
+          </div>
+          <div className="text-sm text-muted-foreground">{label}</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 const ORDEN_PAQUETE: Record<"atrasado" | "por_vencer", number> = {
   atrasado: 0,
   por_vencer: 1,
 };
 
-export default async function HoyPage() {
+// Sprint 22, Parte B: "Hoy" y "Estadísticas" vivían como dos rutas/ítems de menú
+// separados (Sprint 19, Parte 3) — se fusionan de vuelta en una sola página porque
+// un coach en la práctica quería ambas cosas a la vez, no una u otra. La agenda del
+// día y sus alertas van primero (lo que se consulta a diario), las métricas
+// mensuales de "Estadísticas" quedan debajo (consulta bajo demanda). `/protected`
+// sobrevive como URL única: es el destino de login del dueño y el target de
+// `revalidatePath("/protected")` en varias acciones.
+export default async function EstadisticasPage() {
   const perfilData = await getPerfilActual();
   if (!perfilData) return null; // el layout ya redirige a /auth/login
 
   const gimnasioId = perfilData.perfil.gimnasio_id;
   const hoy = hoyIso();
+  const semana = diasDeLaSemana(hoy);
+  const mesDias = diasDelMes(hoy);
+  const inicioMes = mesDias[0];
+  const finMes = mesDias[mesDias.length - 1];
 
   const supabase = await createClient();
 
@@ -42,6 +91,12 @@ export default async function HoyPage() {
     { data: reservasHoy },
     { data: estadoPaquetes },
     { data: alumnosParaFichaSalud },
+    { data: horarios },
+    { data: reservasSemana },
+    { data: pagosDelMes },
+    { count: planesVendidos },
+    { count: alumnosActivos },
+    { count: alumnosInactivos },
   ] = await Promise.all([
     supabase.from("horarios_disponibles").select("*").eq("gimnasio_id", gimnasioId).eq("activo", true),
     supabase
@@ -65,11 +120,40 @@ export default async function HoyPage() {
       .select("id, nombres, apellidos, activo, alergias, enfermedades, lesiones")
       .eq("gimnasio_id", gimnasioId)
       .eq("activo", true),
+    supabase.from("horarios_disponibles").select("*").eq("gimnasio_id", gimnasioId),
+    supabase
+      .from("reservas")
+      .select("*, alumno:alumnos(nombres, apellidos)")
+      .eq("gimnasio_id", gimnasioId)
+      .gte("fecha", semana[0])
+      .lte("fecha", semana[6]),
+    supabase
+      .from("pagos")
+      .select("monto")
+      .eq("gimnasio_id", gimnasioId)
+      .gte("fecha_pago", inicioMes)
+      .lte("fecha_pago", finMes),
+    supabase
+      .from("paquetes")
+      .select("*", { count: "exact", head: true })
+      .eq("gimnasio_id", gimnasioId)
+      .gte("fecha_inicio", inicioMes)
+      .lte("fecha_inicio", finMes),
+    supabase
+      .from("alumnos")
+      .select("*", { count: "exact", head: true })
+      .eq("gimnasio_id", gimnasioId)
+      .eq("activo", true),
+    supabase
+      .from("alumnos")
+      .select("*", { count: "exact", head: true })
+      .eq("gimnasio_id", gimnasioId)
+      .eq("activo", false),
   ]);
 
-  const listaHorarios = (horariosHoy ?? []) as HorarioDisponible[];
+  const listaHorariosHoy = (horariosHoy ?? []) as HorarioDisponible[];
   const reservas = (reservasHoy ?? []) as ReservaConAlumno[];
-  const slotsHoy = construirSlots([hoy], listaHorarios)
+  const slotsHoy = construirSlots([hoy], listaHorariosHoy)
     .map((base) => {
       const reservasDelSlot = reservas.filter((r) => r.hora_inicio === base.horaInicio);
       return {
@@ -93,13 +177,31 @@ export default async function HoyPage() {
     >[]
   ).filter((a) => fichaSaludPendiente(a));
 
+  const listaHorarios = (horarios ?? []) as HorarioDisponible[];
+  const reservasEnSemana = (reservasSemana ?? []) as ReservaConAlumno[];
+  const slotsSemana = construirSlots(semana, listaHorarios).map((base) => {
+    const reservasDelSlot = reservasEnSemana.filter(
+      (r) => r.fecha === base.fecha && r.hora_inicio === base.horaInicio,
+    );
+    return {
+      ...base,
+      cuposOcupados: reservasDelSlot.filter((r) => r.estado !== "cancelada").length,
+      reservas: reservasDelSlot,
+    };
+  });
+
+  const ingresosMes = (pagosDelMes ?? []).reduce(
+    (acc, p) => acc + Number((p as { monto: number }).monto),
+    0,
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
           Panel del dueño
         </div>
-        <h2 className="text-2xl">Hoy</h2>
+        <h2 className="text-2xl">Estadísticas</h2>
       </div>
 
       {/* Sprint 18, Parte 4: lo primero que ve el coach es la agenda del día, no
@@ -214,15 +316,31 @@ export default async function HoyPage() {
         )}
       </Bloque>
 
-      {/* Sprint 19, Parte 3: cobros del mes, planes vendidos y ocupación semanal
-          completa se movieron a /protected/estadisticas — un coach los consulta
-          con mucha menos frecuencia que la agenda del día. */}
-      <Link
-        href="/protected/estadisticas"
-        className="text-xs text-muted-foreground hover:text-primary hover:underline"
-      >
-        Ver estadísticas del mes →
-      </Link>
+      <StatCard
+        icon={Users}
+        label="Alumnos"
+        value={`${alumnosActivos ?? 0} activos · ${alumnosInactivos ?? 0} inactivos`}
+      />
+
+      <StatCard icon={DollarSign} label="Cobrado este mes" value={formatMonto(ingresosMes)} />
+
+      <StatCard icon={Package} label="Planes vendidos este mes" value={planesVendidos ?? 0} />
+
+      <Bloque titulo="Ocupación semanal">
+        {listaHorarios.length === 0 ? (
+          <p className="py-4 text-center text-sm text-muted-foreground">
+            Todavía no configuras ningún horario disponible.
+          </p>
+        ) : (
+          <OcupacionSemanal fecha={hoy} slots={slotsSemana} />
+        )}
+        <Link
+          href="/protected/turnos?vista=semana"
+          className="text-xs text-muted-foreground hover:text-primary hover:underline"
+        >
+          Ver calendario completo →
+        </Link>
+      </Bloque>
     </div>
   );
 }

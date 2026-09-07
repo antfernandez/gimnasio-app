@@ -47,6 +47,9 @@ const CAMPOS_MEDIDA: (keyof MedidasAvance)[] = [
   "cadera_cm",
   "pecho_cm",
   "brazo_cm",
+  "cuello_cm",
+  "muslos_cm",
+  "pantorrillas_cm",
 ];
 
 function readMedidas(formData: FormData): MedidasAvance {
