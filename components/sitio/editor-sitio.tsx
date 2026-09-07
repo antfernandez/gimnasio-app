@@ -336,15 +336,29 @@ export function EditorSitio({
         </div>
       </Seccion>
 
-      <Seccion titulo="Hero (portada)" abiertaPorDefecto>
+      <Seccion titulo="Portada" abiertaPorDefecto>
         <div className="flex flex-col gap-5">
           <div className="grid gap-2">
             <Label>Imagen de portada</Label>
+            <p className="text-xs text-muted-foreground">
+              Se ve mejor una foto vertical, idealmente 1080 x 1350 px (relación de
+              aspecto 4:5), pero puedes subir cualquier tamaño y luego arrastrarla para
+              ajustar qué parte queda visible.
+            </p>
             <ImageUploader
               gimnasioId={gimnasioId}
               value={contenido.hero.imagen_url}
               onChange={(url) =>
                 setContenido({ ...contenido, hero: { ...contenido.hero, imagen_url: url } })
+              }
+              aspecto="aspect-[4/5]"
+              dimensionesRecomendadas={{ ancho: 1080, alto: 1350 }}
+              posicion={{ x: contenido.hero.imagen_pos_x, y: contenido.hero.imagen_pos_y }}
+              onPosicionChange={(pos) =>
+                setContenido({
+                  ...contenido,
+                  hero: { ...contenido.hero, imagen_pos_x: pos.x, imagen_pos_y: pos.y },
+                })
               }
             />
           </div>

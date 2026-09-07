@@ -138,6 +138,11 @@ export interface BloqueHero {
   titulo: string;
   subtitulo: string;
   imagen_url: string | null;
+  /** Punto focal de `imagen_url` como % del ancho/alto (0-100, 50/50 = centrado) —
+   * usado como `object-position` para que el dueño pueda encuadrar la foto de portada
+   * aunque no venga recortada exactamente en la proporción 4:5 del hero. */
+  imagen_pos_x: number;
+  imagen_pos_y: number;
   cta_texto: string;
   cta_whatsapp: string;
 }
@@ -221,6 +226,8 @@ export function contenidoVacio(nombreGimnasio: string): ContenidoSitio {
       titulo: nombreGimnasio,
       subtitulo: "",
       imagen_url: null,
+      imagen_pos_x: 50,
+      imagen_pos_y: 50,
       cta_texto: "Escríbenos",
       cta_whatsapp: "",
     },
@@ -269,6 +276,8 @@ export function normalizarContenido(raw: unknown): ContenidoSitio {
       titulo: r.hero?.titulo ?? "",
       subtitulo: r.hero?.subtitulo ?? "",
       imagen_url: r.hero?.imagen_url ?? null,
+      imagen_pos_x: r.hero?.imagen_pos_x ?? 50,
+      imagen_pos_y: r.hero?.imagen_pos_y ?? 50,
       cta_texto: r.hero?.cta_texto ?? "Escríbenos",
       cta_whatsapp: r.hero?.cta_whatsapp ?? "",
     },

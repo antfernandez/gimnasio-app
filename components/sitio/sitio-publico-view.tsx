@@ -11,6 +11,7 @@ import {
   Trophy,
   Users,
 } from "lucide-react";
+import Image from "next/image";
 import { Fragment, useEffect, useState } from "react";
 
 import { Carrusel } from "@/components/sitio/carrusel";
@@ -109,6 +110,12 @@ function PlanCard({ tarifa, whatsapp }: { tarifa: ItemTarifa; whatsapp: string }
     .filter(Boolean);
   const comoLista = lineas.length > 1;
 
+  // "$25.000/mes" -> monto "$25.000" + sufijo "/mes" con tipografía más chica y liviana,
+  // como en el template de referencia. Si el dueño no escribió "/algo" se muestra tal cual.
+  const separadorSufijo = tarifa.precio.indexOf("/");
+  const montoPrecio = separadorSufijo === -1 ? tarifa.precio : tarifa.precio.slice(0, separadorSufijo);
+  const sufijoPrecio = separadorSufijo === -1 ? null : tarifa.precio.slice(separadorSufijo);
+
   return (
     <div
       className={cn(
@@ -125,7 +132,7 @@ function PlanCard({ tarifa, whatsapp }: { tarifa: ItemTarifa; whatsapp: string }
     >
       {tarifa.destacado && (
         <span
-          className="absolute -top-3.5 right-6 rounded-full px-3.5 py-1.5 text-[.66rem] font-bold uppercase tracking-[.08em] text-[var(--sitio-accent-ink)]"
+          className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[.66rem] font-bold uppercase tracking-[.08em] text-[var(--sitio-accent-ink)]"
           style={{ background: "linear-gradient(135deg, var(--sitio-gold-light), var(--sitio-gold-deep))" }}
         >
           Más elegido
@@ -134,7 +141,12 @@ function PlanCard({ tarifa, whatsapp }: { tarifa: ItemTarifa; whatsapp: string }
       <div className="mb-2.5 text-[.78rem] uppercase tracking-[.16em] text-[var(--sitio-muted)]">
         {tarifa.plan}
       </div>
-      <div className={cn("mb-0.5 text-[2.1rem]", TITULO)}>{tarifa.precio}</div>
+      <div className="mb-0.5 flex items-baseline gap-1">
+        <span className={cn("text-[2.1rem]", TITULO)}>{montoPrecio}</span>
+        {sufijoPrecio && (
+          <span className="text-[.9rem] font-normal text-[var(--sitio-muted)]">{sufijoPrecio}</span>
+        )}
+      </div>
       {!comoLista && lineas[0] && (
         <p className="mb-6 text-[.82rem] text-[var(--sitio-muted)]">{lineas[0]}</p>
       )}
@@ -499,12 +511,14 @@ export function SitioPublicoView({
         style={{ background: "color-mix(in srgb, var(--sitio-bg) 96%, transparent)" }}
       >
         <span className="flex items-center gap-2.5">
-          <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--sitio-accent-ink)]"
-            style={{ background: "var(--sitio-accent)" }}
-          >
-            <Dumbbell className="h-4 w-4" strokeWidth={2.25} />
-          </span>
+          <Image
+            src="/logo-valinor.png"
+            alt={nombreGimnasio}
+            width={48}
+            height={48}
+            className="h-12 w-12 shrink-0 rounded-full object-cover"
+            priority
+          />
           <span className={cn("text-[1.05rem] tracking-[.1em]", TITULO)}>{nombreGimnasio}</span>
         </span>
         {navLinks.length > 0 && (
@@ -525,13 +539,9 @@ export function SitioPublicoView({
           <a href="/auth/login" className={BTN_GHOST}>
             Iniciar sesión
           </a>
-          {whatsapp && (
-            <a href={waHref(whatsapp)} target="_blank" rel="noopener noreferrer" className={BTN_SOLID}>
-              Escríbenos
-            </a>
-          )}
         </div>
       </header>
+      <Divider />
 
       <main>
         <section className="relative overflow-hidden px-6 py-16 min-[981px]:py-24">
@@ -582,6 +592,7 @@ export function SitioPublicoView({
                     borderColor: "var(--sitio-gold-light)",
                     boxShadow: "var(--sitio-shadow)",
                     filter: "sepia(.3) saturate(1.25) brightness(.96) contrast(1.04)",
+                    objectPosition: `${c.hero.imagen_pos_x ?? 50}% ${c.hero.imagen_pos_y ?? 50}%`,
                   }}
                 />
                 <div
