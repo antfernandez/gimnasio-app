@@ -5,6 +5,7 @@ import { BitacoraForm } from "@/components/bitacora/bitacora-form";
 import { ListaAlumnosBloque } from "@/components/bitacora/lista-alumnos-bloque";
 import { SelectorFechaHora } from "@/components/bitacora/selector-fecha-hora";
 import { ExportMenu } from "@/components/export/export-menu";
+import { Acordeon } from "@/components/ui/acordeon";
 import { RutinaCard } from "@/components/rutinas/rutina-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { getPerfilActual } from "@/lib/perfil";
@@ -158,15 +159,25 @@ export default async function BitacoraPage({
       {alumnoSeleccionado && rutinaActiva && (
         <Card>
           <CardContent className="pt-6">
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              {alumnoSeleccionado.nombres} {alumnoSeleccionado.apellidos}
-            </h3>
             {params.bitacora === "1" && (
               <div className="mb-4 rounded-[9px] border border-success/35 bg-success/10 px-4 py-3 text-sm text-success">
                 Sesión registrada en la bitácora.
               </div>
             )}
-            <RutinaCard rutina={rutinaActiva} />
+            <Acordeon
+              titulo={
+                <div>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    {alumnoSeleccionado.nombres} {alumnoSeleccionado.apellidos}
+                  </h3>
+                  <p className="text-base font-semibold text-foreground">
+                    {rutinaActiva.nombre}
+                  </p>
+                </div>
+              }
+            >
+              <RutinaCard rutina={rutinaActiva} />
+            </Acordeon>
 
             <div className="mt-6 border-t border-border pt-6">
               <div className="mb-4 flex items-center justify-between gap-3">

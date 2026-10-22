@@ -1,12 +1,10 @@
 "use client";
 
-import { Check, Pencil, X } from "lucide-react";
 import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
 import type { Rutina } from "@/lib/types";
 
 export type BitacoraFormState = {
@@ -23,73 +21,54 @@ type Props = {
   fechaFija?: boolean;
 };
 
-type EstadoFila = "pendiente" | "hecho" | "editando";
-
 type Fila = {
-  estado: EstadoFila;
+  hecho: boolean;
   series: string;
   reps: string;
   peso: string;
   notas: string;
 };
 
-/** Sprint 18, Parte 1: rediseño tipo checklist — un tap por ejercicio ("Hecho")
- * registra la sesión tal como estaba planificada, sin escribir nada. Solo si el
- * alumno hizo algo distinto (más/menos peso, series, etc.) hace falta abrir
- * "Ajustar" y tipear los valores reales. Pensado para completarse en segundos por
- * alumno, parado en el gimnasio con el teléfono en una mano — ver auditoría UX
- * 2026-09-04, punto 3.2. */
+type Campo = "series" | "reps" | "peso" | "notas";
+
+/** Registro de sesión como tabla: una fila por ejercicio con series/reps
+ * precargadas con lo planificado. Una fila se registra si está marcada "Hecho" o
+ * si el usuario cambió/ingresó algún valor; las demás se envían vacías y el
+ * servidor las descarta (`buildFilasRegistroRutina`). */
 export function BitacoraForm({ action, rutina, fechaFija }: Props) {
   const [state, formAction, isPending] = useActionState(action, {});
   const hoy = new Date().toISOString().slice(0, 10);
 
   const [filas, setFilas] = useState<Fila[]>(() =>
-    rutina.contenido.map(() => ({
-      estado: "pendiente" as EstadoFila,
-      series: "",
-      reps: "",
+    rutina.contenido.map((ej) => ({
+      hecho: false,
+      series: String(ej.series ?? ""),
+      reps: String(ej.reps ?? ""),
       peso: "",
       notas: "",
     })),
   );
 
-  const marcarHecho = (i: number) => {
-    setFilas((prev) =>
-      prev.map((f, idx) => (idx === i ? { ...f, estado: "hecho" } : f)),
-    );
-  };
-
-  const marcarPendiente = (i: number) => {
-    setFilas((prev) =>
-      prev.map((f, idx) =>
-        idx === i
-          ? { estado: "pendiente", series: "", reps: "", peso: "", notas: "" }
-          : f,
-      ),
-    );
-  };
-
-  const abrirAjuste = (i: number) => {
-    setFilas((prev) =>
-      prev.map((f, idx) => {
-        if (idx !== i) return f;
-        const ej = rutina.contenido[idx];
-        return {
-          estado: "editando",
-          series: f.series || String(ej.series ?? ""),
-          reps: f.reps || String(ej.reps ?? ""),
-          peso: f.peso,
-          notas: f.notas,
-        };
-      }),
-    );
-  };
-
-  const actualizarCampo = (i: number, campo: "series" | "reps" | "peso" | "notas", v: string) => {
+  const actualizar = (i: number, campo: Campo, v: string) => {
     setFilas((prev) => prev.map((f, idx) => (idx === i ? { ...f, [campo]: v } : f)));
   };
 
-  const hechos = filas.filter((f) => f.estado !== "pendiente").length;
+  const alternarHecho = (i: number) => {
+    setFilas((prev) =>
+      prev.map((f, idx) => (idx === i ? { ...f, hecho: !f.hecho } : f)),
+    );
+  };
+
+  const estaActiva = (f: Fila, i: number) => {
+    const ej = rutina.contenido[i];
+    return (
+      f.hecho ||
+      f.peso !== "" ||
+      f.notas !== "" ||
+      f.series !== String(ej.series ?? "") ||
+      f.reps !== String(ej.reps ?? "")
+    );
+  };
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
@@ -102,168 +81,99 @@ export function BitacoraForm({ action, rutina, fechaFija }: Props) {
         </div>
       )}
 
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>Toca cada ejercicio a medida que lo completan.</span>
-        <span className="font-medium text-foreground">
-          {hechos} / {filas.length}
-        </span>
-      </div>
+      <div className="overflow-x-auto rounded-[9px] border border-border">
+        <table className="w-full min-w-[640px] text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <th className="px-3 py-2 font-medium">Hecho</th>
+              <th className="px-3 py-2 font-medium">Ejercicio</th>
+              <th className="px-3 py-2 font-medium">Series</th>
+              <th className="px-3 py-2 font-medium">Reps</th>
+              <th className="px-3 py-2 font-medium">Peso (kg)</th>
+              <th className="px-3 py-2 font-medium">Notas</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rutina.contenido.map((ej, i) => {
+              const fila = filas[i];
+              const activa = estaActiva(fila, i);
 
-      <div className="flex flex-col gap-2">
-        {rutina.contenido.map((ej, i) => {
-          const fila = filas[i];
-          const planResumen = `${ej.series || "—"} series × ${ej.reps || "—"} reps${ej.peso ? ` · ${ej.peso}` : ""}`;
-
-          return (
-            <div
-              key={i}
-              className={cn(
-                "rounded-[9px] border p-3 transition-colors",
-                fila.estado === "hecho"
-                  ? "border-success/40 bg-success/10"
-                  : fila.estado === "editando"
-                    ? "border-primary/40 bg-primary/5"
-                    : "border-border",
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() =>
-                    fila.estado === "hecho" ? marcarPendiente(i) : marcarHecho(i)
-                  }
-                  aria-pressed={fila.estado === "hecho"}
-                  aria-label={
-                    fila.estado === "hecho"
-                      ? `Deshacer ${ej.ejercicio}`
-                      : `Marcar ${ej.ejercicio} como hecho`
-                  }
-                  className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-                    fila.estado === "hecho"
-                      ? "border-success bg-success text-success-foreground"
-                      : "border-border text-transparent hover:border-primary",
-                  )}
-                >
-                  <Check className="h-5 w-5" />
-                </button>
-
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium text-foreground">
-                    {ej.ejercicio}
-                  </div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    {fila.estado === "editando" ? `Plan: ${planResumen}` : planResumen}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    fila.estado === "editando" ? marcarPendiente(i) : abrirAjuste(i)
-                  }
-                  className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-primary/10 hover:text-primary"
-                >
-                  {fila.estado === "editando" ? (
-                    <>
-                      <X className="h-3.5 w-3.5" />
-                      Cerrar
-                    </>
-                  ) : (
-                    <>
-                      <Pencil className="h-3.5 w-3.5" />
-                      Ajustar
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {fila.estado === "editando" && (
-                <div className="mt-3 grid grid-cols-3 gap-2 border-t border-border/70 pt-3 sm:grid-cols-[1fr_1fr_1fr_2fr]">
-                  <div className="grid gap-1">
-                    <span className="text-[0.65rem] uppercase text-muted-foreground">
-                      Series
-                    </span>
+              return (
+                <tr key={i} className="border-b border-border/70 last:border-0">
+                  <td className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={fila.hecho}
+                      onChange={() => alternarHecho(i)}
+                      aria-label={`Marcar ${ej.ejercicio} como hecho`}
+                      className="h-4 w-4 accent-primary"
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="font-medium text-foreground">{ej.ejercicio}</div>
+                    {ej.peso && (
+                      <div className="text-xs text-muted-foreground">
+                        Plan: {ej.peso}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
                     <Input
-                      type="number"
-                      min="0"
+                      inputMode="numeric"
+                      className="w-16"
                       value={fila.series}
-                      onChange={(e) => actualizarCampo(i, "series", e.target.value)}
+                      onChange={(e) => actualizar(i, "series", e.target.value)}
+                      aria-label={`Series de ${ej.ejercicio}`}
                     />
-                  </div>
-                  <div className="grid gap-1">
-                    <span className="text-[0.65rem] uppercase text-muted-foreground">
-                      Reps
-                    </span>
+                  </td>
+                  <td className="px-3 py-2">
                     <Input
-                      type="number"
-                      min="0"
+                      inputMode="numeric"
+                      className="w-16"
                       value={fila.reps}
-                      onChange={(e) => actualizarCampo(i, "reps", e.target.value)}
+                      onChange={(e) => actualizar(i, "reps", e.target.value)}
+                      aria-label={`Reps de ${ej.ejercicio}`}
                     />
-                  </div>
-                  <div className="grid gap-1">
-                    <span className="text-[0.65rem] uppercase text-muted-foreground">
-                      Peso (kg)
-                    </span>
+                  </td>
+                  <td className="px-3 py-2">
                     <Input
-                      type="number"
-                      min="0"
-                      step="0.5"
+                      inputMode="decimal"
+                      className="w-20"
                       value={fila.peso}
-                      onChange={(e) => actualizarCampo(i, "peso", e.target.value)}
+                      placeholder={ej.peso ?? ""}
+                      onChange={(e) => actualizar(i, "peso", e.target.value)}
+                      aria-label={`Peso de ${ej.ejercicio}`}
                     />
-                  </div>
-                  <div className="col-span-3 grid gap-1 sm:col-span-1">
-                    <span className="text-[0.65rem] uppercase text-muted-foreground">
-                      Notas
-                    </span>
+                  </td>
+                  <td className="px-3 py-2">
                     <Input
                       value={fila.notas}
                       placeholder="Opcional"
-                      onChange={(e) => actualizarCampo(i, "notas", e.target.value)}
+                      onChange={(e) => actualizar(i, "notas", e.target.value)}
+                      aria-label={`Notas de ${ej.ejercicio}`}
                     />
-                  </div>
-                </div>
-              )}
+                  </td>
 
-              {/* Valores reales enviados al servidor: "hecho" manda el plan tal cual
-                  (sin pesos, no son numéricos), "editando" manda lo tipeado. */}
-              <input
-                type="hidden"
-                name="series_realizadas"
-                value={
-                  fila.estado === "hecho"
-                    ? String(ej.series ?? "")
-                    : fila.estado === "editando"
-                      ? fila.series
-                      : ""
-                }
-              />
-              <input
-                type="hidden"
-                name="reps_realizadas"
-                value={
-                  fila.estado === "hecho"
-                    ? String(ej.reps ?? "")
-                    : fila.estado === "editando"
-                      ? fila.reps
-                      : ""
-                }
-              />
-              <input
-                type="hidden"
-                name="peso_kg"
-                value={fila.estado === "editando" ? fila.peso : ""}
-              />
-              <input
-                type="hidden"
-                name="notas"
-                value={fila.estado === "editando" ? fila.notas : ""}
-              />
-            </div>
-          );
-        })}
+                  {/* Valores enviados al servidor, alineados por índice de ejercicio. */}
+                  <td className="hidden">
+                    <input
+                      type="hidden"
+                      name="series_realizadas"
+                      value={activa ? fila.series : ""}
+                    />
+                    <input
+                      type="hidden"
+                      name="reps_realizadas"
+                      value={activa ? fila.reps : ""}
+                    />
+                    <input type="hidden" name="peso_kg" value={fila.peso} />
+                    <input type="hidden" name="notas" value={fila.notas} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
