@@ -142,6 +142,8 @@ export interface EstadoCobranzaAlumno extends EstadoPagoAlumno {
   plan_nombre: string | null;
   plan_precio: number | null;
   dias_atraso: number;
+  /** Método del último pago; null si el alumno no tiene pagos. */
+  ultimo_metodo: MetodoPago | null;
 }
 
 export interface Paquete {
@@ -276,8 +278,15 @@ export interface MedidasAvance {
   cintura_cm?: number;
   cadera_cm?: number;
   pecho_cm?: number;
-  brazo_cm?: number;
   cuello_cm?: number;
+  brazo_izq_cm?: number;
+  brazo_der_cm?: number;
+  muslo_izq_cm?: number;
+  muslo_der_cm?: number;
+  pantorrilla_izq_cm?: number;
+  pantorrilla_der_cm?: number;
+  /** Registros anteriores a la separación izquierda/derecha; no se migran. */
+  brazo_cm?: number;
   muslos_cm?: number;
   pantorrillas_cm?: number;
 }

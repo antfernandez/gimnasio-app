@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import Link from "next/link";
 
 import { ToggleActivoButton } from "@/components/alumnos/toggle-activo-button";
@@ -6,6 +6,7 @@ import { ExportMenu } from "@/components/export/export-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { IconAction } from "@/components/ui/icon-action";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -18,7 +19,7 @@ import {
 import { formatFecha } from "@/lib/format";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
-import type { Alumno } from "@/lib/types";
+import type { Alumno, EstadoCobranzaAlumno } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type AlumnoConPlan = Alumno & { plan: { nombre: string } | null };
@@ -54,6 +55,7 @@ export default async function AlumnosPage({
     .from("alumnos")
     .select("*, plan:planes(nombre)")
     .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
+    .order("nombres", { ascending: true })
     .order("apellidos", { ascending: true });
 
   if (estado === "activos") query = query.eq("activo", true);
@@ -65,6 +67,19 @@ export default async function AlumnosPage({
 
   const { data: alumnos } = await query;
   const lista = (alumnos ?? []) as AlumnoConPlan[];
+
+  const { data: cobranza } = await supabase
+    .from("v_estado_cobranza_alumnos")
+    .select("alumno_id, vencimiento_actual")
+    .in(
+      "alumno_id",
+      lista.map((a) => a.id),
+    );
+  const vencimientoPorAlumno = new Map(
+    ((cobranza ?? []) as Pick<EstadoCobranzaAlumno, "alumno_id" | "vencimiento_actual">[]).map(
+      (c) => [c.alumno_id, c.vencimiento_actual],
+    ),
+  );
 
   // Sprint 19, Parte 4: "Pendientes de aprobación" deja de ser un ítem fijo del
   // menú principal y pasa a un badge acá, visible solo cuando hay algo que
@@ -160,9 +175,11 @@ export default async function AlumnosPage({
               <TableHeader>
                 <TableRow>
                   <TableHead>Alumno</TableHead>
-                  <TableHead>Contacto</TableHead>
+                  <TableHead>Correo</TableHead>
+                  <TableHead>Teléfono</TableHead>
                   <TableHead>Plan</TableHead>
                   <TableHead>Inicio</TableHead>
+                  <TableHead>Vencimiento</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -178,28 +195,29 @@ export default async function AlumnosPage({
                         {alumno.nombres} {alumno.apellidos}
                       </Link>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col text-xs">
-                        {alumno.email && <span>{alumno.email}</span>}
-                        {alumno.telefono && <span>{alumno.telefono}</span>}
-                        {!alumno.email && !alumno.telefono && <span>—</span>}
-                      </div>
-                    </TableCell>
+                    <TableCell className="text-xs">{alumno.email || "—"}</TableCell>
+                    <TableCell className="text-xs">{alumno.telefono || "—"}</TableCell>
                     <TableCell>{alumno.plan?.nombre ?? "—"}</TableCell>
                     <TableCell>{formatFecha(alumno.fecha_inicio)}</TableCell>
+                    <TableCell>
+                      {vencimientoPorAlumno.get(alumno.id)
+                        ? formatFecha(vencimientoPorAlumno.get(alumno.id)!)
+                        : "—"}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={alumno.activo ? "success" : "secondary"}>
                         {alumno.activo ? "Activo" : "De baja"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button asChild variant="outline" size="sm">
-                          <Link href={`/protected/alumnos/${alumno.id}`}>
-                            Editar
-                          </Link>
-                        </Button>
+                      <div className="flex justify-end gap-1">
+                        <IconAction
+                          icon={Pencil}
+                          label="Editar"
+                          href={`/protected/alumnos/${alumno.id}`}
+                        />
                         <ToggleActivoButton
+                          modoIcono
                           id={alumno.id}
                           activo={alumno.activo}
                           nombreCompleto={`${alumno.nombres} ${alumno.apellidos}`}

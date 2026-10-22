@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CAMPOS_MEDIDA } from "@/lib/medidas";
 
 type Props = {
   action: (
@@ -49,76 +50,18 @@ export function AvanceForm({ action }: Props) {
       <div className="grid gap-3">
         <Label>Medidas (cm)</Label>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="grid gap-1.5">
-            <span className="text-xs text-muted-foreground">Cintura</span>
-            <Input
-              name="cintura_cm"
-              type="number"
-              min="1"
-              step="0.1"
-              placeholder="80"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <span className="text-xs text-muted-foreground">Cadera</span>
-            <Input
-              name="cadera_cm"
-              type="number"
-              min="1"
-              step="0.1"
-              placeholder="95"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <span className="text-xs text-muted-foreground">Pecho</span>
-            <Input
-              name="pecho_cm"
-              type="number"
-              min="1"
-              step="0.1"
-              placeholder="100"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <span className="text-xs text-muted-foreground">Brazo</span>
-            <Input
-              name="brazo_cm"
-              type="number"
-              min="1"
-              step="0.1"
-              placeholder="32"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <span className="text-xs text-muted-foreground">Cuello</span>
-            <Input
-              name="cuello_cm"
-              type="number"
-              min="1"
-              step="0.1"
-              placeholder="35"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <span className="text-xs text-muted-foreground">Muslos</span>
-            <Input
-              name="muslos_cm"
-              type="number"
-              min="1"
-              step="0.1"
-              placeholder="55"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <span className="text-xs text-muted-foreground">Pantorrillas</span>
-            <Input
-              name="pantorrillas_cm"
-              type="number"
-              min="1"
-              step="0.1"
-              placeholder="36"
-            />
-          </div>
+          {CAMPOS_MEDIDA.map((m) => (
+            <div key={m.campo} className="grid gap-1.5">
+              <span className="text-xs text-muted-foreground">{m.etiqueta}</span>
+              <Input
+                name={m.campo}
+                type="number"
+                min="1"
+                step="0.1"
+                placeholder={m.placeholder}
+              />
+            </div>
+          ))}
         </div>
       </div>
 

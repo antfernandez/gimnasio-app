@@ -14,12 +14,14 @@ import { ToggleActivoButton } from "@/components/alumnos/toggle-activo-button";
 import { ToggleAvancesButton } from "@/components/alumnos/toggle-avances-button";
 import { ToggleBitacoraButton } from "@/components/alumnos/toggle-bitacora-button";
 import { AvanceForm } from "@/components/avances/avance-form";
+import { MedidasDialog } from "@/components/avances/medidas-dialog";
 import { BitacoraHistorial } from "@/components/bitacora/bitacora-historial";
 import { ProgresoRutina } from "@/components/bitacora/progreso-rutina";
 import { LineChart } from "@/components/charts/line-chart";
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
 import { AsignarRutinaForm } from "@/components/rutinas/asignar-rutina-form";
 import { RutinaCard } from "@/components/rutinas/rutina-card";
+import { Acordeon } from "@/components/ui/acordeon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,6 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { fichaSaludPendiente } from "@/lib/ficha-salud";
+import { SIGNIFICADO_ESTADOS_ALUMNO } from "@/lib/estados-alumno";
 import { formatFecha } from "@/lib/format";
 import { getPerfilActual } from "@/lib/perfil";
 import { formatRut } from "@/lib/rut";
@@ -42,24 +45,11 @@ import type {
   ClasificacionAlumnoRow,
   EstadoCobranzaAlumno,
   EstadoPaqueteAlumno,
-  MedidasAvance,
   Plan,
   RegistroRutina,
   Rutina,
   RutinaPlantilla,
 } from "@/lib/types";
-
-function formatMedidas(medidas: MedidasAvance): string {
-  const partes: string[] = [];
-  if (medidas.cintura_cm) partes.push(`Cintura ${medidas.cintura_cm}cm`);
-  if (medidas.cadera_cm) partes.push(`Cadera ${medidas.cadera_cm}cm`);
-  if (medidas.pecho_cm) partes.push(`Pecho ${medidas.pecho_cm}cm`);
-  if (medidas.brazo_cm) partes.push(`Brazo ${medidas.brazo_cm}cm`);
-  if (medidas.cuello_cm) partes.push(`Cuello ${medidas.cuello_cm}cm`);
-  if (medidas.muslos_cm) partes.push(`Muslos ${medidas.muslos_cm}cm`);
-  if (medidas.pantorrillas_cm) partes.push(`Pantorrillas ${medidas.pantorrillas_cm}cm`);
-  return partes.length > 0 ? partes.join(" · ") : "—";
-}
 
 export default async function FichaAlumnoPage({
   params,
@@ -146,6 +136,7 @@ export default async function FichaAlumnoPage({
   const listaRutinas = (rutinas ?? []) as Rutina[];
   const rutinaActiva = listaRutinas.find((r) => r.activa);
   const historialAvances = (avances ?? []) as Avance[];
+  const planAlumno = ((planes ?? []) as Plan[]).find((p) => p.id === a.plan_id);
 
   // Sprint 18, Parte 2: historial y gráficos por ejercicio se mueven a esta ficha
   // (antes vivían apilados en la pantalla de Bitácora) — solo se consultan cuando
@@ -193,13 +184,7 @@ export default async function FichaAlumnoPage({
             >
               Ver pagos
             </Link>
-            {/* Sprint 19, Parte 5: antes se veían dos etiquetas "Activo" seguidas
-                (esta y `ClasificacionBadge`) — representan cosas distintas (cuenta
-                habilitada vs. actividad reciente real), pero se ven idénticas. Se
-                deja solo "De baja" acá (estado de cuenta, accionable) y se le pasa
-                el resto del significado a `ClasificacionBadge`. */}
             {!a.activo && <Badge variant="secondary">De baja</Badge>}
-            {clasificacion && <ClasificacionBadge clasificacion={clasificacion} />}
             {estadoPaquete && estadoPaquete.paquete_id && (
               <span className="hidden text-xs text-muted-foreground sm:inline">
                 {estadoPaquete.clases_restantes} clase
@@ -207,17 +192,6 @@ export default async function FichaAlumnoPage({
                 {estadoPaquete.clases_restantes === 1 ? "" : "s"}
               </span>
             )}
-            {/* Spec 01, R1: tres cosas distintas, no una contradicción — estado de
-                pago (esta etiqueta, igual que en Pagos y Hoy), clasificación de
-                actividad y ficha de salud. */}
-            {estadoCobranza && (
-              <span title="Estado de pago: considera el último pago y el último paquete">
-                <EstadoPagoBadge estado={estadoCobranza.estado_pago} />
-              </span>
-            )}
-            <span className="hidden sm:inline-flex">
-              <FichaSaludBadge pendiente={fichaSaludPendiente(a)} />
-            </span>
             <ToggleActivoButton
               id={a.id}
               activo={a.activo}
@@ -225,10 +199,55 @@ export default async function FichaAlumnoPage({
             />
           </div>
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Las etiquetas son independientes: estado de pago (último pago y paquete),
-          actividad reciente (activo, inactivo o de prueba) y ficha de salud.
-        </p>
+        <Table className="mt-4 max-w-2xl">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Concepto</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Qué significa</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell>Pago</TableCell>
+              <TableCell>
+                {estadoCobranza ? (
+                  <EstadoPagoBadge estado={estadoCobranza.estado_pago} />
+                ) : (
+                  "—"
+                )}
+              </TableCell>
+              <TableCell className="text-xs text-muted-foreground">
+                {SIGNIFICADO_ESTADOS_ALUMNO.pago}
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Plan</TableCell>
+              <TableCell>{planAlumno?.nombre ?? "—"}</TableCell>
+              <TableCell className="text-xs text-muted-foreground">
+                {SIGNIFICADO_ESTADOS_ALUMNO.plan}
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Clasificación</TableCell>
+              <TableCell>
+                {clasificacion ? <ClasificacionBadge clasificacion={clasificacion} /> : "—"}
+              </TableCell>
+              <TableCell className="text-xs text-muted-foreground">
+                {SIGNIFICADO_ESTADOS_ALUMNO.clasificacion}
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Ficha de salud</TableCell>
+              <TableCell>
+                <FichaSaludBadge pendiente={fichaSaludPendiente(a)} />
+              </TableCell>
+              <TableCell className="text-xs text-muted-foreground">
+                {SIGNIFICADO_ESTADOS_ALUMNO.fichaSalud}
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       </div>
 
       {/* Sprint 18, Parte 2: pestañas "Datos"/"Progreso" — el historial y los
@@ -274,8 +293,6 @@ export default async function FichaAlumnoPage({
                     {estadoPaquete.clases_restantes === 1 ? "" : "s"}
                   </span>
                 )}
-                <span className="text-muted-foreground">Ficha de salud:</span>
-                <FichaSaludBadge pendiente={fichaSaludPendiente(a)} />
               </div>
               <AlumnoForm
                 action={updateAlumnoConId}
@@ -286,49 +303,11 @@ export default async function FichaAlumnoPage({
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
-              <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Registro de avances propios
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {a.puede_registrar_avances
-                    ? "Este alumno puede registrar sus propios avances desde su portal."
-                    : "Solo tú puedes registrar avances para este alumno."}
-                </p>
-              </div>
-              <ToggleAvancesButton
-                id={a.id}
-                puedeRegistrarAvances={a.puede_registrar_avances}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
-              <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Registro de bitácora propio
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {a.puede_registrar_bitacora
-                    ? "Este alumno puede registrar sus propias sesiones de rutina desde su portal."
-                    : "Solo tú puedes registrar sesiones de rutina para este alumno."}
-                </p>
-              </div>
-              <ToggleBitacoraButton
-                id={a.id}
-                puedeRegistrarBitacora={a.puede_registrar_bitacora}
-              />
-            </CardContent>
-          </Card>
-
           {/* Rutina asignada */}
           <Card>
             <CardContent className="pt-6">
               <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Rutina asignada
+                Asignar rutina
               </h3>
               {rutinaOk === "1" && (
                 <div className="mb-4 rounded-[9px] border border-success/35 bg-success/10 px-4 py-3 text-sm text-success">
@@ -337,9 +316,21 @@ export default async function FichaAlumnoPage({
               )}
               <AsignarRutinaForm action={asignarRutinaConId} plantillas={listaPlantillas} />
               {rutinaActiva && (
-                <div className="mt-5">
+                <Acordeon
+                  className="mt-5"
+                  titulo={
+                    <div>
+                      <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Rutina asignada
+                      </div>
+                      <div className="text-base font-semibold text-foreground">
+                        {rutinaActiva.nombre}
+                      </div>
+                    </div>
+                  }
+                >
                   <RutinaCard rutina={rutinaActiva} />
-                </div>
+                </Acordeon>
               )}
             </CardContent>
           </Card>
@@ -390,7 +381,13 @@ export default async function FichaAlumnoPage({
                           <TableCell className="font-medium text-foreground">
                             {avance.peso_kg ? `${avance.peso_kg} kg` : "—"}
                           </TableCell>
-                          <TableCell>{formatMedidas(avance.medidas)}</TableCell>
+                          <TableCell>
+                            <MedidasDialog
+                              fecha={avance.fecha}
+                              pesoKg={avance.peso_kg}
+                              medidas={avance.medidas}
+                            />
+                          </TableCell>
                           <TableCell className="max-w-[220px] truncate text-muted-foreground">
                             {avance.notas || "—"}
                           </TableCell>
@@ -400,6 +397,49 @@ export default async function FichaAlumnoPage({
                   </Table>
                 )}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="flex flex-col gap-6 pt-6">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Permisos del alumno
+              </h3>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Registro de avances propios
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {a.puede_registrar_avances
+                    ? "Este alumno puede registrar sus propios avances desde su portal."
+                    : "Solo tú puedes registrar avances para este alumno."}
+                </p>
+              </div>
+              <ToggleAvancesButton
+                id={a.id}
+                puedeRegistrarAvances={a.puede_registrar_avances}
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Registro de bitácora propio
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {a.puede_registrar_bitacora
+                    ? "Este alumno puede registrar sus propias sesiones de rutina desde su portal."
+                    : "Solo tú puedes registrar sesiones de rutina para este alumno."}
+                </p>
+              </div>
+              <ToggleBitacoraButton
+                id={a.id}
+                puedeRegistrarBitacora={a.puede_registrar_bitacora}
+              />
+            </div>
+
+
             </CardContent>
           </Card>
         </>

@@ -241,10 +241,13 @@ const CAMPOS_MEDIDA: (keyof MedidasAvance)[] = [
   "cintura_cm",
   "cadera_cm",
   "pecho_cm",
-  "brazo_cm",
   "cuello_cm",
-  "muslos_cm",
-  "pantorrillas_cm",
+  "brazo_izq_cm",
+  "brazo_der_cm",
+  "muslo_izq_cm",
+  "muslo_der_cm",
+  "pantorrilla_izq_cm",
+  "pantorrilla_der_cm",
 ];
 
 function readMedidas(formData: FormData): MedidasAvance {

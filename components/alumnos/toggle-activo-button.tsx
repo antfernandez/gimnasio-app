@@ -3,16 +3,21 @@
 import { useTransition } from "react";
 
 import { setAlumnoActivo } from "@/app/protected/alumnos/actions";
+import { UserCheck, UserX } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
+import { IconAction } from "@/components/ui/icon-action";
 
 export function ToggleActivoButton({
   id,
   activo,
   nombreCompleto,
+  modoIcono,
 }: {
   id: string;
   activo: boolean;
   nombreCompleto: string;
+  modoIcono?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
 
@@ -25,6 +30,17 @@ export function ToggleActivoButton({
       await setAlumnoActivo(id, !activo);
     });
   };
+
+  if (modoIcono) {
+    return (
+      <IconAction
+        icon={activo ? UserX : UserCheck}
+        label={activo ? "Dar de baja" : "Reactivar"}
+        disabled={isPending}
+        onClick={handleClick}
+      />
+    );
+  }
 
   return (
     <Button
