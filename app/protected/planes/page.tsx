@@ -2,6 +2,7 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { PlanAcciones } from "@/components/planes/plan-acciones";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -13,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatFecha, formatMonto } from "@/lib/format";
+import { ESTADO_PLAN_LABEL, estadoPlan } from "@/lib/planes";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import type { Plan } from "@/lib/types";
@@ -43,17 +45,22 @@ export default async function PlanesPage({
     supabase
       .from("alumnos")
       .select("plan_id, activo")
-      .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
-      .eq("activo", true),
+      .eq("gimnasio_id", perfilData.perfil.gimnasio_id),
   ]);
 
   const lista = (planes ?? []) as Plan[];
   const hoy = new Date().toISOString().slice(0, 10);
 
+  // Columna "Alumnos" cuenta solo activos; la regla de baja usa el total.
   const alumnosPorPlan = new Map<string, number>();
-  for (const { plan_id } of (alumnos ?? []) as { plan_id: string | null }[]) {
+  const asignadosPorPlan = new Map<string, number>();
+  for (const { plan_id, activo } of (alumnos ?? []) as {
+    plan_id: string | null;
+    activo: boolean;
+  }[]) {
     if (!plan_id) continue;
-    alumnosPorPlan.set(plan_id, (alumnosPorPlan.get(plan_id) ?? 0) + 1);
+    asignadosPorPlan.set(plan_id, (asignadosPorPlan.get(plan_id) ?? 0) + 1);
+    if (activo) alumnosPorPlan.set(plan_id, (alumnosPorPlan.get(plan_id) ?? 0) + 1);
   }
 
   return (
@@ -100,15 +107,14 @@ export default async function PlanesPage({
                   <TableHead>Días/semana</TableHead>
                   <TableHead>Precio</TableHead>
                   <TableHead>Vigencia</TableHead>
+                  <TableHead>Estado</TableHead>
                   <TableHead>Alumnos</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {lista.map((plan) => {
-                  const vigente =
-                    plan.fecha_vigencia_desde <= hoy &&
-                    (!plan.fecha_vigencia_hasta || plan.fecha_vigencia_hasta >= hoy);
+                  const estado = estadoPlan(plan, hoy);
                   return (
                     <TableRow key={plan.id}>
                       <TableCell className="font-medium text-foreground">
@@ -122,24 +128,33 @@ export default async function PlanesPage({
                       <TableCell>{NIVEL_LABEL[plan.nivel]}</TableCell>
                       <TableCell>{plan.dias_por_semana}</TableCell>
                       <TableCell>{plan.precio ? formatMonto(plan.precio) : "—"}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {formatFecha(plan.fecha_vigencia_desde)} –{" "}
+                        {plan.fecha_vigencia_hasta
+                          ? formatFecha(plan.fecha_vigencia_hasta)
+                          : "Sin término"}
+                      </TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <span className="text-xs text-muted-foreground">
-                            Desde {formatFecha(plan.fecha_vigencia_desde)}
-                            {plan.fecha_vigencia_hasta
-                              ? ` hasta ${formatFecha(plan.fecha_vigencia_hasta)}`
-                              : ""}
-                          </span>
-                          <Badge variant={vigente ? "success" : "secondary"}>
-                            {vigente ? "Vigente" : "No vigente"}
-                          </Badge>
-                        </div>
+                        <Badge
+                          variant={
+                            estado === "vigente"
+                              ? "success"
+                              : estado === "proximo"
+                                ? "outline"
+                                : "secondary"
+                          }
+                        >
+                          {ESTADO_PLAN_LABEL[estado]}
+                        </Badge>
                       </TableCell>
                       <TableCell>{alumnosPorPlan.get(plan.id) ?? 0}</TableCell>
                       <TableCell className="text-right">
-                        <Button asChild variant="outline" size="sm">
-                          <Link href={`/protected/planes/${plan.id}`}>Editar</Link>
-                        </Button>
+                        <PlanAcciones
+                          id={plan.id}
+                          nombre={plan.nombre}
+                          estado={estado}
+                          alumnosAsignados={asignadosPorPlan.get(plan.id) ?? 0}
+                        />
                       </TableCell>
                     </TableRow>
                   );

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getPerfilActual } from "@/lib/perfil";
+import { estadoPlan } from "@/lib/planes";
 import { createClient } from "@/lib/supabase/server";
 import type { NivelPlan } from "@/lib/types";
 
@@ -147,4 +148,49 @@ export async function updatePlan(
   revalidatePath("/protected/planes");
   revalidatePath("/protected/alumnos");
   redirect("/protected/planes?actualizado=1");
+}
+
+/** Spec 10: "dar de baja" = cerrar la vigencia hoy (sin columna `activo`). Se
+ * reactiva editando la vigencia. Bloqueada si hay alumnos asignados (activos o no);
+ * se revalida acá aunque la UI ya deshabilite el botón. */
+export async function darDeBajaPlan(id: string): Promise<PlanFormState> {
+  const perfilData = await getPerfilActual();
+  if (!perfilData) redirect("/auth/login");
+
+  const supabase = await createClient();
+  const { data: plan } = await supabase
+    .from("planes")
+    .select("fecha_vigencia_desde, fecha_vigencia_hasta")
+    .eq("id", id)
+    .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
+    .maybeSingle();
+  if (!plan) return { error: "No se encontró el plan." };
+
+  const hoy = new Date().toISOString().slice(0, 10);
+  const estado = estadoPlan(plan, hoy);
+  if (estado === "de_baja") return { error: "El plan ya está de baja." };
+  if (estado === "proximo") {
+    return { error: "El plan aún no entra en vigencia; edita sus fechas en vez de darlo de baja." };
+  }
+
+  const { count } = await supabase
+    .from("alumnos")
+    .select("id", { count: "exact", head: true })
+    .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
+    .eq("plan_id", id);
+  if (count) {
+    return {
+      error: `No se puede dar de baja: tiene ${count} alumno${count === 1 ? "" : "s"} asignado${count === 1 ? "" : "s"}.`,
+    };
+  }
+
+  const { error } = await supabase
+    .from("planes")
+    .update({ fecha_vigencia_hasta: hoy, modificado_por: perfilData.perfil.id })
+    .eq("id", id);
+  if (error) return { error: "No se pudo dar de baja el plan. Intenta de nuevo." };
+
+  revalidatePath("/protected/planes");
+  revalidatePath("/protected/alumnos");
+  return {};
 }
