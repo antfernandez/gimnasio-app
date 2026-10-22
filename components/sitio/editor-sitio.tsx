@@ -114,19 +114,17 @@ export function EditorSitio({
   gimnasioId,
   slug,
   contenidoInicial,
-  temaInicial,
   colorAcentoInicial,
   publicadoAtInicial,
 }: {
   gimnasioId: string;
   slug: string | null;
   contenidoInicial: ContenidoSitio;
-  temaInicial: TemaSitio;
   colorAcentoInicial: string;
   publicadoAtInicial: string | null;
 }) {
   const [contenido, setContenido] = useState(contenidoInicial);
-  const [tema, setTema] = useState(temaInicial);
+  const [tema, setTema] = useState<TemaSitio>("claro");
   const [colorAcento, setColorAcento] = useState(colorAcentoInicial);
   const [guardando, setGuardando] = useState(false);
   const [guardadoEn, setGuardadoEn] = useState<Date | null>(null);
@@ -145,7 +143,7 @@ export function EditorSitio({
   // dispara un autoguardado fantasma sin cambios reales). Comparar contra esto en vez
   // de contra un booleano es inmune a eso: `contenido`/`tema`/`colorAcento` solo dejan
   // de ser referencia-igual a lo inicial cuando el usuario edita algo de verdad.
-  const inicialRef = useRef({ contenido: contenidoInicial, tema: temaInicial, colorAcento: colorAcentoInicial });
+  const inicialRef = useRef({ contenido: contenidoInicial, tema: "claro" as TemaSitio, colorAcento: colorAcentoInicial });
 
   useEffect(() => {
     const sinCambios =
@@ -157,7 +155,8 @@ export function EditorSitio({
     timeoutRef.current = setTimeout(async () => {
       setGuardando(true);
       setErrorGuardado(null);
-      const res = await guardarBorrador(tema, colorAcento, contenido);
+      const acentoGuardado = ACENTOS.some((a) => a.valor === colorAcento) ? colorAcento : ACENTOS[0].valor;
+      const res = await guardarBorrador(tema, acentoGuardado, contenido);
       setGuardando(false);
       if (res.ok) setGuardadoEn(new Date());
       else setErrorGuardado(res.error);
@@ -190,7 +189,7 @@ export function EditorSitio({
     setRestaurando(null);
     if (res.ok) {
       setContenido(version.contenido);
-      setTema(version.tema as TemaSitio);
+      setTema("claro");
       setColorAcento(version.color_acento);
       setGuardadoEn(new Date());
       setVersiones(null);
@@ -289,26 +288,6 @@ export function EditorSitio({
 
       <Seccion titulo="Apariencia" abiertaPorDefecto>
         <div className="flex flex-col gap-5">
-          <div className="grid gap-2">
-            <Label>Tema</Label>
-            <div className="flex gap-3">
-              {(["oscuro", "claro"] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setTema(t)}
-                  className={cn(
-                    "rounded-[9px] border px-4 py-2 text-sm capitalize transition-colors",
-                    tema === t
-                      ? "border-primary bg-primary/10 text-secondary-foreground"
-                      : "border-input text-muted-foreground hover:border-secondary-foreground",
-                  )}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
           <div className="grid gap-2">
             <Label>Color de acento</Label>
             <div className="flex flex-wrap gap-2">

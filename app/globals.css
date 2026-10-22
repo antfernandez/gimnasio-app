@@ -8,7 +8,7 @@
    vuelve a una base clara dorado/crema/verde/café con tipografía Cormorant Garamond + Work Sans; Sprint v5: texto/títulos en verde oliva. */
 @layer base {
   :root {
-    --background: 43 53% 92%; /* --bg #f8f0e5 */
+    --background: 43 55% 95%; /* crema más claro (spec 11) para contrastar con formularios */
     --foreground: 97 28% 18%; /* --cream (texto) #3a3527 */
     --card: 38 100% 98%; /* --card #fffcf7 */
     --card-foreground: 97 28% 18%;

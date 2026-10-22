@@ -27,7 +27,6 @@ export default async function SitioPage() {
         gimnasioId={perfilData.perfil.gimnasio_id}
         slug={perfilData.gimnasio.slug}
         contenidoInicial={sitioData.sitio.contenido_borrador}
-        temaInicial={sitioData.sitio.tema}
         colorAcentoInicial={sitioData.sitio.color_acento}
         publicadoAtInicial={sitioData.sitio.publicado_at}
       />

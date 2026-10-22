@@ -582,7 +582,7 @@ export function SitioPublicoView({
         style={{ background: "var(--sitio-gold-grad)", width: `${progreso}%` }}
         aria-hidden="true"
       />
-      {tema === "claro" && (
+      {tema !== undefined && (
         <div
           className="pointer-events-none fixed inset-0 z-0"
           aria-hidden="true"

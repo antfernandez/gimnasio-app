@@ -17,12 +17,8 @@ export interface Acento {
 }
 
 export const ACENTOS: Acento[] = [
-  { nombre: "Naranja", valor: "#ff4b26", ink: "#ffffff" },
-  { nombre: "Lima", valor: "#c6ff3d", ink: "#0a0a0b" },
   { nombre: "Dorado", valor: "#c9a24d", ink: "#1a1207" },
   { nombre: "Verde", valor: "#4d9f6c", ink: "#ffffff" },
-  { nombre: "Azul", valor: "#3d7fff", ink: "#ffffff" },
-  { nombre: "Rojo", valor: "#e0483a", ink: "#ffffff" },
   { nombre: "Morado", valor: "#8b5cf6", ink: "#ffffff" },
   { nombre: "Rosado", valor: "#ec4899", ink: "#ffffff" },
 ];
@@ -114,7 +110,7 @@ const TEMAS: Record<TemaSitio, PaletaTema> = {
  * (`app/globals.css`, que son la marca fija de Valinor Estudio como SaaS) — se aplican
  * como `style` en el contenedor raíz del sitio, nunca en `:root`. */
 export function temaCssVars(tema: TemaSitio, colorAcento: string): CSSProperties {
-  const t = TEMAS[tema];
+  const t = TEMAS[tema] ?? TEMAS.claro;
   const acento = derivarAcento(colorAcento);
   return {
     "--sitio-bg": t.bg,
