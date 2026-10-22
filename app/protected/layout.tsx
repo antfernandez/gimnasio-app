@@ -44,21 +44,21 @@ export default async function ProtectedLayout({
 
   return (
     <div className="grid min-h-svh grid-cols-1 md:grid-cols-[260px_1fr]">
-      <aside className="flex flex-col border-b border-border bg-secondary/40 px-5 py-5 md:border-b-0 md:border-r md:py-7">
+      <aside className="flex flex-col border-b border-border bg-[hsl(33_50%_86%)] px-5 py-5 md:border-b-0 md:border-r md:py-7">
         <BrandMark className="mb-2 px-1 md:mb-8" />
         <SidebarMobileToggle>
           <div className="mb-6 border-b border-border pb-6 text-center">
-            <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary font-display text-xl text-primary-foreground">
+            <div className="mx-auto mb-3 flex h-20 w-20 items-center justify-center rounded-full bg-primary font-display text-2xl text-primary-foreground">
               {inicial}
             </div>
-            <h4 className="font-sans text-sm font-semibold text-foreground">
+            <h4 className="break-words font-sans text-base font-semibold text-foreground">
               {perfil.nombre_completo}
             </h4>
+            <div className="mt-3 flex justify-center">
+              <LogoutButton />
+            </div>
           </div>
           <SidebarNav esDueno={perfil.rol === "dueño"} />
-          <div className="mt-8 flex justify-center">
-            <LogoutButton />
-          </div>
         </SidebarMobileToggle>
       </aside>
 

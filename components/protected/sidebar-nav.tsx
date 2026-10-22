@@ -16,12 +16,12 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
-// Sprint 22, Parte B: "Hoy" y "Estadísticas" (dos rutas separadas desde el
+// Sprint 22, Parte B: "Hoy" y "Dashboard" (dos rutas separadas desde el
 // Sprint 19, Parte 3) se fusionaron de vuelta en una sola página/ítem —
-// "Estadísticas" queda al principio del menú porque es la página de aterrizaje
+// "Dashboard" queda al principio del menú porque es la página de aterrizaje
 // del dueño (agenda del día + métricas), no al final como vista bajo demanda.
 const items = [
-  { href: "/protected", label: "Estadísticas", icon: BarChart3, exact: true },
+  { href: "/protected", label: "Dashboard", icon: BarChart3, exact: true },
   { href: "/protected/bitacora", label: "Bitácora", icon: NotebookPen },
   { href: "/protected/alumnos", label: "Alumnos", icon: Users },
   { href: "/protected/rutinas", label: "Rutinas", icon: Dumbbell },
@@ -53,8 +53,8 @@ export function SidebarNav({ esDueno = false }: { esDueno?: boolean }) {
             className={cn(
               "flex items-center gap-3 rounded-[9px] px-3.5 py-2.5 text-sm transition-all",
               active
-                ? "bg-gradient-to-br from-primary/20 to-primary/5 text-secondary-foreground shadow-[inset_3px_0_0_hsl(var(--primary))]"
-                : "text-muted-foreground hover:bg-primary/10 hover:text-secondary-foreground",
+                ? "bg-gradient-to-br from-primary/30 to-primary/10 text-secondary-foreground shadow-[inset_3px_0_0_hsl(var(--primary))]"
+                : "text-foreground/80 hover:bg-primary/20 hover:text-secondary-foreground",
             )}
           >
             <Icon className="h-4 w-4" />
