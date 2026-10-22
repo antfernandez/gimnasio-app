@@ -1,8 +1,7 @@
 import {
-  AlertTriangle,
   DollarSign,
   type LucideIcon,
-  Percent,
+  UserMinus,
   Users,
   Wallet,
 } from "lucide-react";
@@ -11,7 +10,6 @@ import Link from "next/link";
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
 import { WhatsAppCobranzaButton } from "@/components/pagos/whatsapp-cobranza-button";
 import { Card, CardContent } from "@/components/ui/card";
-import { fichaSaludPendiente } from "@/lib/ficha-salud";
 import { formatFecha, formatMonto } from "@/lib/format";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
@@ -24,7 +22,6 @@ import {
   NOMBRES_MES,
 } from "@/lib/turnos";
 import type {
-  Alumno,
   EstadoCobranzaAlumno,
   HorarioDisponible,
   ReservaConAlumno,
@@ -111,7 +108,7 @@ function mesAnterior(hoy: string, n: number): { clave: string; mes: number } {
 // orden: indicadores arriba, pendientes de hoy en el medio, tendencias abajo. La
 // grilla semanal completa vive solo en `/protected/turnos`. `/protected` sigue siendo
 // la URL única (destino de login y target de `revalidatePath("/protected")`).
-export default async function EstadisticasPage() {
+export default async function DashboardPage() {
   const perfilData = await getPerfilActual();
   if (!perfilData) return null; // el layout ya redirige a /auth/login
 
@@ -130,10 +127,10 @@ export default async function EstadisticasPage() {
     { data: horarios },
     { data: reservasHoy },
     { data: cobranza },
-    { data: alumnosParaFichaSalud },
     { data: reservasSemana },
     { data: pagos6Meses },
     { count: altasMes },
+    { count: alumnosEnBaja },
   ] = await Promise.all([
     supabase.from("horarios_disponibles").select("*").eq("gimnasio_id", gimnasioId),
     supabase
@@ -146,11 +143,6 @@ export default async function EstadisticasPage() {
     supabase
       .from("v_estado_cobranza_alumnos")
       .select("*")
-      .eq("gimnasio_id", gimnasioId)
-      .eq("activo", true),
-    supabase
-      .from("alumnos")
-      .select("id, activo, alergias, enfermedades, lesiones")
       .eq("gimnasio_id", gimnasioId)
       .eq("activo", true),
     supabase
@@ -172,6 +164,11 @@ export default async function EstadisticasPage() {
       .eq("gimnasio_id", gimnasioId)
       .gte("fecha_inicio", inicioMes)
       .lte("fecha_inicio", finMes),
+    supabase
+      .from("alumnos")
+      .select("*", { count: "exact", head: true })
+      .eq("gimnasio_id", gimnasioId)
+      .eq("activo", false),
   ]);
 
   const listaHorarios = (horarios ?? []) as HorarioDisponible[];
@@ -215,8 +212,6 @@ export default async function EstadisticasPage() {
       (r) => r.fecha === base.fecha && r.hora_inicio === base.horaInicio,
     ).length,
   }));
-  const cuposOfrecidos = slotsSemana.reduce((acc, s) => acc + s.cupos, 0);
-  const cuposUsados = slotsSemana.reduce((acc, s) => acc + s.cuposOcupados, 0);
   const porBloque = new Map<string, { usados: number; cupos: number }>();
   for (const s of slotsSemana) {
     const b = porBloque.get(s.horaInicio) ?? { usados: 0, cupos: 0 };
@@ -240,20 +235,13 @@ export default async function EstadisticasPage() {
   }
   const alumnosPorPlan = [...porPlan.entries()].sort((a, b) => b[1] - a[1]);
 
-  const fichasPendientes = (
-    (alumnosParaFichaSalud ?? []) as Pick<
-      Alumno,
-      "id" | "activo" | "alergias" | "enfermedades" | "lesiones"
-    >[]
-  ).filter((a) => fichaSaludPendiente(a)).length;
-
   return (
     <div className="flex flex-col gap-6">
       <div>
         <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
           Panel del dueño
         </div>
-        <h2 className="text-2xl">Estadísticas</h2>
+        <h2 className="text-2xl">Dashboard</h2>
       </div>
 
       {/* Fila 1 — indicadores */}
@@ -266,23 +254,17 @@ export default async function EstadisticasPage() {
           detail={`de ${formatMonto(esperadoMes)} esperados`}
         />
         <StatCard
-          icon={Wallet}
-          label="Por cobrar"
-          value={formatMonto(porCobrarMonto)}
-          detail={`${atrasados.length} alumno${atrasados.length === 1 ? "" : "s"} atrasado${atrasados.length === 1 ? "" : "s"}`}
-        />
-        <StatCard
           icon={Users}
           label="Alumnos activos"
           value={alumnos.length}
           detail={`${altasMes ?? 0} alta${altasMes === 1 ? "" : "s"} este mes`}
         />
+        <StatCard icon={UserMinus} label="Alumnos en baja" value={alumnosEnBaja ?? 0} />
         <StatCard
-          icon={Percent}
-          label="Ocupación semanal"
-          value={`${pct(cuposUsados, cuposOfrecidos)}%`}
-          progress={pct(cuposUsados, cuposOfrecidos)}
-          detail={`${cuposUsados} de ${cuposOfrecidos} cupos`}
+          icon={Wallet}
+          label="Alumnos morosos"
+          value={atrasados.length}
+          detail={`${formatMonto(porCobrarMonto)} por cobrar`}
         />
       </div>
 
@@ -371,23 +353,6 @@ export default async function EstadisticasPage() {
           )}
         </Bloque>
       </div>
-
-      <Bloque titulo="Alertas">
-        {fichasPendientes === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Todos los alumnos activos tienen su ficha de salud completa.
-          </p>
-        ) : (
-          <Link
-            href="/protected/alumnos"
-            className="flex items-center gap-2 text-sm text-destructive hover:underline"
-          >
-            <AlertTriangle className="h-4 w-4" />
-            {fichasPendientes} ficha{fichasPendientes === 1 ? "" : "s"} de salud incompleta
-            {fichasPendientes === 1 ? "" : "s"} →
-          </Link>
-        )}
-      </Bloque>
 
       {/* Fila 3 — tendencias */}
       <div className="grid gap-4 lg:grid-cols-3">
