@@ -1,5 +1,6 @@
 import { MessageCircle } from "lucide-react";
 
+import { IconAction } from "@/components/ui/icon-action";
 import { enlaceWhatsApp, mensajeCobranza } from "@/lib/whatsapp";
 import type { EstadoCobranzaAlumno } from "@/lib/types";
 
@@ -17,29 +18,15 @@ export function WhatsAppCobranzaButton({ alumno }: { alumno: EstadoCobranzaAlumn
       planPrecio: alumno.plan_precio,
     }),
   );
-  const clase =
-    "inline-flex items-center gap-1 rounded-[7px] border border-border px-2 py-1 text-xs";
 
   if (!href) {
     return (
-      <span
-        className={`${clase} cursor-not-allowed text-muted-foreground opacity-60`}
-        title="El alumno no tiene un teléfono válido registrado"
-      >
-        <MessageCircle className="h-3.5 w-3.5" />
-        WhatsApp
-      </span>
+      <IconAction
+        icon={MessageCircle}
+        label="El alumno no tiene un teléfono válido registrado"
+        disabled
+      />
     );
   }
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`${clase} text-foreground hover:bg-primary/10`}
-    >
-      <MessageCircle className="h-3.5 w-3.5" />
-      Enviar WhatsApp
-    </a>
-  );
+  return <IconAction icon={MessageCircle} label="Enviar WhatsApp" href={href} externo />;
 }

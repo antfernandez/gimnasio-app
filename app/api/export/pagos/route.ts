@@ -6,7 +6,8 @@ import { buildExportResponse, parseExportFormat } from "@/lib/export/response";
 import type { XlsxColumn } from "@/lib/export/xlsx";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
-import type { Pago } from "@/lib/types";
+import { ESTADOS_PAGO } from "@/lib/estados-pago";
+import type { EstadoPago, Pago } from "@/lib/types";
 
 type PagoConDetalle = Pago & {
   alumno: { nombres: string; apellidos: string } | null;
@@ -49,11 +50,36 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createClient();
-  const { data } = await supabase
+
+  // Mismos filtros que la pantalla de Pagos (`q` y `estado`): se resuelven contra la
+  // vista de cobranza y se exportan todos los pagos de esos alumnos, sin paginar.
+  const q = (request.nextUrl.searchParams.get("q") ?? "").trim();
+  const estado = request.nextUrl.searchParams.get("estado");
+  let alumnoIds: string[] | null = null;
+  if (q || ESTADOS_PAGO.includes(estado as EstadoPago)) {
+    let filtro = supabase
+      .from("v_estado_cobranza_alumnos")
+      .select("alumno_id")
+      .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
+      .eq("activo", true);
+    if (estado && ESTADOS_PAGO.includes(estado as EstadoPago)) {
+      filtro = filtro.eq("estado_pago", estado);
+    }
+    if (q) {
+      const qSafe = q.replace(/[,%]/g, "");
+      filtro = filtro.or(`nombres.ilike.%${qSafe}%,apellidos.ilike.%${qSafe}%`);
+    }
+    const { data: filtrados } = await filtro;
+    alumnoIds = (filtrados ?? []).map((r) => r.alumno_id as string);
+  }
+
+  let query = supabase
     .from("pagos")
     .select("*, alumno:alumnos(nombres, apellidos), plan:planes(nombre)")
     .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
     .order("fecha_pago", { ascending: false });
+  if (alumnoIds) query = query.in("alumno_id", alumnoIds);
+  const { data } = await query;
 
   const pagos = (data ?? []) as PagoConDetalle[];
   const rows = pagos.map((p) => ({

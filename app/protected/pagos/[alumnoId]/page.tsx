@@ -124,7 +124,7 @@ export default async function PagosAlumnoPage({
         </div>
       )}
 
-      <Card>
+      <Card id="registrar-pago" className="scroll-mt-6">
         <CardContent className="pt-6">
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Registrar pago
