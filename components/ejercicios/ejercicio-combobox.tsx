@@ -11,6 +11,8 @@ export type EjercicioOpcion = {
   zona_id: string;
   equipo: string | null;
   musculo_principal: string | null;
+  musculos_secundarios?: string | null;
+  ejecucion?: string | null;
 };
 
 export type ZonaOpcion = { id: string; nombre: string };

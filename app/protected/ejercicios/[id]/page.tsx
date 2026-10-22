@@ -9,11 +9,21 @@ import { exigirDueno } from "@/lib/ejercicios";
 import { createClient } from "@/lib/supabase/server";
 import type { Ejercicio } from "@/lib/types";
 
+function EtiquetaFicha({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-xs uppercase tracking-wider text-muted-foreground">
+      {children}
+    </div>
+  );
+}
+
 function Lineas({ titulo, texto }: { titulo: string; texto: string | null }) {
   if (!texto) return null;
   return (
     <section>
-      <h3 className="mb-2 text-sm font-semibold text-foreground">{titulo}</h3>
+      <div className="mb-2">
+        <EtiquetaFicha>{titulo}</EtiquetaFicha>
+      </div>
       <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
         {texto.split("\n").map((l, i) => (
           <li key={i}>{l}</li>
@@ -27,8 +37,8 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: string | null }) {
   if (!valor) return null;
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wider text-muted-foreground">
-        {etiqueta}
+      <dt>
+        <EtiquetaFicha>{etiqueta}</EtiquetaFicha>
       </dt>
       <dd className="mt-0.5 text-sm text-foreground">{valor}</dd>
     </div>

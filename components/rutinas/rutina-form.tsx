@@ -10,6 +10,7 @@ import {
   type EjercicioOpcion,
   type ZonaOpcion,
 } from "@/components/ejercicios/ejercicio-combobox";
+import { EjercicioInfo } from "@/components/ejercicios/ejercicio-info";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -170,13 +171,20 @@ export function RutinaForm({
                   Ejercicio
                 </span>
               )}
-              <EjercicioCombobox
-                zonas={zonas}
-                ejercicios={ejercicios}
-                value={fila.ejercicio_id}
-                onChange={(eid) => elegirEjercicio(fila.id, eid)}
-                etiquetaFallback={fila.ejercicio_id ? fila.ejercicio : undefined}
-              />
+              <div className="flex items-center gap-1">
+                <div className="min-w-0 flex-1">
+                  <EjercicioCombobox
+                    zonas={zonas}
+                    ejercicios={ejercicios}
+                    value={fila.ejercicio_id}
+                    onChange={(eid) => elegirEjercicio(fila.id, eid)}
+                    etiquetaFallback={fila.ejercicio_id ? fila.ejercicio : undefined}
+                  />
+                </div>
+                <EjercicioInfo
+                  ejercicio={ejercicios.find((o) => o.id === fila.ejercicio_id)}
+                />
+              </div>
               <input type="hidden" name="ejercicio_id" value={fila.ejercicio_id} />
               <input
                 type="hidden"
@@ -286,8 +294,5 @@ function EjercicioAyuda({
       </span>
     );
   }
-  const detalle = [e?.equipo, e?.musculo_principal].filter(Boolean).join(" · ");
-  return detalle ? (
-    <span className="text-xs text-muted-foreground">{detalle}</span>
-  ) : null;
+  return null;
 }

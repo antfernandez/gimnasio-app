@@ -1,10 +1,11 @@
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import Link from "next/link";
 
 import { AplicarPresetRutinasButton } from "@/components/rutinas/aplicar-preset-rutinas-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { IconAction } from "@/components/ui/icon-action";
 import {
   Table,
   TableBody,
@@ -111,9 +112,11 @@ export default async function RutinasPage({
                     </TableCell>
                     <TableCell>{plantilla.contenido.length}</TableCell>
                     <TableCell className="text-right">
-                      <Button asChild variant="outline" size="sm">
-                        <Link href={`/protected/rutinas/${plantilla.id}`}>Editar</Link>
-                      </Button>
+                      <IconAction
+                        icon={Pencil}
+                        label="Editar"
+                        href={`/protected/rutinas/${plantilla.id}`}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
