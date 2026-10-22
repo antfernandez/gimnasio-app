@@ -121,7 +121,7 @@ export interface Pago {
   created_at: string;
 }
 
-export type EstadoPago = "al_dia" | "atrasado" | "sin_pagos";
+export type EstadoPago = "al_dia" | "por_vencer" | "atrasado" | "sin_pagos";
 
 export interface EstadoPagoAlumno {
   alumno_id: string;
@@ -131,6 +131,17 @@ export interface EstadoPagoAlumno {
   activo: boolean;
   vencimiento_actual: string | null;
   estado_pago: EstadoPago;
+}
+
+/** Fila de la vista `v_estado_cobranza_alumnos` (Spec 01, R1) — único estado de
+ * pago que consume el panel del dueño. `vencimiento_actual` es el más tardío entre
+ * el último pago y el último paquete. */
+export interface EstadoCobranzaAlumno extends EstadoPagoAlumno {
+  telefono: string | null;
+  plan_id: string | null;
+  plan_nombre: string | null;
+  plan_precio: number | null;
+  dias_atraso: number;
 }
 
 export interface Paquete {
@@ -180,8 +191,45 @@ export interface ClasificacionAlumnoRow {
   ficha_salud_pendiente: boolean;
 }
 
+/** Catálogo de ejercicios (migración 0016) — por gimnasio, gestionado por el dueño. */
+export interface ZonaCuerpo {
+  id: string;
+  gimnasio_id: string;
+  nombre: string;
+  orden: number;
+  /** "Cardio" y "Personalizados": no se pueden eliminar ni renombrar. */
+  es_sistema: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Ejercicio {
+  id: string;
+  gimnasio_id: string;
+  zona_id: string;
+  nombre: string;
+  subgrupo: string | null;
+  equipo: string | null;
+  musculo_principal: string | null;
+  musculos_secundarios: string | null;
+  posicion_inicial: string | null;
+  ejecucion: string | null;
+  notas: string | null;
+  url_referencia: string | null;
+  origen: "seed" | "manual";
+  activo: boolean;
+  creado_por: string | null;
+  modificado_por: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface EjercicioRutina {
+  /** Nombre del ejercicio como snapshot (se toma del catálogo al guardar). */
   ejercicio: string;
+  /** Catálogo de ejercicios: referencia al ejercicio elegido. Ausente en filas
+   * heredadas con nombre libre ("Fuera del catálogo"). */
+  ejercicio_id?: string;
   series: number;
   reps: number;
   /** Sprint 15: peso sugerido/planificado, texto libre corto (ej. "40 kg",

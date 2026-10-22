@@ -1,8 +1,15 @@
-import { AlertTriangle, DollarSign, type LucideIcon, Package, Users } from "lucide-react";
+import {
+  AlertTriangle,
+  DollarSign,
+  type LucideIcon,
+  Percent,
+  Users,
+  Wallet,
+} from "lucide-react";
 import Link from "next/link";
 
-import { EstadoPaqueteBadge } from "@/components/pagos/estado-paquete-badge";
-import { OcupacionSemanal } from "@/components/turnos/ocupacion-semanal";
+import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
+import { WhatsAppCobranzaButton } from "@/components/pagos/whatsapp-cobranza-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { fichaSaludPendiente } from "@/lib/ficha-salud";
 import { formatFecha, formatMonto } from "@/lib/format";
@@ -14,10 +21,11 @@ import {
   diasDelMes,
   formatHora,
   hoyIso,
+  NOMBRES_MES,
 } from "@/lib/turnos";
 import type {
   Alumno,
-  EstadoPaqueteAlumno,
+  EstadoCobranzaAlumno,
   HorarioDisponible,
   ReservaConAlumno,
 } from "@/lib/types";
@@ -39,10 +47,15 @@ function StatCard({
   icon: Icon,
   label,
   value,
+  detail,
+  progress,
 }: {
   icon: LucideIcon;
   label: string;
   value: number | string;
+  detail?: string;
+  /** 0-100; si viene, dibuja una barra de avance bajo el valor. */
+  progress?: number;
 }) {
   return (
     <Card>
@@ -50,29 +63,54 @@ function StatCard({
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-secondary-foreground">
           <Icon className="h-5 w-5" />
         </div>
-        <div>
-          <div className="font-display text-2xl font-semibold text-foreground">
-            {value}
-          </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-display text-2xl font-semibold text-foreground">{value}</div>
           <div className="text-sm text-muted-foreground">{label}</div>
+          {progress !== undefined && (
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary"
+                style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+              />
+            </div>
+          )}
+          {detail && <div className="mt-1 text-xs text-muted-foreground">{detail}</div>}
         </div>
       </CardContent>
     </Card>
   );
 }
 
-const ORDEN_PAQUETE: Record<"atrasado" | "por_vencer", number> = {
-  atrasado: 0,
-  por_vencer: 1,
-};
+function Barra({ etiqueta, valor, max, texto }: { etiqueta: string; valor: number; max: number; texto: string }) {
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      <span className="w-14 shrink-0 text-muted-foreground">{etiqueta}</span>
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full bg-primary"
+          style={{ width: `${max > 0 ? (valor / max) * 100 : 0}%` }}
+        />
+      </div>
+      <span className="w-24 shrink-0 text-right text-xs text-foreground">{texto}</span>
+    </div>
+  );
+}
 
-// Sprint 22, Parte B: "Hoy" y "Estadísticas" vivían como dos rutas/ítems de menú
-// separados (Sprint 19, Parte 3) — se fusionan de vuelta en una sola página porque
-// un coach en la práctica quería ambas cosas a la vez, no una u otra. La agenda del
-// día y sus alertas van primero (lo que se consulta a diario), las métricas
-// mensuales de "Estadísticas" quedan debajo (consulta bajo demanda). `/protected`
-// sobrevive como URL única: es el destino de login del dueño y el target de
-// `revalidatePath("/protected")` en varias acciones.
+const pct = (parte: number, total: number) => (total > 0 ? Math.round((parte / total) * 100) : 0);
+
+/** "YYYY-MM" de hace `n` meses respecto de `hoy` (YYYY-MM-DD). */
+function mesAnterior(hoy: string, n: number): { clave: string; mes: number } {
+  const [y, m] = hoy.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 - n, 1));
+  const mes = d.getUTCMonth();
+  return { clave: `${d.getUTCFullYear()}-${String(mes + 1).padStart(2, "0")}`, mes };
+}
+
+// Spec 01, R3: el panel responde en 10 segundos tres preguntas — ¿cuánta plata entró
+// y cuánta falta?, ¿qué tengo que hacer hoy?, ¿cómo vienen las tendencias? — en ese
+// orden: indicadores arriba, pendientes de hoy en el medio, tendencias abajo. La
+// grilla semanal completa vive solo en `/protected/turnos`. `/protected` sigue siendo
+// la URL única (destino de login y target de `revalidatePath("/protected")`).
 export default async function EstadisticasPage() {
   const perfilData = await getPerfilActual();
   if (!perfilData) return null; // el layout ya redirige a /auth/login
@@ -83,117 +121,131 @@ export default async function EstadisticasPage() {
   const mesDias = diasDelMes(hoy);
   const inicioMes = mesDias[0];
   const finMes = mesDias[mesDias.length - 1];
+  const meses = [5, 4, 3, 2, 1, 0].map((n) => mesAnterior(hoy, n));
+  const inicio6Meses = `${meses[0].clave}-01`;
 
   const supabase = await createClient();
 
   const [
-    { data: horariosHoy },
-    { data: reservasHoy },
-    { data: estadoPaquetes },
-    { data: alumnosParaFichaSalud },
     { data: horarios },
+    { data: reservasHoy },
+    { data: cobranza },
+    { data: alumnosParaFichaSalud },
     { data: reservasSemana },
-    { data: pagosDelMes },
-    { count: planesVendidos },
-    { count: alumnosActivos },
-    { count: alumnosInactivos },
+    { data: pagos6Meses },
+    { count: altasMes },
   ] = await Promise.all([
-    supabase.from("horarios_disponibles").select("*").eq("gimnasio_id", gimnasioId).eq("activo", true),
+    supabase.from("horarios_disponibles").select("*").eq("gimnasio_id", gimnasioId),
     supabase
       .from("reservas")
       .select("*, alumno:alumnos(nombres, apellidos)")
       .eq("gimnasio_id", gimnasioId)
       .eq("fecha", hoy)
       .neq("estado", "cancelada"),
+    // Spec 01, R1: misma fuente que el listado de Pagos y la ficha de alumno.
     supabase
-      .from("v_estado_paquetes_alumnos")
+      .from("v_estado_cobranza_alumnos")
       .select("*")
       .eq("gimnasio_id", gimnasioId)
-      .eq("activo", true)
-      .in("estado_paquete", ["atrasado", "por_vencer"]),
-    // Sprint 18, Parte 6: implementa la alerta que la ficha de salud (Sprint 9) ya
-    // promete ("alergias y enfermedades quedan visibles como pendientes en el
-    // panel") pero que hasta ahora no aparecía en ningún lado — misma regla que
-    // `fichaSaludPendiente` usa en la ficha de alumno y el listado de Alumnos.
+      .eq("activo", true),
     supabase
       .from("alumnos")
-      .select("id, nombres, apellidos, activo, alergias, enfermedades, lesiones")
+      .select("id, activo, alergias, enfermedades, lesiones")
       .eq("gimnasio_id", gimnasioId)
       .eq("activo", true),
-    supabase.from("horarios_disponibles").select("*").eq("gimnasio_id", gimnasioId),
     supabase
       .from("reservas")
-      .select("*, alumno:alumnos(nombres, apellidos)")
+      .select("*")
       .eq("gimnasio_id", gimnasioId)
       .gte("fecha", semana[0])
-      .lte("fecha", semana[6]),
+      .lte("fecha", semana[6])
+      .neq("estado", "cancelada"),
     supabase
       .from("pagos")
-      .select("monto")
+      .select("monto, fecha_pago")
       .eq("gimnasio_id", gimnasioId)
-      .gte("fecha_pago", inicioMes)
+      .gte("fecha_pago", inicio6Meses)
       .lte("fecha_pago", finMes),
     supabase
-      .from("paquetes")
+      .from("alumnos")
       .select("*", { count: "exact", head: true })
       .eq("gimnasio_id", gimnasioId)
       .gte("fecha_inicio", inicioMes)
       .lte("fecha_inicio", finMes),
-    supabase
-      .from("alumnos")
-      .select("*", { count: "exact", head: true })
-      .eq("gimnasio_id", gimnasioId)
-      .eq("activo", true),
-    supabase
-      .from("alumnos")
-      .select("*", { count: "exact", head: true })
-      .eq("gimnasio_id", gimnasioId)
-      .eq("activo", false),
   ]);
 
-  const listaHorariosHoy = (horariosHoy ?? []) as HorarioDisponible[];
+  const listaHorarios = (horarios ?? []) as HorarioDisponible[];
   const reservas = (reservasHoy ?? []) as ReservaConAlumno[];
-  const slotsHoy = construirSlots([hoy], listaHorariosHoy)
+  const slotsHoy = construirSlots([hoy], listaHorarios)
     .map((base) => {
       const reservasDelSlot = reservas.filter((r) => r.hora_inicio === base.horaInicio);
-      return {
-        ...base,
-        cuposOcupados: reservasDelSlot.length,
-        reservas: reservasDelSlot,
-      };
+      return { ...base, cuposOcupados: reservasDelSlot.length, reservas: reservasDelSlot };
     })
+    .filter((slot) => slot.reservas.length > 0)
     .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
+  const alumnosCitadosHoy = new Set(reservas.map((r) => r.alumno_id)).size;
 
-  const paquetesPendientes = ((estadoPaquetes ?? []) as EstadoPaqueteAlumno[]).sort(
-    (a, b) =>
-      ORDEN_PAQUETE[a.estado_paquete as "atrasado" | "por_vencer"] -
-      ORDEN_PAQUETE[b.estado_paquete as "atrasado" | "por_vencer"],
-  );
+  // Cobranza (R1 + R3 fila 1 y 2)
+  const alumnos = (cobranza ?? []) as EstadoCobranzaAlumno[];
+  const atrasados = alumnos
+    .filter((a) => a.estado_pago === "atrasado")
+    .sort((a, b) => b.dias_atraso - a.dias_atraso);
+  const porVencer = alumnos
+    .filter((a) => a.estado_pago === "por_vencer")
+    .sort((a, b) => (a.vencimiento_actual ?? "").localeCompare(b.vencimiento_actual ?? ""));
+  const cobranzaPendiente = [...atrasados, ...porVencer];
+  const esperadoMes = alumnos.reduce((acc, a) => acc + Number(a.plan_precio ?? 0), 0);
+  const porCobrarMonto = atrasados.reduce((acc, a) => acc + Number(a.plan_precio ?? 0), 0);
 
-  const fichasSaludPendientes = (
+  const pagos = (pagos6Meses ?? []) as { monto: number; fecha_pago: string }[];
+  const ingresosPorMes = meses.map(({ clave, mes }) => ({
+    etiqueta: NOMBRES_MES[mes].slice(0, 3),
+    total: pagos
+      .filter((p) => p.fecha_pago.startsWith(clave))
+      .reduce((acc, p) => acc + Number(p.monto), 0),
+  }));
+  const cobradoMes = ingresosPorMes[ingresosPorMes.length - 1].total;
+  const maxIngreso = Math.max(...ingresosPorMes.map((m) => m.total));
+
+  // Ocupación (semanal agregada y por bloque horario)
+  const reservasEnSemana = (reservasSemana ?? []) as ReservaConAlumno[];
+  const slotsSemana = construirSlots(semana, listaHorarios).map((base) => ({
+    ...base,
+    cuposOcupados: reservasEnSemana.filter(
+      (r) => r.fecha === base.fecha && r.hora_inicio === base.horaInicio,
+    ).length,
+  }));
+  const cuposOfrecidos = slotsSemana.reduce((acc, s) => acc + s.cupos, 0);
+  const cuposUsados = slotsSemana.reduce((acc, s) => acc + s.cuposOcupados, 0);
+  const porBloque = new Map<string, { usados: number; cupos: number }>();
+  for (const s of slotsSemana) {
+    const b = porBloque.get(s.horaInicio) ?? { usados: 0, cupos: 0 };
+    b.usados += s.cuposOcupados;
+    b.cupos += s.cupos;
+    porBloque.set(s.horaInicio, b);
+  }
+  const bloques = [...porBloque.entries()]
+    .map(([hora, b]) => ({ hora, ...b, pct: pct(b.usados, b.cupos) }))
+    .sort((a, b) => b.pct - a.pct || a.hora.localeCompare(b.hora));
+  const masLlenos = bloques.slice(0, 3);
+  const masVacios = bloques
+    .filter((b) => !masLlenos.includes(b))
+    .slice(-3)
+    .reverse();
+
+  const porPlan = new Map<string, number>();
+  for (const a of alumnos) {
+    const nombre = a.plan_nombre ?? "Sin plan";
+    porPlan.set(nombre, (porPlan.get(nombre) ?? 0) + 1);
+  }
+  const alumnosPorPlan = [...porPlan.entries()].sort((a, b) => b[1] - a[1]);
+
+  const fichasPendientes = (
     (alumnosParaFichaSalud ?? []) as Pick<
       Alumno,
-      "id" | "nombres" | "apellidos" | "activo" | "alergias" | "enfermedades" | "lesiones"
+      "id" | "activo" | "alergias" | "enfermedades" | "lesiones"
     >[]
-  ).filter((a) => fichaSaludPendiente(a));
-
-  const listaHorarios = (horarios ?? []) as HorarioDisponible[];
-  const reservasEnSemana = (reservasSemana ?? []) as ReservaConAlumno[];
-  const slotsSemana = construirSlots(semana, listaHorarios).map((base) => {
-    const reservasDelSlot = reservasEnSemana.filter(
-      (r) => r.fecha === base.fecha && r.hora_inicio === base.horaInicio,
-    );
-    return {
-      ...base,
-      cuposOcupados: reservasDelSlot.filter((r) => r.estado !== "cancelada").length,
-      reservas: reservasDelSlot,
-    };
-  });
-
-  const ingresosMes = (pagosDelMes ?? []).reduce(
-    (acc, p) => acc + Number((p as { monto: number }).monto),
-    0,
-  );
+  ).filter((a) => fichaSaludPendiente(a)).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -204,143 +256,199 @@ export default async function EstadisticasPage() {
         <h2 className="text-2xl">Estadísticas</h2>
       </div>
 
-      {/* Sprint 18, Parte 4: lo primero que ve el coach es la agenda del día, no
-          una grilla semanal de más de 80 celdas — con acceso directo a la
-          bitácora de cada bloque (auditoría UX 2026-09-04, punto 3.4). */}
-      <Bloque titulo={`Agenda del día · ${formatFecha(hoy)}`}>
-        {slotsHoy.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">
-            No tienes bloques configurados para hoy.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {slotsHoy.map((slot) => (
-              <Link
-                key={slot.horarioId}
-                href={`/protected/bitacora?fecha=${hoy}&hora=${slot.horaInicio}`}
-                className="flex items-center justify-between gap-3 rounded-[7px] border border-border px-3 py-2.5 text-sm hover:bg-primary/10"
-              >
-                <span className="font-medium text-foreground">
-                  {formatHora(slot.horaInicio)} h
-                </span>
-                <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                  {slot.reservas.length === 0
-                    ? "Sin alumnos citados"
-                    : slot.reservas
-                        .map((r) => `${r.alumno?.nombres} ${r.alumno?.apellidos}`)
-                        .join(", ")}
-                </span>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {slot.cuposOcupados}/{slot.cupos} cupos
-                </span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </Bloque>
+      {/* Fila 1 — indicadores */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          icon={DollarSign}
+          label="Cobrado este mes"
+          value={formatMonto(cobradoMes)}
+          progress={pct(cobradoMes, esperadoMes)}
+          detail={`de ${formatMonto(esperadoMes)} esperados`}
+        />
+        <StatCard
+          icon={Wallet}
+          label="Por cobrar"
+          value={formatMonto(porCobrarMonto)}
+          detail={`${atrasados.length} alumno${atrasados.length === 1 ? "" : "s"} atrasado${atrasados.length === 1 ? "" : "s"}`}
+        />
+        <StatCard
+          icon={Users}
+          label="Alumnos activos"
+          value={alumnos.length}
+          detail={`${altasMes ?? 0} alta${altasMes === 1 ? "" : "s"} este mes`}
+        />
+        <StatCard
+          icon={Percent}
+          label="Ocupación semanal"
+          value={`${pct(cuposUsados, cuposOfrecidos)}%`}
+          progress={pct(cuposUsados, cuposOfrecidos)}
+          detail={`${cuposUsados} de ${cuposOfrecidos} cupos`}
+        />
+      </div>
 
-      {/* Sprint 18, Parte 5: lista real de atrasados + por vencer en 7 días — antes
-          mezclaba "sin paquete" (alumno de prueba) con paquetes vencidos. */}
-      <Bloque titulo="Estado de pagos">
-        {paquetesPendientes.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">
-            Todas las alumnas activas tienen un paquete vigente.
+      {/* Fila 2 — pendientes de hoy */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Bloque titulo={`Clases de hoy · ${formatFecha(hoy)}`}>
+          <p className="text-sm text-muted-foreground">
+            {slotsHoy.length} clase{slotsHoy.length === 1 ? "" : "s"}, {alumnosCitadosHoy} alumno
+            {alumnosCitadosHoy === 1 ? "" : "s"}
           </p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {paquetesPendientes.slice(0, 8).map((row) => (
-              <Link
-                key={row.alumno_id}
-                href={`/protected/pagos/${row.alumno_id}`}
-                className="flex items-center justify-between rounded-[7px] px-3 py-2 text-sm hover:bg-primary/10"
-              >
-                <span className="font-medium text-foreground">
-                  {row.nombres} {row.apellidos}
-                </span>
-                <div className="flex items-center gap-2">
-                  {row.vencimiento_actual && (
-                    <span className="text-xs text-muted-foreground">
-                      {row.estado_paquete === "atrasado" ? "venció" : "vence"}{" "}
-                      {formatFecha(row.vencimiento_actual)}
-                    </span>
-                  )}
-                  <EstadoPaqueteBadge estado={row.estado_paquete} />
+          {slotsHoy.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              No hay alumnos citados para hoy.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {slotsHoy.map((slot) => (
+                <Link
+                  key={slot.horarioId}
+                  href={`/protected/bitacora?fecha=${hoy}&hora=${slot.horaInicio}`}
+                  className="flex items-center justify-between gap-3 rounded-[7px] border border-border px-3 py-2.5 text-sm hover:bg-primary/10"
+                >
+                  <span className="font-medium text-foreground">
+                    {formatHora(slot.horaInicio)} h
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                    {slot.reservas
+                      .map((r) => `${r.alumno?.nombres} ${r.alumno?.apellidos}`)
+                      .join(", ")}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {slot.cuposOcupados}/{slot.cupos} cupos
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </Bloque>
+
+        <Bloque titulo="Cobranza">
+          {cobranzaPendiente.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              No hay alumnos atrasados ni por vencer esta semana.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {cobranzaPendiente.slice(0, 8).map((row) => (
+                <div
+                  key={row.alumno_id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-[7px] border border-border px-3 py-2 text-sm"
+                >
+                  <div className="min-w-0">
+                    <Link
+                      href={`/protected/pagos/${row.alumno_id}`}
+                      className="font-medium text-foreground hover:text-primary hover:underline"
+                    >
+                      {row.nombres} {row.apellidos}
+                    </Link>
+                    <div className="text-xs text-muted-foreground">
+                      {row.estado_pago === "atrasado"
+                        ? `venció ${formatFecha(row.vencimiento_actual!)} · ${row.dias_atraso} día${row.dias_atraso === 1 ? "" : "s"} de atraso`
+                        : `vence ${formatFecha(row.vencimiento_actual!)}`}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <EstadoPagoBadge estado={row.estado_pago} />
+                    <WhatsAppCobranzaButton alumno={row} />
+                    <Link
+                      href={`/protected/pagos/${row.alumno_id}`}
+                      className="text-xs text-muted-foreground hover:text-primary hover:underline"
+                    >
+                      Registrar pago
+                    </Link>
+                  </div>
                 </div>
-              </Link>
-            ))}
-            {paquetesPendientes.length > 8 && (
-              <Link
-                href="/protected/pagos"
-                className="mt-1 text-xs text-muted-foreground hover:text-primary hover:underline"
-              >
-                Ver las {paquetesPendientes.length} alumnas en Pagos →
-              </Link>
-            )}
-          </div>
+              ))}
+              {cobranzaPendiente.length > 8 && (
+                <Link
+                  href="/protected/pagos"
+                  className="mt-1 text-xs text-muted-foreground hover:text-primary hover:underline"
+                >
+                  Ver {cobranzaPendiente.length} alumnos pendientes →
+                </Link>
+              )}
+            </div>
+          )}
+        </Bloque>
+      </div>
+
+      <Bloque titulo="Alertas">
+        {fichasPendientes === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Todos los alumnos activos tienen su ficha de salud completa.
+          </p>
+        ) : (
+          <Link
+            href="/protected/alumnos"
+            className="flex items-center gap-2 text-sm text-destructive hover:underline"
+          >
+            <AlertTriangle className="h-4 w-4" />
+            {fichasPendientes} ficha{fichasPendientes === 1 ? "" : "s"} de salud incompleta
+            {fichasPendientes === 1 ? "" : "s"} →
+          </Link>
         )}
       </Bloque>
 
-      {/* Sprint 18, Parte 6: implementa la alerta que el texto de la ficha de
-          salud ya prometía pero no aparecía en ningún lado. */}
-      <Bloque titulo="Fichas de salud incompletas">
-        {fichasSaludPendientes.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">
-            Todas las alumnas activas tienen su ficha de salud completa.
-          </p>
-        ) : (
+      {/* Fila 3 — tendencias */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Bloque titulo="Ingresos · últimos 6 meses">
           <div className="flex flex-col gap-2">
-            {fichasSaludPendientes.slice(0, 8).map((a) => (
-              <Link
-                key={a.id}
-                href={`/protected/alumnos/${a.id}`}
-                className="flex items-center justify-between rounded-[7px] px-3 py-2 text-sm hover:bg-primary/10"
-              >
-                <span className="font-medium text-foreground">
-                  {a.nombres} {a.apellidos}
-                </span>
-                <span className="flex items-center gap-1.5 text-xs text-destructive">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  Alergias/enfermedades/lesiones sin completar
-                </span>
-              </Link>
+            {ingresosPorMes.map((m) => (
+              <Barra
+                key={m.etiqueta + m.total}
+                etiqueta={m.etiqueta}
+                valor={m.total}
+                max={maxIngreso}
+                texto={formatMonto(m.total)}
+              />
             ))}
-            {fichasSaludPendientes.length > 8 && (
-              <Link
-                href="/protected/alumnos"
-                className="mt-1 text-xs text-muted-foreground hover:text-primary hover:underline"
-              >
-                Ver las {fichasSaludPendientes.length} alumnas en Alumnos →
-              </Link>
-            )}
           </div>
-        )}
-      </Bloque>
+        </Bloque>
 
-      <StatCard
-        icon={Users}
-        label="Alumnos"
-        value={`${alumnosActivos ?? 0} activos · ${alumnosInactivos ?? 0} inactivos`}
-      />
+        <Bloque titulo="Ocupación por bloque horario">
+          {bloques.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              Todavía no configuras ningún horario disponible.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="text-xs text-muted-foreground">Más llenos</div>
+              {masLlenos.map((b) => (
+                <Barra key={b.hora} etiqueta={`${formatHora(b.hora)} h`} valor={b.pct} max={100} texto={`${b.pct}%`} />
+              ))}
+              {masVacios.length > 0 && (
+                <>
+                  <div className="mt-1 text-xs text-muted-foreground">Más vacíos</div>
+                  {masVacios.map((b) => (
+                    <Barra key={b.hora} etiqueta={`${formatHora(b.hora)} h`} valor={b.pct} max={100} texto={`${b.pct}%`} />
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+          <Link
+            href="/protected/turnos?vista=semana"
+            className="text-xs text-muted-foreground hover:text-primary hover:underline"
+          >
+            Ver calendario completo →
+          </Link>
+        </Bloque>
 
-      <StatCard icon={DollarSign} label="Cobrado este mes" value={formatMonto(ingresosMes)} />
-
-      <StatCard icon={Package} label="Planes vendidos este mes" value={planesVendidos ?? 0} />
-
-      <Bloque titulo="Ocupación semanal">
-        {listaHorarios.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">
-            Todavía no configuras ningún horario disponible.
-          </p>
-        ) : (
-          <OcupacionSemanal fecha={hoy} slots={slotsSemana} />
-        )}
-        <Link
-          href="/protected/turnos?vista=semana"
-          className="text-xs text-muted-foreground hover:text-primary hover:underline"
-        >
-          Ver calendario completo →
-        </Link>
-      </Bloque>
+        <Bloque titulo="Alumnos por plan">
+          {alumnosPorPlan.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">Sin alumnos activos.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {alumnosPorPlan.map(([nombre, n]) => (
+                <div key={nombre} className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">{nombre}</span>
+                  <span className="font-medium text-foreground">{n}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Bloque>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cinzel, Work_Sans } from "next/font/google";
+import { Allura, Cormorant_Garamond, Work_Sans } from "next/font/google";
 import "./globals.css";
 
 // `NEXT_PUBLIC_SITE_URL` es el dominio estable de producción; `VERCEL_URL` es la URL
@@ -55,11 +55,19 @@ const workSans = Work_Sans({
   weight: ["300", "400", "500", "600", "700"],
 });
 
-const cinzel = Cinzel({
-  variable: "--font-cinzel",
+const cormorant = Cormorant_Garamond({
+  variable: "--font-cormorant",
   display: "swap",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["500", "600", "700"],
+  style: ["normal", "italic"],
+});
+
+const allura = Allura({
+  variable: "--font-allura",
+  display: "swap",
+  subsets: ["latin"],
+  weight: "400",
 });
 
 export default function RootLayout({
@@ -68,7 +76,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${workSans.variable} ${cinzel.variable}`}>
+    <html lang="es" className={`${workSans.variable} ${cormorant.variable} ${allura.variable}`}>
       <body className="font-sans antialiased">{children}</body>
     </html>
   );

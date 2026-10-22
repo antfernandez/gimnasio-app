@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 
 import { createPago } from "@/app/protected/pagos/actions";
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
-import { EstadoPaqueteBadge } from "@/components/pagos/estado-paquete-badge";
 import { PagoForm } from "@/components/pagos/pago-form";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -20,7 +19,7 @@ import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import type {
   Alumno,
-  EstadoPagoAlumno,
+  EstadoCobranzaAlumno,
   EstadoPaqueteAlumno,
   Pago,
   Plan,
@@ -66,7 +65,7 @@ export default async function PagosAlumnoPage({
         .eq("alumno_id", alumnoId)
         .order("fecha_pago", { ascending: false }),
       supabase
-        .from("v_estado_pago_alumnos")
+        .from("v_estado_cobranza_alumnos")
         .select("*")
         .eq("alumno_id", alumnoId)
         .maybeSingle(),
@@ -83,7 +82,7 @@ export default async function PagosAlumnoPage({
     ]);
 
   const historial = (pagos ?? []) as PagoConPlan[];
-  const estado = estadoRow as EstadoPagoAlumno | null;
+  const estado = estadoRow as EstadoCobranzaAlumno | null;
   const estadoPaquete = estadoPaqueteRow as EstadoPaqueteAlumno | null;
   const createPagoConId = createPago.bind(null, a.id);
 
@@ -107,8 +106,14 @@ export default async function PagosAlumnoPage({
             </h2>
           </div>
           <div className="flex items-center gap-2">
+            {estadoPaquete && estadoPaquete.paquete_id && (
+              <span className="text-xs text-muted-foreground">
+                {estadoPaquete.clases_restantes} clase
+                {estadoPaquete.clases_restantes === 1 ? "" : "s"} restante
+                {estadoPaquete.clases_restantes === 1 ? "" : "s"}
+              </span>
+            )}
             {estado && <EstadoPagoBadge estado={estado.estado_pago} />}
-            {estadoPaquete && <EstadoPaqueteBadge estado={estadoPaquete.estado_paquete} />}
           </div>
         </div>
       </div>

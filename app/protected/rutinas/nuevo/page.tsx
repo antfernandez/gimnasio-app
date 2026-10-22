@@ -4,8 +4,16 @@ import Link from "next/link";
 import { createRutina } from "@/app/protected/rutinas/actions";
 import { RutinaForm } from "@/components/rutinas/rutina-form";
 import { Card, CardContent } from "@/components/ui/card";
+import { fetchEjercicios, fetchZonas } from "@/lib/ejercicios";
+import { getPerfilActual } from "@/lib/perfil";
 
-export default function NuevaPlantillaPage() {
+export default async function NuevaPlantillaPage() {
+  const [perfilData, zonas, ejercicios] = await Promise.all([
+    getPerfilActual(),
+    fetchZonas(),
+    fetchEjercicios({ soloActivos: true }),
+  ]);
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -24,7 +32,13 @@ export default function NuevaPlantillaPage() {
 
       <Card>
         <CardContent className="pt-6">
-          <RutinaForm action={createRutina} submitLabel="Crear plantilla" />
+          <RutinaForm
+            action={createRutina}
+            submitLabel="Crear plantilla"
+            zonas={zonas}
+            ejercicios={ejercicios}
+            esDueno={perfilData?.perfil.rol === "dueño"}
+          />
         </CardContent>
       </Card>
     </div>

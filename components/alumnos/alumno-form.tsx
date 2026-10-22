@@ -27,7 +27,7 @@ export function AlumnoForm({ action, alumno, planes, submitLabel }: Props) {
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         <div className="grid gap-2">
           <Label htmlFor="rut">RUT</Label>
           {alumno ? (
@@ -107,7 +107,7 @@ export function AlumnoForm({ action, alumno, planes, submitLabel }: Props) {
           />
         </div>
 
-        <div className="grid gap-2 sm:col-span-2 sm:max-w-[240px]">
+        <div className="grid gap-2 sm:col-span-2 xl:col-span-1 sm:max-w-[240px]">
           <Label htmlFor="fecha_inicio">Fecha de inicio</Label>
           <Input
             id="fecha_inicio"
@@ -119,8 +119,8 @@ export function AlumnoForm({ action, alumno, planes, submitLabel }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-5 border-t border-border pt-5 sm:grid-cols-2">
-        <div className="sm:col-span-2">
+      <div className="grid gap-5 border-t border-border pt-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="sm:col-span-2 xl:col-span-3">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Ficha de salud
           </h3>

@@ -55,7 +55,7 @@ export default async function ProtectedLayout({
               {perfil.nombre_completo}
             </h4>
           </div>
-          <SidebarNav />
+          <SidebarNav esDueno={perfil.rol === "dueño"} />
           <div className="mt-8 flex justify-center">
             <LogoutButton />
           </div>
@@ -63,7 +63,7 @@ export default async function ProtectedLayout({
       </aside>
 
       <main className="px-6 py-8 md:px-10 md:py-10">
-        <div className="mx-auto max-w-4xl">{children}</div>
+        <div className="max-w-[1600px]">{children}</div>
       </main>
     </div>
   );

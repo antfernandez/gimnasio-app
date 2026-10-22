@@ -7,6 +7,7 @@ import {
   CreditCard,
   Dumbbell,
   Globe,
+  ListChecks,
   NotebookPen,
   Users,
 } from "lucide-react";
@@ -24,18 +25,23 @@ const items = [
   { href: "/protected/bitacora", label: "Bitácora", icon: NotebookPen },
   { href: "/protected/alumnos", label: "Alumnos", icon: Users },
   { href: "/protected/rutinas", label: "Rutinas", icon: Dumbbell },
+  // Catálogo de ejercicios: solo lo gestiona el dueño (el entrenador lo lee desde
+  // el selector de rutinas).
+  { href: "/protected/ejercicios", label: "Ejercicios", icon: ListChecks, soloDueno: true },
   { href: "/protected/turnos", label: "Turnos", icon: CalendarDays },
   { href: "/protected/pagos", label: "Pagos", icon: CreditCard },
   { href: "/protected/planes", label: "Planes", icon: ClipboardList },
   { href: "/protected/sitio", label: "Sitio público", icon: Globe },
 ];
 
-export function SidebarNav() {
+export function SidebarNav({ esDueno = false }: { esDueno?: boolean }) {
   const pathname = usePathname();
 
   return (
     <nav className="flex flex-col gap-1">
-      {items.map((item) => {
+      {items
+        .filter((item) => esDueno || !item.soloDueno)
+        .map((item) => {
         const active = item.exact
           ? pathname === item.href
           : pathname.startsWith(item.href);

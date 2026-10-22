@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { updateRutina } from "@/app/protected/rutinas/actions";
 import { RutinaForm } from "@/components/rutinas/rutina-form";
 import { Card, CardContent } from "@/components/ui/card";
+import { fetchEjercicios, fetchZonas } from "@/lib/ejercicios";
+import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import type { RutinaPlantilla } from "@/lib/types";
 
@@ -24,6 +26,11 @@ export default async function EditarPlantillaPage({
 
   if (!plantilla) notFound();
   const p = plantilla as RutinaPlantilla;
+  const [perfilData, zonas, ejercicios] = await Promise.all([
+    getPerfilActual(),
+    fetchZonas(),
+    fetchEjercicios({ soloActivos: true }),
+  ]);
   const updateRutinaConId = updateRutina.bind(null, p.id);
 
   return (
@@ -44,7 +51,14 @@ export default async function EditarPlantillaPage({
 
       <Card>
         <CardContent className="pt-6">
-          <RutinaForm action={updateRutinaConId} plantilla={p} submitLabel="Guardar cambios" />
+          <RutinaForm
+            action={updateRutinaConId}
+            plantilla={p}
+            submitLabel="Guardar cambios"
+            zonas={zonas}
+            ejercicios={ejercicios}
+            esDueno={perfilData?.perfil.rol === "dueño"}
+          />
         </CardContent>
       </Card>
     </div>

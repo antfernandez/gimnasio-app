@@ -55,7 +55,8 @@ export default {
       },
       fontFamily: {
         sans: ["var(--font-work-sans)", "sans-serif"],
-        display: ["var(--font-cinzel)", "serif"],
+        display: ["var(--font-cormorant)", "serif"],
+        script: ["var(--font-allura)", "cursive"],
       },
       borderRadius: {
         lg: "var(--radius)",

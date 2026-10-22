@@ -1,8 +1,12 @@
 import { Badge } from "@/components/ui/badge";
 import type { EstadoPago } from "@/lib/types";
 
-const CONFIG: Record<EstadoPago, { label: string; variant: "success" | "destructive" | "secondary" }> = {
+const CONFIG: Record<
+  EstadoPago,
+  { label: string; variant: "success" | "default" | "destructive" | "secondary" }
+> = {
   al_dia: { label: "Al día", variant: "success" },
+  por_vencer: { label: "Por vencer", variant: "default" },
   atrasado: { label: "Atrasado", variant: "destructive" },
   sin_pagos: { label: "Sin pagos", variant: "secondary" },
 };

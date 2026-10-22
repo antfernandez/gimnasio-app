@@ -5,21 +5,21 @@
 /* Paleta "Valinor Estudio" (.claude/templates/valinor-sistema-web-claro-v2.html)
    llevada a tokens shadcn/Tailwind. Reemplaza el tema oscuro naranja/lima del
    Sprint 4 (que a su vez había reemplazado el dorado/crema del Sprint 1) — Sprint 11
-   vuelve a una base clara dorado/crema/verde/café con tipografía Cinzel + Work Sans. */
+   vuelve a una base clara dorado/crema/verde/café con tipografía Cormorant Garamond + Work Sans; Sprint v5: texto/títulos en verde oliva. */
 @layer base {
   :root {
-    --background: 35 58% 94%; /* --bg #f8f0e5 */
-    --foreground: 44 20% 19%; /* --cream (texto) #3a3527 */
+    --background: 43 53% 92%; /* --bg #f8f0e5 */
+    --foreground: 97 28% 18%; /* --cream (texto) #3a3527 */
     --card: 38 100% 98%; /* --card #fffcf7 */
-    --card-foreground: 44 20% 19%;
+    --card-foreground: 97 28% 18%;
     --popover: 38 100% 98%;
-    --popover-foreground: 44 20% 19%;
+    --popover-foreground: 97 28% 18%;
     --primary: 41 53% 55%; /* --gold #c9a24d */
     --primary-foreground: 40 68% 6%; /* texto oscuro sobre dorado, como .btn-solid */
     --secondary: 33 54% 88%; /* --bg-alt #f1e2d0 */
-    --secondary-foreground: 39 49% 36%; /* --ink-gold #8a6a2f, color de títulos */
+    --secondary-foreground: 97 28% 22%; /* --ink-gold #8a6a2f, color de títulos */
     --muted: 33 54% 88%; /* --bg-alt */
-    --muted-foreground: 32 18% 41%; /* --muted #7d6b56 */
+    --muted-foreground: 97 12% 36%; /* --muted #7d6b56 */
     --accent: 43 64% 76%; /* --gold-light #e9d29a */
     --accent-foreground: 39 49% 36%; /* --ink-gold */
     --destructive: 6 40% 58%; /* --red #bf7269 */

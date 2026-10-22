@@ -17,7 +17,7 @@ import { AvanceForm } from "@/components/avances/avance-form";
 import { BitacoraHistorial } from "@/components/bitacora/bitacora-historial";
 import { ProgresoRutina } from "@/components/bitacora/progreso-rutina";
 import { LineChart } from "@/components/charts/line-chart";
-import { EstadoPaqueteBadge } from "@/components/pagos/estado-paquete-badge";
+import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
 import { AsignarRutinaForm } from "@/components/rutinas/asignar-rutina-form";
 import { RutinaCard } from "@/components/rutinas/rutina-card";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,7 @@ import type {
   Alumno,
   Avance,
   ClasificacionAlumnoRow,
+  EstadoCobranzaAlumno,
   EstadoPaqueteAlumno,
   MedidasAvance,
   Plan,
@@ -91,6 +92,7 @@ export default async function FichaAlumnoPage({
   const [
     { data: clasificacionRow },
     { data: estadoPaqueteRow },
+    { data: estadoCobranzaRow },
     { data: planes },
     { data: plantillas },
     { data: rutinas },
@@ -104,6 +106,12 @@ export default async function FichaAlumnoPage({
     // Sprint 19, Parte 2: contador de clases restantes del paquete vigente.
     supabase
       .from("v_estado_paquetes_alumnos")
+      .select("*")
+      .eq("alumno_id", a.id)
+      .maybeSingle(),
+    // Spec 01, R1: mismo estado de pago que ve el listado de Pagos y el panel Hoy.
+    supabase
+      .from("v_estado_cobranza_alumnos")
       .select("*")
       .eq("alumno_id", a.id)
       .maybeSingle(),
@@ -132,6 +140,7 @@ export default async function FichaAlumnoPage({
     clasificacionRow as Pick<ClasificacionAlumnoRow, "clasificacion"> | null
   )?.clasificacion;
   const estadoPaquete = estadoPaqueteRow as EstadoPaqueteAlumno | null;
+  const estadoCobranza = estadoCobranzaRow as EstadoCobranzaAlumno | null;
 
   const listaPlantillas = (plantillas ?? []) as RutinaPlantilla[];
   const listaRutinas = (rutinas ?? []) as Rutina[];
@@ -191,15 +200,20 @@ export default async function FichaAlumnoPage({
                 el resto del significado a `ClasificacionBadge`. */}
             {!a.activo && <Badge variant="secondary">De baja</Badge>}
             {clasificacion && <ClasificacionBadge clasificacion={clasificacion} />}
-            {estadoPaquete && estadoPaquete.estado_paquete !== "sin_paquete" && (
-              <>
-                <span className="hidden text-xs text-muted-foreground sm:inline">
-                  {estadoPaquete.clases_restantes} clase
-                  {estadoPaquete.clases_restantes === 1 ? "" : "s"} restante
-                  {estadoPaquete.clases_restantes === 1 ? "" : "s"}
-                </span>
-                <EstadoPaqueteBadge estado={estadoPaquete.estado_paquete} />
-              </>
+            {estadoPaquete && estadoPaquete.paquete_id && (
+              <span className="hidden text-xs text-muted-foreground sm:inline">
+                {estadoPaquete.clases_restantes} clase
+                {estadoPaquete.clases_restantes === 1 ? "" : "s"} restante
+                {estadoPaquete.clases_restantes === 1 ? "" : "s"}
+              </span>
+            )}
+            {/* Spec 01, R1: tres cosas distintas, no una contradicción — estado de
+                pago (esta etiqueta, igual que en Pagos y Hoy), clasificación de
+                actividad y ficha de salud. */}
+            {estadoCobranza && (
+              <span title="Estado de pago: considera el último pago y el último paquete">
+                <EstadoPagoBadge estado={estadoCobranza.estado_pago} />
+              </span>
             )}
             <span className="hidden sm:inline-flex">
               <FichaSaludBadge pendiente={fichaSaludPendiente(a)} />
@@ -211,6 +225,10 @@ export default async function FichaAlumnoPage({
             />
           </div>
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Las etiquetas son independientes: estado de pago (último pago y paquete),
+          actividad reciente (activo, inactivo o de prueba) y ficha de salud.
+        </p>
       </div>
 
       {/* Sprint 18, Parte 2: pestañas "Datos"/"Progreso" — el historial y los
@@ -249,7 +267,7 @@ export default async function FichaAlumnoPage({
                 >
                   Ver pagos
                 </Link>
-                {estadoPaquete && estadoPaquete.estado_paquete !== "sin_paquete" && (
+                {estadoPaquete && estadoPaquete.paquete_id && (
                   <span className="text-muted-foreground">
                     {estadoPaquete.clases_restantes} clase
                     {estadoPaquete.clases_restantes === 1 ? "" : "s"} restante

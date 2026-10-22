@@ -96,16 +96,17 @@ const TEMAS: Record<TemaSitio, PaletaTema> = {
     line: "rgba(245,245,244,.14)",
     shadow: "0 16px 40px -18px rgba(0,0,0,.55)",
   },
+  // Valores del template v5 (valinor-boutique-hojas-v5.html), 00_spec_estilo_marca_valinor §7.2.
   claro: {
-    bg: "#faf6ec",
-    bgAlt: "#f2e9d4",
-    card: "#ffffff",
-    card2: "#faf1e4",
-    text: "#2b2415",
-    muted: "#6b5f45",
-    muted2: "#9c8b74",
-    line: "rgba(43,36,21,.14)",
-    shadow: "0 16px 40px -18px rgba(110,80,45,.26)",
+    bg: "#f6f0e1",
+    bgAlt: "#efe4c9",
+    card: "#fffdf6",
+    card2: "#faf3e0",
+    text: "#2e3a21",
+    muted: "#5d6650",
+    muted2: "#8b8c72",
+    line: "rgba(46,58,33,.15)",
+    shadow: "0 22px 48px -24px rgba(58,48,20,.38)",
   },
 };
 
@@ -124,13 +125,22 @@ export function temaCssVars(tema: TemaSitio, colorAcento: string): CSSProperties
     "--sitio-muted": t.muted,
     "--sitio-muted-2": t.muted2,
     "--sitio-line": t.line,
-    "--sitio-radius": "14px",
+    "--sitio-radius": tema === "claro" ? "18px" : "14px",
     "--sitio-shadow": t.shadow,
     "--sitio-accent": colorAcento,
     "--sitio-accent-ink": acentoInk(colorAcento),
     "--sitio-gold-light": acento.light,
     "--sitio-gold-deep": acento.deep,
     "--sitio-ink-gold": acento.ink,
+    // Color de títulos: oliva en el tema claro (v5), dorado oscuro en el oscuro.
+    "--sitio-title": tema === "claro" ? "#3a4b2a" : acento.ink,
+    // Ambiente oliva fijo de la marca (v5): no depende del acento del tenant.
+    "--sitio-olive-900": "#1f2816",
+    "--sitio-olive-800": "#2b3720",
+    "--sitio-olive-700": "#3a4b2a",
+    "--sitio-olive-600": "#4f6335",
+    "--sitio-leaf": "#62783f",
+    "--sitio-gold-grad": `linear-gradient(135deg, ${acento.light}, ${colorAcento} 55%, ${acento.deep})`,
   } as CSSProperties;
 }
 

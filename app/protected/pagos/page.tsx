@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ExportMenu } from "@/components/export/export-menu";
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
+import { WhatsAppCobranzaButton } from "@/components/pagos/whatsapp-cobranza-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,9 +16,7 @@ import {
 import { formatFecha } from "@/lib/format";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
-import type { Alumno, EstadoPagoAlumno } from "@/lib/types";
-
-type AlumnoConPlan = Pick<Alumno, "id"> & { plan: { nombre: string } | null };
+import type { EstadoCobranzaAlumno } from "@/lib/types";
 
 export default async function PagosPage({
   searchParams,
@@ -32,7 +31,7 @@ export default async function PagosPage({
 
   const supabase = await createClient();
   let query = supabase
-    .from("v_estado_pago_alumnos")
+    .from("v_estado_cobranza_alumnos")
     .select("*")
     .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
     .eq("activo", true)
@@ -43,19 +42,10 @@ export default async function PagosPage({
     query = query.or(`nombres.ilike.%${qSafe}%,apellidos.ilike.%${qSafe}%`);
   }
 
-  const [{ data }, { data: alumnosConPlan }] = await Promise.all([
-    query,
-    supabase
-      .from("alumnos")
-      .select("*, plan:planes(nombre)")
-      .eq("gimnasio_id", perfilData.perfil.gimnasio_id),
-  ]);
-  const lista = ((data ?? []) as EstadoPagoAlumno[]).sort((a, b) => {
-    const orden = { atrasado: 0, sin_pagos: 1, al_dia: 2 };
-    return orden[a.estado_pago] - orden[b.estado_pago];
-  });
-  const planPorAlumno = new Map(
-    ((alumnosConPlan ?? []) as AlumnoConPlan[]).map((a) => [a.id, a.plan?.nombre ?? null]),
+  const { data } = await query;
+  const orden = { atrasado: 0, sin_pagos: 1, por_vencer: 2, al_dia: 3 };
+  const lista = ((data ?? []) as EstadoCobranzaAlumno[]).sort(
+    (a, b) => orden[a.estado_pago] - orden[b.estado_pago] || b.dias_atraso - a.dias_atraso,
   );
 
   return (
@@ -119,14 +109,19 @@ export default async function PagosPage({
                     <TableCell>
                       <EstadoPagoBadge estado={row.estado_pago} />
                     </TableCell>
-                    <TableCell>{planPorAlumno.get(row.alumno_id) ?? "—"}</TableCell>
+                    <TableCell>{row.plan_nombre ?? "—"}</TableCell>
                     <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-3">
+                        {(row.estado_pago === "atrasado" || row.estado_pago === "por_vencer") && (
+                          <WhatsAppCobranzaButton alumno={row} />
+                        )}
                       <Link
                         href={`/protected/pagos/${row.alumno_id}`}
                         className="text-xs text-muted-foreground hover:text-primary hover:underline"
                       >
                         Ver historial / registrar pago
                       </Link>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

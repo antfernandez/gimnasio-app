@@ -1,9 +1,15 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import type { RutinaFormState } from "@/app/protected/rutinas/actions";
+import {
+  EjercicioCombobox,
+  type EjercicioOpcion,
+  type ZonaOpcion,
+} from "@/components/ejercicios/ejercicio-combobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,12 +30,20 @@ type Props = {
   ) => Promise<RutinaFormState>;
   plantilla?: RutinaPlantilla;
   submitLabel: string;
+  /** Catálogo de ejercicios activos con el que se arma la rutina. */
+  zonas: ZonaOpcion[];
+  ejercicios: EjercicioOpcion[];
+  esDueno: boolean;
 };
 
 let nextRowId = 1;
 
 type Fila = {
   id: number;
+  /** Id del ejercicio del catálogo; vacío si aún no se eligió o si es una fila
+   * heredada con nombre libre. */
+  ejercicio_id: string;
+  /** Nombre guardado en la plantilla (snapshot). */
   ejercicio: string;
   series: number | string;
   reps: number | string;
@@ -37,25 +51,56 @@ type Fila = {
   notas: string;
 };
 
-export function RutinaForm({ action, plantilla, submitLabel }: Props) {
+const filaVacia = (): Fila => ({
+  id: nextRowId++,
+  ejercicio_id: "",
+  ejercicio: "",
+  series: "",
+  reps: "",
+  peso: "",
+  notas: "",
+});
+
+export function RutinaForm({
+  action,
+  plantilla,
+  submitLabel,
+  zonas,
+  ejercicios,
+  esDueno,
+}: Props) {
   const [state, formAction, isPending] = useActionState(action, {});
   const [filas, setFilas] = useState<Fila[]>(
     plantilla && plantilla.contenido.length > 0
-      ? plantilla.contenido.map((ej) => ({ id: nextRowId++, peso: "", ...ej }))
-      : [{ id: nextRowId++, ejercicio: "", series: "", reps: "", peso: "", notas: "" }],
+      ? plantilla.contenido.map((ej) => ({
+          id: nextRowId++,
+          peso: "",
+          ...ej,
+          ejercicio_id: ej.ejercicio_id ?? "",
+        }))
+      : [filaVacia()],
   );
 
-  const agregarFila = () =>
-    setFilas((f) => [
-      ...f,
-      { id: nextRowId++, ejercicio: "", series: "", reps: "", peso: "", notas: "" },
-    ]);
+  const elegirEjercicio = (id: number, ejercicioId: string) =>
+    setFilas((f) =>
+      f.map((fila) =>
+        fila.id === id
+          ? {
+              ...fila,
+              ejercicio_id: ejercicioId,
+              ejercicio: ejercicios.find((e) => e.id === ejercicioId)?.nombre ?? "",
+            }
+          : fila,
+      ),
+    );
+
+  const agregarFila = () => setFilas((f) => [...f, filaVacia()]);
   const quitarFila = (id: number) =>
     setFilas((f) => (f.length > 1 ? f.filter((fila) => fila.id !== id) : f));
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         <div className="grid gap-2">
           <Label htmlFor="nombre">Nombre de la plantilla</Label>
           <Input
@@ -82,7 +127,7 @@ export function RutinaForm({ action, plantilla, submitLabel }: Props) {
             ))}
           </Select>
         </div>
-        <div className="grid gap-2 sm:col-span-2">
+        <div className="grid gap-2 sm:col-span-2 xl:col-span-3">
           <Label htmlFor="objetivo">Objetivo</Label>
           <Textarea
             id="objetivo"
@@ -96,6 +141,24 @@ export function RutinaForm({ action, plantilla, submitLabel }: Props) {
 
       <div className="flex flex-col gap-3">
         <Label>Ejercicios</Label>
+        {ejercicios.length === 0 && (
+          <div className="rounded-[9px] border border-border bg-secondary/40 px-4 py-3 text-sm text-muted-foreground">
+            {esDueno ? (
+              <>
+                El catálogo de ejercicios está vacío.{" "}
+                <Link
+                  href="/protected/ejercicios"
+                  className="text-primary hover:underline"
+                >
+                  Ve a Ejercicios para cargarlo
+                </Link>
+                .
+              </>
+            ) : (
+              "El catálogo de ejercicios está vacío. Pídele al dueño que cargue el catálogo."
+            )}
+          </div>
+        )}
         {filas.map((fila, i) => (
           <div
             key={fila.id}
@@ -107,11 +170,22 @@ export function RutinaForm({ action, plantilla, submitLabel }: Props) {
                   Ejercicio
                 </span>
               )}
-              <Input
-                name="ejercicio"
-                placeholder="Sentadilla"
-                defaultValue={fila.ejercicio}
-                required
+              <EjercicioCombobox
+                zonas={zonas}
+                ejercicios={ejercicios}
+                value={fila.ejercicio_id}
+                onChange={(eid) => elegirEjercicio(fila.id, eid)}
+                etiquetaFallback={fila.ejercicio_id ? fila.ejercicio : undefined}
+              />
+              <input type="hidden" name="ejercicio_id" value={fila.ejercicio_id} />
+              <input
+                type="hidden"
+                name="ejercicio_legacy"
+                value={fila.ejercicio_id ? "" : fila.ejercicio}
+              />
+              <EjercicioAyuda
+                fila={fila}
+                ejercicios={ejercicios}
               />
             </div>
             <div className="grid gap-1.5">
@@ -187,4 +261,33 @@ export function RutinaForm({ action, plantilla, submitLabel }: Props) {
       </div>
     </form>
   );
+}
+
+function EjercicioAyuda({
+  fila,
+  ejercicios,
+}: {
+  fila: Fila;
+  ejercicios: EjercicioOpcion[];
+}) {
+  if (!fila.ejercicio_id && fila.ejercicio) {
+    return (
+      <span className="text-xs text-highlight">
+        Fuera del catálogo: «{fila.ejercicio}». Puedes conservarlo o elegir uno del
+        catálogo.
+      </span>
+    );
+  }
+  const e = ejercicios.find((o) => o.id === fila.ejercicio_id);
+  if (!e && fila.ejercicio_id) {
+    return (
+      <span className="text-xs text-muted-foreground">
+        Ya no está activo en el catálogo; se conserva como estaba guardado.
+      </span>
+    );
+  }
+  const detalle = [e?.equipo, e?.musculo_principal].filter(Boolean).join(" · ");
+  return detalle ? (
+    <span className="text-xs text-muted-foreground">{detalle}</span>
+  ) : null;
 }
