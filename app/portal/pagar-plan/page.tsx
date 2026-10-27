@@ -1,4 +1,5 @@
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
+import { iniciarPago } from "@/app/portal/pagar-plan/actions";
 import { PagarPlanForm } from "@/components/portal/pagar-plan-form";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -112,6 +113,7 @@ export default async function PagarPlanPage({
 
       {puedePagar ? (
         <PagarPlanForm
+          accion={iniciarPago}
           precioMensual={Number(planActual!.precio)}
           mercadoPagoDisponible={mpDisponible}
           cuenta={(cuenta as CuentaTransferencia | null) ?? null}

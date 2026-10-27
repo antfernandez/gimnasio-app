@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AdminRow } from "@/components/superadmin/admin-row";
 import { CrearAdminForm } from "@/components/superadmin/crear-admin-form";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getSuperadminActual } from "@/lib/superadmin";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -49,15 +51,21 @@ export default async function SuperadminPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          Panel Superadmin
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            Panel Superadmin
+          </div>
+          <h2 className="text-2xl">Administradores</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Crea, edita y da de baja cuentas de dueño/a. Este panel no tiene acceso a
+            alumnos, pagos de alumnos ni contenido del sitio de ningún gimnasio; solo
+            valida los pagos de suscripción al sistema.
+          </p>
         </div>
-        <h2 className="text-2xl">Administradores</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Crea, edita y da de baja cuentas de dueño/a. Este panel no tiene acceso a
-          alumnos, pagos ni contenido del sitio de ningún gimnasio.
-        </p>
+        <Button asChild variant="outline">
+          <Link href="/superadmin/suscripciones">Suscripciones por validar</Link>
+        </Button>
       </div>
 
       <Card>

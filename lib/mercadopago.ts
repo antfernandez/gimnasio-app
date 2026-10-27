@@ -7,13 +7,32 @@ export function tokenValinor(): string | null {
   return process.env.MP_ACCESS_TOKEN_VALINOR || null;
 }
 
+/** Flujo B: la dueña paga la suscripción a la cuenta de Antonio Fernandez. */
+export function tokenAntonio(): string | null {
+  return process.env.MP_ACCESS_TOKEN_ANTONIO || null;
+}
+
+export type FlujoMp = "alumno" | "suscripcion";
+
+/** Cada cuenta de Mercado Pago tiene su propia aplicación y, por tanto, su propio
+ * secreto de webhook. */
+export function credencialesMp(flujo: FlujoMp): { token: string | null; secret: string | null } {
+  return flujo === "suscripcion"
+    ? { token: tokenAntonio(), secret: process.env.MP_WEBHOOK_SECRET_ANTONIO || null }
+    : { token: tokenValinor(), secret: process.env.MP_WEBHOOK_SECRET || null };
+}
+
 export async function crearPreferencia(opts: {
   token: string;
   solicitudId: string;
   titulo: string;
   monto: number;
   siteUrl: string;
+  flujo?: FlujoMp;
 }): Promise<{ id: string; initPoint: string }> {
+  const flujo = opts.flujo ?? "alumno";
+  const retorno =
+    flujo === "suscripcion" ? "/protected/pagar-plan/resultado" : "/portal/pagar-plan/resultado";
   const res = await fetch(`${API}/checkout/preferences`, {
     method: "POST",
     headers: {
@@ -32,12 +51,12 @@ export async function crearPreferencia(opts: {
       ],
       external_reference: opts.solicitudId,
       back_urls: {
-        success: `${opts.siteUrl}/portal/pagar-plan/resultado`,
-        pending: `${opts.siteUrl}/portal/pagar-plan/resultado`,
-        failure: `${opts.siteUrl}/portal/pagar-plan/resultado`,
+        success: `${opts.siteUrl}${retorno}`,
+        pending: `${opts.siteUrl}${retorno}`,
+        failure: `${opts.siteUrl}${retorno}`,
       },
       auto_return: "approved",
-      notification_url: `${opts.siteUrl}/api/mercadopago/webhook`,
+      notification_url: `${opts.siteUrl}/api/mercadopago/webhook?flujo=${flujo}`,
     }),
     cache: "no-store",
   });

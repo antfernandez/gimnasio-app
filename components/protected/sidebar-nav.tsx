@@ -9,6 +9,7 @@ import {
   Dumbbell,
   Globe,
   KeyRound,
+  Receipt,
   ListChecks,
   NotebookPen,
   Users,
@@ -37,6 +38,8 @@ const items = [
   // Spec 22: permisos de los alumnos (hoy avances y bitácora propios).
   { href: "/protected/permisos", label: "Permisos", icon: KeyRound },
   { href: "/protected/sitio", label: "Sitio público", icon: Globe },
+  // Spec 23, flujo B: la dueña paga la suscripción al sistema.
+  { href: "/protected/pagar-plan", label: "Suscripción", icon: Receipt, soloDueno: true },
 ];
 
 export function SidebarNav({ esDueno = false }: { esDueno?: boolean }) {

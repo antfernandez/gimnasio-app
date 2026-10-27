@@ -3,7 +3,7 @@
 import { Check, Copy } from "lucide-react";
 import { useActionState, useState } from "react";
 
-import { iniciarPago, type PagarPlanState } from "@/app/portal/pagar-plan/actions";
+import type { PagarPlanState } from "@/app/portal/pagar-plan/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,18 +17,22 @@ import type { CuentaTransferencia } from "@/lib/types";
 
 const initialState: PagarPlanState = {};
 
+type Accion = (prev: PagarPlanState, formData: FormData) => Promise<PagarPlanState>;
+
 export function PagarPlanForm({
+  accion,
   precioMensual,
   mercadoPagoDisponible,
   cuenta,
   hoy,
 }: {
+  accion: Accion;
   precioMensual: number;
   mercadoPagoDisponible: boolean;
   cuenta: CuentaTransferencia | null;
   hoy: string;
 }) {
-  const [state, action, pending] = useActionState(iniciarPago, initialState);
+  const [state, action, pending] = useActionState(accion, initialState);
   const [metodo, setMetodo] = useState<"mercado_pago" | "transferencia">(
     mercadoPagoDisponible ? "mercado_pago" : "transferencia",
   );
@@ -99,7 +103,7 @@ export function PagarPlanForm({
             : "No disponible por ahora.",
           !mercadoPagoDisponible,
         )}
-        {tarjeta("transferencia", "Transferencia", "Sube tu comprobante; tu gimnasio lo valida.")}
+        {tarjeta("transferencia", "Transferencia", "Sube tu comprobante; se valida manualmente.")}
       </div>
 
       {metodo === "transferencia" && (
@@ -122,7 +126,7 @@ export function PagarPlanForm({
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Tu gimnasio aún no configuró sus datos bancarios. Contáctalo para pagar.
+                Aún no hay datos bancarios configurados. Contacta a quien cobra para pagar.
               </p>
             )}
 

@@ -1,14 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { firmaValida, obtenerPago, tokenValinor } from "@/lib/mercadopago";
+import { credencialesMp, firmaValida, obtenerPago } from "@/lib/mercadopago";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// Webhook de Mercado Pago (flujo A). Verifica la firma, consulta el pago a la API (no
+// Webhook de Mercado Pago (flujos A y B; `?flujo=` elige la cuenta, el token y el secreto). Verifica la firma, consulta el pago a la API (no
 // confía en el cuerpo recibido) y confirma la solicitud. Idempotente: un reintento no
 // duplica el pago (índice único en mp_payment_id + `aplicar_solicitud_pago`).
 export async function POST(request: NextRequest) {
-  const secret = process.env.MP_WEBHOOK_SECRET;
-  const token = tokenValinor();
+  const flujo = request.nextUrl.searchParams.get("flujo") === "suscripcion" ? "suscripcion" : "alumno";
+  const { token, secret } = credencialesMp(flujo);
   if (!secret || !token) {
     return NextResponse.json({ error: "no configurado" }, { status: 503 });
   }
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     .eq("id", pago.external_reference)
     .maybeSingle();
 
-  if (!solicitud || solicitud.flujo !== "alumno" || solicitud.metodo !== "mercado_pago") {
+  if (!solicitud || solicitud.flujo !== flujo || solicitud.metodo !== "mercado_pago") {
     return NextResponse.json({ ok: true });
   }
   if (solicitud.estado === "confirmado") return NextResponse.json({ ok: true });
