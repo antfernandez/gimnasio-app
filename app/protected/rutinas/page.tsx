@@ -1,11 +1,11 @@
-import { Pencil, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 
 import { AplicarPresetRutinasButton } from "@/components/rutinas/aplicar-preset-rutinas-button";
+import { RutinaAcciones } from "@/components/rutinas/rutina-acciones";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { IconAction } from "@/components/ui/icon-action";
 import {
   Table,
   TableBody,
@@ -43,6 +43,17 @@ export default async function RutinasPage({
 
   const lista = (plantillas ?? []) as RutinaPlantilla[];
 
+  // Alumnos con cada rutina vigente: bloquea editar y dar de baja.
+  const { data: asignaciones } = await supabase
+    .from("rutinas")
+    .select("plantilla_id")
+    .eq("activa", true)
+    .in("plantilla_id", lista.length > 0 ? lista.map((r) => r.id) : [""]);
+  const asignadosPorRutina = new Map<string, number>();
+  for (const { plantilla_id } of (asignaciones ?? []) as { plantilla_id: string }[]) {
+    asignadosPorRutina.set(plantilla_id, (asignadosPorRutina.get(plantilla_id) ?? 0) + 1);
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -51,27 +62,23 @@ export default async function RutinasPage({
             Panel del dueño
           </div>
           <h2 className="text-2xl">Rutinas</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Catálogo de plantillas de rutina, reutilizable entre alumnos. Para asignar
-            una a un alumno, ve a su ficha en Alumnos → Editar.
-          </p>
         </div>
         <Button asChild size="lg">
           <Link href="/protected/rutinas/nuevo">
             <Plus className="h-4 w-4" />
-            Nueva plantilla
+            Nueva rutina
           </Link>
         </Button>
       </div>
 
       {params.creada === "1" && (
         <div className="rounded-[9px] border border-success/35 bg-success/10 px-4 py-3 text-sm text-success">
-          Plantilla creada correctamente.
+          Rutina creada correctamente.
         </div>
       )}
       {params.actualizada === "1" && (
         <div className="rounded-[9px] border border-success/35 bg-success/10 px-4 py-3 text-sm text-success">
-          Plantilla actualizada correctamente.
+          Rutina actualizada correctamente.
         </div>
       )}
 
@@ -80,7 +87,7 @@ export default async function RutinasPage({
           {lista.length === 0 ? (
             <div className="flex flex-col items-center gap-4 py-10 text-center">
               <p className="text-sm text-muted-foreground">
-                Aún no tienes plantillas de rutina creadas.
+                Aún no tienes rutinas creadas.
               </p>
               <AplicarPresetRutinasButton />
             </div>
@@ -91,19 +98,19 @@ export default async function RutinasPage({
                   <TableHead>Nombre</TableHead>
                   <TableHead>Categoría</TableHead>
                   <TableHead>Ejercicios</TableHead>
+                  <TableHead>Alumnos</TableHead>
+                  <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {lista.map((plantilla) => (
-                  <TableRow key={plantilla.id}>
+                {lista.map((plantilla) => {
+                  const deBaja = plantilla.activa === false;
+                  const asignados = asignadosPorRutina.get(plantilla.id) ?? 0;
+                  return (
+                  <TableRow key={plantilla.id} className={deBaja ? "opacity-60" : ""}>
                     <TableCell className="font-medium text-foreground">
-                      <Link
-                        href={`/protected/rutinas/${plantilla.id}`}
-                        className="hover:text-primary hover:underline"
-                      >
-                        {plantilla.nombre}
-                      </Link>
+                      {plantilla.nombre}
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary">
@@ -111,15 +118,23 @@ export default async function RutinasPage({
                       </Badge>
                     </TableCell>
                     <TableCell>{plantilla.contenido.length}</TableCell>
+                    <TableCell>{asignados}</TableCell>
+                    <TableCell>
+                      <Badge variant={deBaja ? "secondary" : "success"}>
+                        {deBaja ? "De baja" : "Activa"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right">
-                      <IconAction
-                        icon={Pencil}
-                        label="Editar"
-                        href={`/protected/rutinas/${plantilla.id}`}
+                      <RutinaAcciones
+                        id={plantilla.id}
+                        nombre={plantilla.nombre}
+                        deBaja={deBaja}
+                        alumnosAsignados={asignados}
                       />
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           )}

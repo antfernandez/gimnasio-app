@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Lock, Pencil, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Pencil, Trash2 } from "lucide-react";
 import { useActionState, useState, useTransition } from "react";
 
 import {
@@ -72,15 +72,6 @@ function FilaZona({
             <span className="text-xs text-muted-foreground">
               {cantidad} {cantidad === 1 ? "ejercicio" : "ejercicios"}
             </span>
-            {zona.es_sistema && (
-              <span
-                className="inline-flex items-center gap-1 text-xs text-muted-foreground"
-                title="Zona del sistema: no se puede renombrar ni eliminar"
-              >
-                <Lock className="h-3 w-3" />
-                Sistema
-              </span>
-            )}
           </div>
         )}
         {!editando && (
@@ -109,7 +100,6 @@ function FilaZona({
               type="button"
               variant="ghost"
               size="icon"
-              disabled={zona.es_sistema}
               onClick={() => setEditando(true)}
               aria-label={`Renombrar ${zona.nombre}`}
             >
@@ -119,8 +109,8 @@ function FilaZona({
               type="button"
               variant="ghost"
               size="icon"
-              disabled={zona.es_sistema || cantidad > 0}
-              title={cantidad > 0 ? "Vacía la zona para poder eliminarla" : undefined}
+              disabled={cantidad > 0}
+              title={cantidad > 0 ? "No se puede eliminar: tiene ejercicios asociados" : undefined}
               onClick={() => setConfirmando(true)}
               aria-label={`Eliminar ${zona.nombre}`}
             >

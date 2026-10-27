@@ -33,6 +33,13 @@ export default async function EditarPlantillaPage({
   ]);
   const updateRutinaConId = updateRutina.bind(null, p.id);
 
+  // Con alumnos que la tienen vigente no se puede editar (también lo valida la acción).
+  const { count: asignados } = await supabase
+    .from("rutinas")
+    .select("*", { count: "exact", head: true })
+    .eq("plantilla_id", p.id)
+    .eq("activa", true);
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -44,21 +51,29 @@ export default async function EditarPlantillaPage({
           Volver a rutinas
         </Link>
         <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          Editar plantilla
+          Editar rutina
         </div>
         <h2 className="text-2xl">{p.nombre}</h2>
       </div>
 
       <Card>
         <CardContent className="pt-6">
-          <RutinaForm
-            action={updateRutinaConId}
-            plantilla={p}
-            submitLabel="Guardar cambios"
-            zonas={zonas}
-            ejercicios={ejercicios}
-            esDueno={perfilData?.perfil.rol === "dueño"}
-          />
+          {asignados ? (
+            <p className="text-sm text-muted-foreground">
+              No se puede editar: la rutina está asignada a {asignados} alumno
+              {asignados === 1 ? "" : "s"}. Para ajustar la rutina de un alumno, hazlo
+              desde su ficha, en Membresía.
+            </p>
+          ) : (
+            <RutinaForm
+              action={updateRutinaConId}
+              plantilla={p}
+              submitLabel="Guardar cambios"
+              zonas={zonas}
+              ejercicios={ejercicios}
+              esDueno={perfilData?.perfil.rol === "dueño"}
+            />
+          )}
         </CardContent>
       </Card>
     </div>

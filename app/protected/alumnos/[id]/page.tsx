@@ -318,7 +318,9 @@ async function MembresiaVista({
         <MembresiaForm
           action={actualizarMembresia.bind(null, a.id)}
           planes={planesOpcion}
-          rutinas={rutinasCatalogo.map((r) => ({ id: r.id, nombre: r.nombre }))}
+          rutinas={rutinasCatalogo
+            .filter((r) => r.activa !== false || r.id === rutinaActiva?.plantilla_id)
+            .map((r) => ({ id: r.id, nombre: r.nombre }))}
           planActualId={a.plan_id}
           rutinaActualId={rutinaActiva?.plantilla_id ?? null}
           tieneRutina={!!rutinaActiva}

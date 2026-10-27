@@ -228,12 +228,11 @@ export async function renombrarZona(
   const supabase = await createClient();
   const { data: zona } = await supabase
     .from("zonas_cuerpo")
-    .select("es_sistema")
+    .select("id")
     .eq("id", id)
     .eq("gimnasio_id", dueno.perfil.gimnasio_id)
     .maybeSingle();
   if (!zona) return { error: "La zona no existe." };
-  if (zona.es_sistema) return { error: "Las zonas del sistema no se pueden renombrar." };
 
   const { error } = await supabase
     .from("zonas_cuerpo")
@@ -301,12 +300,11 @@ export async function eliminarZona(id: string): Promise<CatalogoState> {
   const supabase = await createClient();
   const { data: zona } = await supabase
     .from("zonas_cuerpo")
-    .select("es_sistema")
+    .select("id")
     .eq("id", id)
     .eq("gimnasio_id", dueno.perfil.gimnasio_id)
     .maybeSingle();
   if (!zona) return { error: "La zona no existe." };
-  if (zona.es_sistema) return { error: "Las zonas del sistema no se pueden eliminar." };
 
   const { error } = await supabase
     .from("zonas_cuerpo")

@@ -26,10 +26,6 @@ export default async function ZonasPage() {
           Panel del dueño
         </div>
         <h2 className="text-2xl">Zonas del cuerpo</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Cardio y Personalizados son zonas del sistema: no se pueden renombrar ni
-          eliminar. Una zona con ejercicios no se puede eliminar.
-        </p>
       </div>
 
       <Card>

@@ -44,7 +44,7 @@ type Fila = {
   /** Id del ejercicio del catálogo; vacío si aún no se eligió o si es una fila
    * heredada con nombre libre. */
   ejercicio_id: string;
-  /** Nombre guardado en la plantilla (snapshot). */
+  /** Nombre guardado en la rutina (snapshot). */
   ejercicio: string;
   series: number | string;
   reps: number | string;
@@ -103,7 +103,7 @@ export function RutinaForm({
     <form action={formAction} className="flex flex-col gap-6">
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         <div className="grid gap-2">
-          <Label htmlFor="nombre">Nombre de la plantilla</Label>
+          <Label htmlFor="nombre">Nombre de la rutina</Label>
           <Input
             id="nombre"
             name="nombre"

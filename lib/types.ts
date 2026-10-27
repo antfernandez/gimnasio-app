@@ -252,6 +252,8 @@ export interface RutinaPlantilla {
   categoria: CategoriaRutinaPlantilla;
   objetivo: string | null;
   contenido: EjercicioRutina[];
+  /** Spec 15: false = rutina dada de baja (migración 0019). Ausente antes de aplicarla. */
+  activa?: boolean;
   creado_por: string | null;
   modificado_por: string | null;
   created_at: string;

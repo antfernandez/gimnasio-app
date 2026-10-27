@@ -263,6 +263,15 @@ export async function actualizarMembresia(
     if (cicloEnCurso && rutinaActiva) {
       return { error: "La rutina solo se puede cambiar cuando termina el ciclo en curso." };
     }
+    const { data: rutinaCatalogo } = await supabase
+      .from("rutina_plantillas")
+      .select("activa")
+      .eq("id", rutinaCatalogoId)
+      .eq("gimnasio_id", gimnasioId)
+      .maybeSingle();
+    if (!rutinaCatalogo || rutinaCatalogo.activa === false) {
+      return { error: "La rutina seleccionada no está disponible." };
+    }
     const { error } = await supabase.rpc("asignar_rutina_alumno", {
       p_alumno_id: alumnoId,
       p_gimnasio_id: gimnasioId,

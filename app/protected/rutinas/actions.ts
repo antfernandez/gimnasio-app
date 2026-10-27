@@ -61,7 +61,7 @@ async function resolverEjercicios(
   previos: EjercicioRutina[] = [],
 ): Promise<{ contenido: EjercicioRutina[] } | { error: string }> {
   if (filas.length === 0) {
-    return { error: "Agrega al menos un ejercicio a la plantilla." };
+    return { error: "Agrega al menos un ejercicio a la rutina." };
   }
 
   const previosPorId = new Map(
@@ -121,7 +121,7 @@ type PlantillaInput = {
 function readPlantillaForm(formData: FormData): PlantillaInput | { error: string } {
   const nombre = String(formData.get("nombre") ?? "").trim();
   if (!nombre) {
-    return { error: "Ingresa un nombre para la plantilla." };
+    return { error: "Ingresa un nombre para la rutina." };
   }
 
   const categoria = String(formData.get("categoria") ?? "").trim() as CategoriaRutinaPlantilla;
@@ -159,11 +159,28 @@ export async function createRutina(
   });
 
   if (error) {
-    return { error: "No se pudo guardar la plantilla. Intenta de nuevo." };
+    return { error: "No se pudo guardar la rutina. Intenta de nuevo." };
   }
 
   revalidatePath("/protected/rutinas");
   redirect("/protected/rutinas?creada=1");
+}
+
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+/** Alumnos que tienen esta rutina del catálogo vigente (asignación activa). Las
+ * asignaciones anteriores son copias históricas y no bloquean. */
+async function alumnosConRutina(supabase: Supabase, id: string): Promise<number> {
+  const { count } = await supabase
+    .from("rutinas")
+    .select("*", { count: "exact", head: true })
+    .eq("plantilla_id", id)
+    .eq("activa", true);
+  return count ?? 0;
+}
+
+function mensajeAsignada(accion: "editar" | "dar de baja", n: number): string {
+  return `No se puede ${accion}: la rutina está asignada a ${n} alumno${n === 1 ? "" : "s"}.`;
 }
 
 export async function updateRutina(
@@ -183,7 +200,12 @@ export async function updateRutina(
     .select("contenido")
     .eq("id", id)
     .maybeSingle();
-  if (!actual) return { error: "La plantilla no existe." };
+  if (!actual) return { error: "La rutina no existe." };
+
+  const asignados = await alumnosConRutina(supabase, id);
+  if (asignados > 0) {
+    return { error: mensajeAsignada("editar", asignados) };
+  }
 
   const resuelto = await resolverEjercicios(
     readFilas(formData),
@@ -202,7 +224,7 @@ export async function updateRutina(
     .eq("id", id);
 
   if (error) {
-    return { error: "No se pudo guardar la plantilla. Intenta de nuevo." };
+    return { error: "No se pudo guardar la rutina. Intenta de nuevo." };
   }
 
   revalidatePath("/protected/rutinas");
@@ -249,6 +271,43 @@ export async function personalizarRutinaAlumno(
 
   revalidatePath(`/protected/alumnos/${alumnoId}`);
   redirect(`/protected/alumnos/${alumnoId}?vista=membresia&ajuste=1`);
+}
+
+/** Spec 15: da de baja una rutina del catálogo (deja de ofrecerse para asignar). No se
+ * puede si hay alumnos con ella vigente; se valida acá aunque la UI ya lo bloquee. */
+export async function darDeBajaRutina(id: string): Promise<RutinaFormState> {
+  const perfilData = await getPerfilActual();
+  if (!perfilData) redirect("/auth/login");
+
+  const supabase = await createClient();
+  const asignados = await alumnosConRutina(supabase, id);
+  if (asignados > 0) return { error: mensajeAsignada("dar de baja", asignados) };
+
+  const { error } = await supabase
+    .from("rutina_plantillas")
+    .update({ activa: false, modificado_por: perfilData.perfil.id })
+    .eq("id", id)
+    .eq("gimnasio_id", perfilData.perfil.gimnasio_id);
+  if (error) return { error: "No se pudo dar de baja la rutina. Intenta de nuevo." };
+
+  revalidatePath("/protected/rutinas");
+  return {};
+}
+
+export async function reactivarRutina(id: string): Promise<RutinaFormState> {
+  const perfilData = await getPerfilActual();
+  if (!perfilData) redirect("/auth/login");
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("rutina_plantillas")
+    .update({ activa: true, modificado_por: perfilData.perfil.id })
+    .eq("id", id)
+    .eq("gimnasio_id", perfilData.perfil.gimnasio_id);
+  if (error) return { error: "No se pudo reactivar la rutina. Intenta de nuevo." };
+
+  revalidatePath("/protected/rutinas");
+  return {};
 }
 
 type ItemPreset = [
