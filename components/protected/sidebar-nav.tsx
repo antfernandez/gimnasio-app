@@ -3,10 +3,12 @@
 import {
   BarChart3,
   CalendarDays,
+  ClipboardCheck,
   ClipboardList,
   CreditCard,
   Dumbbell,
   Globe,
+  KeyRound,
   ListChecks,
   NotebookPen,
   Users,
@@ -29,8 +31,11 @@ const items = [
   // el selector de rutinas).
   { href: "/protected/ejercicios", label: "Ejercicios", icon: ListChecks, soloDueno: true },
   { href: "/protected/turnos", label: "Turnos", icon: CalendarDays },
+  { href: "/protected/asistencias", label: "Asistencias", icon: ClipboardCheck },
   { href: "/protected/pagos", label: "Pagos", icon: CreditCard },
   { href: "/protected/planes", label: "Planes", icon: ClipboardList },
+  // Spec 22: permisos de los alumnos (hoy avances y bitácora propios).
+  { href: "/protected/permisos", label: "Permisos", icon: KeyRound },
   { href: "/protected/sitio", label: "Sitio público", icon: Globe },
 ];
 

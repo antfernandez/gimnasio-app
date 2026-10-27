@@ -29,7 +29,7 @@ export function ProgresoPdfSelector({
           id="pdf_anio"
           value={anio}
           onChange={(e) => setAnio(e.target.value)}
-          className="w-28 bg-white"
+          className="w-28"
         >
           {anios.map((a) => (
             <option key={a} value={a}>
@@ -44,7 +44,7 @@ export function ProgresoPdfSelector({
           id="pdf_mes"
           value={mes}
           onChange={(e) => setMes(e.target.value)}
-          className="w-44 bg-white"
+          className="w-44"
         >
           <option value="">Año completo</option>
           {NOMBRES_MES.map((m, i) => (

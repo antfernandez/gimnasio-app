@@ -30,7 +30,7 @@ type Props = {
   fechaFutura: boolean;
 };
 
-const CAMPO = "w-full bg-white";
+const CAMPO = "w-full";
 
 /** Registro de sesión del dueño (Spec 13): cada fila se guarda sola con su botón, así
  * se va registrando el ejercicio que hace el alumno sin completar toda la tabla.

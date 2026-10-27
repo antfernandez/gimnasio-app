@@ -12,8 +12,6 @@ import { AlumnoForm } from "@/components/alumnos/alumno-form";
 import { MembresiaForm } from "@/components/alumnos/membresia-form";
 import { ProgresoPdfSelector } from "@/components/alumnos/progreso-pdf-selector";
 import { ToggleActivoButton } from "@/components/alumnos/toggle-activo-button";
-import { ToggleAvancesButton } from "@/components/alumnos/toggle-avances-button";
-import { ToggleBitacoraButton } from "@/components/alumnos/toggle-bitacora-button";
 import { AvanceForm } from "@/components/avances/avance-form";
 import { MedidasDialog } from "@/components/avances/medidas-dialog";
 import { ProgresoRutina } from "@/components/bitacora/progreso-rutina";
@@ -23,7 +21,6 @@ import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
 import { PersonalizarRutinaForm } from "@/components/rutinas/personalizar-rutina-form";
 import { RutinaCard } from "@/components/rutinas/rutina-card";
 import { Acordeon } from "@/components/ui/acordeon";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { IconAction } from "@/components/ui/icon-action";
@@ -136,7 +133,6 @@ export default async function FichaAlumnoPage({
   const listaPlanes = (planes ?? []) as Plan[];
   const listaRutinas = (rutinas ?? []) as Rutina[];
   const rutinaActiva = listaRutinas.find((r) => r.activa);
-  const planAlumno = listaPlanes.find((p) => p.id === a.plan_id);
 
   const updateAlumnoConId = updateAlumno.bind(null, a.id);
 
@@ -156,28 +152,6 @@ export default async function FichaAlumnoPage({
         <h2 className="text-2xl">
           {a.nombres} {a.apellidos}
         </h2>
-
-        {/* Tres estados, cada uno en dos filas: título y detalle. */}
-        <div className="mt-4 grid max-w-2xl grid-cols-3 gap-x-6 gap-y-1 rounded-[9px] border border-border px-4 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Pago
-          </div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Plan
-          </div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Estado
-          </div>
-          <div>
-            {estadoCobranza ? <EstadoPagoBadge estado={estadoCobranza.estado_pago} /> : "—"}
-          </div>
-          <div className="text-sm text-foreground">{planAlumno?.nombre ?? "—"}</div>
-          <div>
-            <Badge variant={a.activo ? "success" : "secondary"}>
-              {a.activo ? "Activo" : "De baja"}
-            </Badge>
-          </div>
-        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-1 self-start rounded-full border border-border p-1">
@@ -208,37 +182,6 @@ export default async function FichaAlumnoPage({
               />
             </CardContent>
           </Card>
-
-          <Seccion titulo="Permisos del alumno">
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    Registro de avances propios
-                  </h4>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {a.puede_registrar_avances
-                      ? "Este alumno puede registrar sus propios avances desde su portal."
-                      : "Solo tú puedes registrar avances para este alumno."}
-                  </p>
-                </div>
-                <ToggleAvancesButton id={a.id} puedeRegistrarAvances={a.puede_registrar_avances} />
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    Registro de bitácora propio
-                  </h4>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {a.puede_registrar_bitacora
-                      ? "Este alumno puede registrar sus propias sesiones de rutina desde su portal."
-                      : "Solo tú puedes registrar sesiones de rutina para este alumno."}
-                  </p>
-                </div>
-                <ToggleBitacoraButton id={a.id} puedeRegistrarBitacora={a.puede_registrar_bitacora} />
-              </div>
-            </div>
-          </Seccion>
         </>
       )}
 

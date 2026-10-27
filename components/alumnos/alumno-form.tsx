@@ -22,9 +22,6 @@ type Props = {
   acciones?: React.ReactNode;
 };
 
-/** Spec 14: editable = blanco; bloqueado = beige y deshabilitado (estilo base del Input). */
-const EDITABLE = "bg-white";
-
 export function AlumnoForm({ action, alumno, submitLabel, acciones }: Props) {
   const [state, formAction, isPending] = useActionState(action, {});
   const hoy = new Date().toISOString().slice(0, 10);
@@ -50,7 +47,6 @@ export function AlumnoForm({ action, alumno, submitLabel, acciones }: Props) {
               id="rut"
               name="rut"
               placeholder="12.345.678-9"
-              className={EDITABLE}
               required
               autoFocus
             />
@@ -62,7 +58,6 @@ export function AlumnoForm({ action, alumno, submitLabel, acciones }: Props) {
             id="nombres"
             name="nombres"
             defaultValue={alumno?.nombres}
-            className={EDITABLE}
             disabled={!!alumno}
             required
           />
@@ -73,7 +68,6 @@ export function AlumnoForm({ action, alumno, submitLabel, acciones }: Props) {
             id="apellidos"
             name="apellidos"
             defaultValue={alumno?.apellidos}
-            className={EDITABLE}
             disabled={!!alumno}
             required
           />
@@ -86,7 +80,6 @@ export function AlumnoForm({ action, alumno, submitLabel, acciones }: Props) {
             name="email"
             type="email"
             placeholder="alumno@correo.cl"
-            className={EDITABLE}
             defaultValue={alumno?.email ?? ""}
           />
         </div>
@@ -97,7 +90,6 @@ export function AlumnoForm({ action, alumno, submitLabel, acciones }: Props) {
             name="telefono"
             type="tel"
             placeholder="+56 9 0000 0000"
-            className={EDITABLE}
             defaultValue={alumno?.telefono ?? ""}
           />
         </div>
@@ -107,7 +99,6 @@ export function AlumnoForm({ action, alumno, submitLabel, acciones }: Props) {
             id="fecha_nacimiento"
             name="fecha_nacimiento"
             type="date"
-            className={EDITABLE}
             disabled={!!alumno}
             defaultValue={alumno?.fecha_nacimiento ?? ""}
           />
@@ -119,7 +110,6 @@ export function AlumnoForm({ action, alumno, submitLabel, acciones }: Props) {
             id="fecha_inicio"
             name="fecha_inicio"
             type="date"
-            className={EDITABLE}
             defaultValue={alumno?.fecha_inicio ?? hoy}
             disabled={!!alumno}
             required
@@ -142,7 +132,6 @@ export function AlumnoForm({ action, alumno, submitLabel, acciones }: Props) {
           <Textarea
             id="alergias"
             name="alergias"
-            className={EDITABLE}
             placeholder="Ej. Ninguna conocida"
             defaultValue={alumno?.alergias ?? ""}
           />
@@ -152,7 +141,6 @@ export function AlumnoForm({ action, alumno, submitLabel, acciones }: Props) {
           <Textarea
             id="enfermedades"
             name="enfermedades"
-            className={EDITABLE}
             placeholder="Ej. Hipertensión controlada"
             defaultValue={alumno?.enfermedades ?? ""}
           />
@@ -162,7 +150,6 @@ export function AlumnoForm({ action, alumno, submitLabel, acciones }: Props) {
           <Textarea
             id="lesiones"
             name="lesiones"
-            className={EDITABLE}
             placeholder="Ej. Esguince de tobillo derecho (2025)"
             defaultValue={alumno?.lesiones ?? ""}
           />
@@ -172,7 +159,6 @@ export function AlumnoForm({ action, alumno, submitLabel, acciones }: Props) {
           <Textarea
             id="objetivos_salud"
             name="objetivos_salud"
-            className={EDITABLE}
             placeholder="Ej. Bajar de peso, mejorar movilidad"
             defaultValue={alumno?.objetivos_salud ?? ""}
           />

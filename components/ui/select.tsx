@@ -9,7 +9,7 @@ const Select = React.forwardRef<
   return (
     <select
       className={cn(
-        "flex h-11 w-full rounded-[9px] border border-input bg-secondary/40 px-3.5 py-1 text-sm text-foreground transition-colors focus-visible:outline-none focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50",
+        "flex h-11 w-full rounded-[9px] border border-input bg-white px-3.5 py-1 text-sm text-foreground transition-colors focus-visible:outline-none focus-visible:border-primary disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted-foreground read-only:bg-secondary read-only:text-muted-foreground",
         className,
       )}
       ref={ref}

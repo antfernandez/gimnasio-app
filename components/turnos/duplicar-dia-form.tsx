@@ -29,7 +29,7 @@ export function DuplicarDiaForm({ diasConHorario }: { diasConHorario: DiaSemana[
     <form action={formAction} className="flex flex-col gap-4">
       <div className="grid gap-1.5 sm:max-w-[220px]">
         <Label htmlFor={`${idBase}-origen`}>Copiar el horario de</Label>
-        <Select id={`${idBase}-origen`} name="dia_origen" defaultValue={String(diasConHorario[0])} required className="bg-white">
+        <Select id={`${idBase}-origen`} name="dia_origen" defaultValue={String(diasConHorario[0])} required>
           {diasConHorario.map((d) => (
             <option key={d} value={d}>
               {NOMBRES_DIA[d]}

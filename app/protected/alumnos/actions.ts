@@ -137,34 +137,6 @@ export async function setAlumnoActivo(id: string, activo: boolean) {
   revalidatePath("/protected");
 }
 
-export async function setPuedeRegistrarAvances(id: string, valor: boolean) {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("alumnos")
-    .update({ puede_registrar_avances: valor })
-    .eq("id", id);
-
-  if (error) {
-    throw new Error("No se pudo actualizar el permiso de avances.");
-  }
-
-  revalidatePath(`/protected/alumnos/${id}`);
-}
-
-export async function setPuedeRegistrarBitacora(id: string, valor: boolean) {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("alumnos")
-    .update({ puede_registrar_bitacora: valor })
-    .eq("id", id);
-
-  if (error) {
-    throw new Error("No se pudo actualizar el permiso de bitácora.");
-  }
-
-  revalidatePath(`/protected/alumnos/${id}`);
-}
-
 /** Cola de aprobación (Sprint 12, Parte D): alumnos que se autorregistraron y
  * todavía no fueron revisados por el Admin. */
 export async function aprobarAlumno(id: string) {

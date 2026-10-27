@@ -49,7 +49,6 @@ export function MembresiaForm({
             name="plan_id"
             defaultValue={planActualId ?? ""}
             disabled={planBloqueado}
-            className="bg-white"
           >
             <option value="">— Sin plan asignado —</option>
             {planes.map((p) => (
@@ -66,7 +65,6 @@ export function MembresiaForm({
             name="plantilla_id"
             defaultValue={rutinaActualId ?? ""}
             disabled={rutinaBloqueada}
-            className="bg-white"
           >
             <option value="">— Sin rutina asignada —</option>
             {rutinas.map((r) => (
@@ -84,7 +82,6 @@ export function MembresiaForm({
             type="date"
             defaultValue={fechaAsignacion}
             disabled={planBloqueado && rutinaBloqueada}
-            className="bg-white"
             required
           />
         </div>

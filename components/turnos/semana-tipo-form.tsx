@@ -37,7 +37,7 @@ export function SemanaTipoForm() {
     <form action={formAction} className="flex flex-col gap-4">
       <div className="grid gap-1.5 sm:max-w-[220px]">
         <Label htmlFor={`${idBase}-dia`}>Día</Label>
-        <Select id={`${idBase}-dia`} name="dia_semana" defaultValue="1" required className="bg-white">
+        <Select id={`${idBase}-dia`} name="dia_semana" defaultValue="1" required>
           {ORDEN_DIAS.map((d) => (
             <option key={d} value={d}>
               {NOMBRES_DIA[d]}
@@ -60,7 +60,6 @@ export function SemanaTipoForm() {
                 value={b.horaInicio}
                 onChange={(e) => actualizar(i, "horaInicio", e.target.value)}
                 required
-                className="bg-white"
               />
             </div>
             <div className="grid gap-1">
@@ -74,7 +73,6 @@ export function SemanaTipoForm() {
                 value={b.duracionMin}
                 onChange={(e) => actualizar(i, "duracionMin", e.target.value)}
                 required
-                className="bg-white"
               />
             </div>
             <div className="grid gap-1">
@@ -86,7 +84,6 @@ export function SemanaTipoForm() {
                 value={b.cupos}
                 onChange={(e) => actualizar(i, "cupos", e.target.value)}
                 required
-                className="bg-white"
               />
             </div>
             <Button

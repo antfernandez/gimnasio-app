@@ -98,7 +98,6 @@ export function PersonalizarRutinaForm({ action, contenido, zonas, ejercicios }:
               name="series"
               type="number"
               min="1"
-              className="bg-white"
               defaultValue={fila.series || undefined}
             />
           </div>
@@ -108,17 +107,16 @@ export function PersonalizarRutinaForm({ action, contenido, zonas, ejercicios }:
               name="reps"
               type="number"
               min="1"
-              className="bg-white"
               defaultValue={fila.reps || undefined}
             />
           </div>
           <div className="grid gap-1.5">
             {i === 0 && <span className="text-xs text-muted-foreground">Peso</span>}
-            <Input name="peso" className="bg-white" defaultValue={fila.peso} />
+            <Input name="peso" defaultValue={fila.peso} />
           </div>
           <div className="grid gap-1.5">
             {i === 0 && <span className="text-xs text-muted-foreground">Notas</span>}
-            <Input name="notas" className="bg-white" defaultValue={fila.notas} />
+            <Input name="notas" defaultValue={fila.notas} />
           </div>
           <div className="flex items-end">
             <Button
