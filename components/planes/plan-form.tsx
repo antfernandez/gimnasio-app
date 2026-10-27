@@ -32,6 +32,7 @@ export function PlanForm({ action, plan, submitLabel }: Props) {
           <Input
             id="nombre"
             name="nombre"
+            className="bg-white"
             placeholder="Ej. Plan Intermedio"
             defaultValue={plan?.nombre}
             required
@@ -40,7 +41,13 @@ export function PlanForm({ action, plan, submitLabel }: Props) {
         </div>
         <div className="grid gap-2">
           <Label htmlFor="nivel">Nivel</Label>
-          <Select id="nivel" name="nivel" defaultValue={plan?.nivel ?? "basico"} required>
+          <Select
+            id="nivel"
+            name="nivel"
+            defaultValue={plan?.nivel ?? "basico"}
+            required
+            className="bg-white"
+          >
             {NIVELES.map((n) => (
               <option key={n.value} value={n.value}>
                 {n.label}
@@ -54,6 +61,7 @@ export function PlanForm({ action, plan, submitLabel }: Props) {
           <Input
             id="dias_por_semana"
             name="dias_por_semana"
+            className="bg-white"
             type="number"
             min="1"
             step="1"
@@ -61,15 +69,13 @@ export function PlanForm({ action, plan, submitLabel }: Props) {
             defaultValue={plan?.dias_por_semana}
             required
           />
-          <p className="text-xs text-muted-foreground">
-            Sugiere las clases mensuales del paquete (días × 4) al registrar un pago.
-          </p>
         </div>
         <div className="grid gap-2">
           <Label htmlFor="precio">Precio</Label>
           <Input
             id="precio"
             name="precio"
+            className="bg-white"
             type="number"
             min="0"
             step="1"
@@ -83,6 +89,7 @@ export function PlanForm({ action, plan, submitLabel }: Props) {
           <Input
             id="fecha_vigencia_desde"
             name="fecha_vigencia_desde"
+            className="bg-white"
             type="date"
             defaultValue={
               plan?.fecha_vigencia_desde ?? new Date().toISOString().slice(0, 10)
@@ -95,12 +102,10 @@ export function PlanForm({ action, plan, submitLabel }: Props) {
           <Input
             id="fecha_vigencia_hasta"
             name="fecha_vigencia_hasta"
+            className="bg-white"
             type="date"
             defaultValue={plan?.fecha_vigencia_hasta ?? ""}
           />
-          <p className="text-xs text-muted-foreground">
-            Déjalo vacío para un plan vigente indefinidamente.
-          </p>
         </div>
       </div>
 

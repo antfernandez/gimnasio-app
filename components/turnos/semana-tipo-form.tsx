@@ -8,9 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { NOMBRES_DIA } from "@/lib/turnos";
-
-const DIAS = [1, 2, 3, 4, 5, 6, 0] as const;
+import { NOMBRES_DIA, ORDEN_DIAS } from "@/lib/turnos";
 
 type Bloque = { horaInicio: string; duracionMin: string; cupos: string };
 
@@ -39,8 +37,8 @@ export function SemanaTipoForm() {
     <form action={formAction} className="flex flex-col gap-4">
       <div className="grid gap-1.5 sm:max-w-[220px]">
         <Label htmlFor={`${idBase}-dia`}>Día</Label>
-        <Select id={`${idBase}-dia`} name="dia_semana" defaultValue="1" required>
-          {DIAS.map((d) => (
+        <Select id={`${idBase}-dia`} name="dia_semana" defaultValue="1" required className="bg-white">
+          {ORDEN_DIAS.map((d) => (
             <option key={d} value={d}>
               {NOMBRES_DIA[d]}
             </option>
@@ -62,6 +60,7 @@ export function SemanaTipoForm() {
                 value={b.horaInicio}
                 onChange={(e) => actualizar(i, "horaInicio", e.target.value)}
                 required
+                className="bg-white"
               />
             </div>
             <div className="grid gap-1">
@@ -75,6 +74,7 @@ export function SemanaTipoForm() {
                 value={b.duracionMin}
                 onChange={(e) => actualizar(i, "duracionMin", e.target.value)}
                 required
+                className="bg-white"
               />
             </div>
             <div className="grid gap-1">
@@ -86,6 +86,7 @@ export function SemanaTipoForm() {
                 value={b.cupos}
                 onChange={(e) => actualizar(i, "cupos", e.target.value)}
                 required
+                className="bg-white"
               />
             </div>
             <Button

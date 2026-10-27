@@ -5,19 +5,10 @@ import { createAlumno } from "@/app/protected/alumnos/actions";
 import { AlumnoForm } from "@/components/alumnos/alumno-form";
 import { Card, CardContent } from "@/components/ui/card";
 import { getPerfilActual } from "@/lib/perfil";
-import { createClient } from "@/lib/supabase/server";
-import type { Plan } from "@/lib/types";
 
 export default async function NuevoAlumnoPage() {
   const perfilData = await getPerfilActual();
   if (!perfilData) return null; // el layout ya redirige a /auth/login
-
-  const supabase = await createClient();
-  const { data: planes } = await supabase
-    .from("planes")
-    .select("*")
-    .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
-    .order("dias_por_semana", { ascending: true });
 
   return (
     <div className="flex flex-col gap-6">
@@ -39,7 +30,6 @@ export default async function NuevoAlumnoPage() {
         <CardContent className="pt-6">
           <AlumnoForm
             action={createAlumno}
-            planes={(planes ?? []) as Plan[]}
             submitLabel="Crear alumno"
           />
         </CardContent>

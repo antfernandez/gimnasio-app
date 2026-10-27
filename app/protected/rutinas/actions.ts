@@ -209,6 +209,48 @@ export async function updateRutina(
   redirect("/protected/rutinas?actualizada=1");
 }
 
+/** Spec 14: ajuste personalizado de la rutina ya asignada a un alumno (p. ej. cambiar
+ * un ejercicio durante el período). `rutinas` es una copia (snapshot) por alumno, así
+ * que editar su `contenido` no toca la rutina del catálogo ni la de otros alumnos. */
+export async function personalizarRutinaAlumno(
+  alumnoId: string,
+  rutinaId: string,
+  _prevState: RutinaFormState,
+  formData: FormData,
+): Promise<RutinaFormState> {
+  const perfilData = await getPerfilActual();
+  if (!perfilData) redirect("/auth/login");
+
+  const supabase = await createClient();
+  const { data: actual } = await supabase
+    .from("rutinas")
+    .select("contenido")
+    .eq("id", rutinaId)
+    .eq("alumno_id", alumnoId)
+    .eq("activa", true)
+    .maybeSingle();
+  if (!actual) return { error: "La rutina del alumno no existe o ya no está vigente." };
+
+  const resuelto = await resolverEjercicios(
+    readFilas(formData),
+    perfilData.perfil.gimnasio_id,
+    actual.contenido as EjercicioRutina[],
+  );
+  if ("error" in resuelto) return resuelto;
+
+  const { error } = await supabase
+    .from("rutinas")
+    .update({ contenido: resuelto.contenido })
+    .eq("id", rutinaId)
+    .eq("alumno_id", alumnoId);
+  if (error) {
+    return { error: "No se pudo guardar el ajuste. Intenta de nuevo." };
+  }
+
+  revalidatePath(`/protected/alumnos/${alumnoId}`);
+  redirect(`/protected/alumnos/${alumnoId}?vista=membresia&ajuste=1`);
+}
+
 type ItemPreset = [
   nombreCatalogo: string,
   series: number,

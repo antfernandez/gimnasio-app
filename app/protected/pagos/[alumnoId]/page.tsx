@@ -22,7 +22,6 @@ import type {
   EstadoCobranzaAlumno,
   EstadoPaqueteAlumno,
   Pago,
-  Plan,
 } from "@/lib/types";
 
 const METODO_LABEL: Record<string, string> = {
@@ -57,7 +56,7 @@ export default async function PagosAlumnoPage({
   if (!alumno) notFound();
   const a = alumno as Alumno;
 
-  const [{ data: pagos }, { data: estadoRow }, { data: estadoPaqueteRow }, { data: planes }] =
+  const [{ data: pagos }, { data: estadoRow }, { data: estadoPaqueteRow }] =
     await Promise.all([
       supabase
         .from("pagos")
@@ -74,11 +73,6 @@ export default async function PagosAlumnoPage({
         .select("*")
         .eq("alumno_id", alumnoId)
         .maybeSingle(),
-      supabase
-        .from("planes")
-        .select("*")
-        .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
-        .order("dias_por_semana", { ascending: true }),
     ]);
 
   const historial = (pagos ?? []) as PagoConPlan[];
@@ -129,11 +123,7 @@ export default async function PagosAlumnoPage({
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Registrar pago
           </h3>
-          <PagoForm
-            action={createPagoConId}
-            planes={(planes ?? []) as Plan[]}
-            planActualId={a.plan_id}
-          />
+          <PagoForm action={createPagoConId} />
         </CardContent>
       </Card>
 

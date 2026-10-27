@@ -171,7 +171,7 @@ export default async function AlumnosPage({
                 : "Aún no tienes alumnos registrados."}
             </p>
           ) : (
-            <Table>
+            <Table className="text-[13px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Alumno</TableHead>
@@ -188,18 +188,15 @@ export default async function AlumnosPage({
                 {lista.map((alumno) => (
                   <TableRow key={alumno.id}>
                     <TableCell className="font-medium text-foreground">
-                      <Link
-                        href={`/protected/alumnos/${alumno.id}`}
-                        className="hover:text-primary hover:underline"
-                      >
-                        {alumno.nombres} {alumno.apellidos}
-                      </Link>
+                      {alumno.nombres} {alumno.apellidos}
                     </TableCell>
-                    <TableCell className="text-xs">{alumno.email || "—"}</TableCell>
-                    <TableCell className="text-xs">{alumno.telefono || "—"}</TableCell>
+                    <TableCell className="max-w-[200px] truncate text-xs" title={alumno.email ?? undefined}>
+                      {alumno.email || "—"}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-xs">{alumno.telefono || "—"}</TableCell>
                     <TableCell>{alumno.plan?.nombre ?? "—"}</TableCell>
-                    <TableCell>{formatFecha(alumno.fecha_inicio)}</TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">{formatFecha(alumno.fecha_inicio)}</TableCell>
+                    <TableCell className="whitespace-nowrap">
                       {vencimientoPorAlumno.get(alumno.id)
                         ? formatFecha(vencimientoPorAlumno.get(alumno.id)!)
                         : "—"}
@@ -209,8 +206,8 @@ export default async function AlumnosPage({
                         {alumno.activo ? "Activo" : "De baja"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
+                    <TableCell className="w-px whitespace-nowrap text-right">
+                      <div className="flex justify-end">
                         <IconAction
                           icon={Pencil}
                           label="Editar"

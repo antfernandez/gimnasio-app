@@ -1,30 +1,32 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Banknote } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
-  asignarRutina,
+  actualizarMembresia,
   createAvance,
   updateAlumno,
 } from "@/app/protected/alumnos/actions";
+import { personalizarRutinaAlumno } from "@/app/protected/rutinas/actions";
 import { AlumnoForm } from "@/components/alumnos/alumno-form";
-import { ClasificacionBadge } from "@/components/alumnos/clasificacion-badge";
-import { FichaSaludBadge } from "@/components/alumnos/ficha-salud-badge";
+import { MembresiaForm } from "@/components/alumnos/membresia-form";
+import { ProgresoPdfSelector } from "@/components/alumnos/progreso-pdf-selector";
 import { ToggleActivoButton } from "@/components/alumnos/toggle-activo-button";
 import { ToggleAvancesButton } from "@/components/alumnos/toggle-avances-button";
 import { ToggleBitacoraButton } from "@/components/alumnos/toggle-bitacora-button";
 import { AvanceForm } from "@/components/avances/avance-form";
 import { MedidasDialog } from "@/components/avances/medidas-dialog";
-import { BitacoraHistorial } from "@/components/bitacora/bitacora-historial";
 import { ProgresoRutina } from "@/components/bitacora/progreso-rutina";
+import { SesionDetalleDialog } from "@/components/bitacora/sesion-detalle-dialog";
 import { LineChart } from "@/components/charts/line-chart";
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
-import { AsignarRutinaForm } from "@/components/rutinas/asignar-rutina-form";
+import { PersonalizarRutinaForm } from "@/components/rutinas/personalizar-rutina-form";
 import { RutinaCard } from "@/components/rutinas/rutina-card";
 import { Acordeon } from "@/components/ui/acordeon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { IconAction } from "@/components/ui/icon-action";
 import {
   Table,
   TableBody,
@@ -33,34 +35,72 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { fichaSaludPendiente } from "@/lib/ficha-salud";
-import { SIGNIFICADO_ESTADOS_ALUMNO } from "@/lib/estados-alumno";
-import { formatFecha } from "@/lib/format";
+import { fetchEjercicios, fetchZonas } from "@/lib/ejercicios";
+import { formatFecha, formatMonto } from "@/lib/format";
 import { getPerfilActual } from "@/lib/perfil";
-import { formatRut } from "@/lib/rut";
+import { estadoPlan } from "@/lib/planes";
+import { agruparSesiones, detalleSesion } from "@/lib/progreso";
 import { createClient } from "@/lib/supabase/server";
+import { hoyIso } from "@/lib/turnos";
 import type {
   Alumno,
   Avance,
-  ClasificacionAlumnoRow,
   EstadoCobranzaAlumno,
-  EstadoPaqueteAlumno,
+  Pago,
   Plan,
   RegistroRutina,
   Rutina,
   RutinaPlantilla,
 } from "@/lib/types";
 
+type Vista = "datos" | "membresia" | "progreso";
+
+const VISTAS: { value: Vista; label: string }[] = [
+  { value: "datos", label: "Datos Personales" },
+  { value: "membresia", label: "Membresía" },
+  { value: "progreso", label: "Progreso" },
+];
+
+const METODO_LABEL: Record<string, string> = {
+  efectivo: "Efectivo",
+  transferencia: "Transferencia",
+  tarjeta: "Tarjeta",
+  otro: "Otro",
+};
+
+function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          {titulo}
+        </h3>
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
+
+function Aviso({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mb-4 rounded-[9px] border border-success/35 bg-success/10 px-4 py-3 text-sm text-success">
+      {children}
+    </div>
+  );
+}
+
 export default async function FichaAlumnoPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ rutina?: string; avance?: string; vista?: string }>;
+  searchParams: Promise<{ vista?: string; ok?: string; ajuste?: string; avance?: string }>;
 }) {
   const { id } = await params;
-  const { rutina: rutinaOk, avance: avanceOk, vista: vistaParam } = await searchParams;
-  const vista = vistaParam === "progreso" ? "progreso" : "datos";
+  const { vista: vistaParam, ok, ajuste, avance: avanceOk } = await searchParams;
+  const vista: Vista = VISTAS.some((v) => v.value === vistaParam)
+    ? (vistaParam as Vista)
+    : "datos";
 
   const perfilData = await getPerfilActual();
   if (!perfilData) return null; // el layout ya redirige a /auth/login
@@ -75,81 +115,30 @@ export default async function FichaAlumnoPage({
   if (!alumno) notFound();
 
   const a = alumno as Alumno;
-  const updateAlumnoConId = updateAlumno.bind(null, a.id);
-  const asignarRutinaConId = asignarRutina.bind(null, a.id);
-  const createAvanceConId = createAvance.bind(null, a.id);
+  const hoy = hoyIso();
+  const gimnasioId = perfilData.perfil.gimnasio_id;
 
-  const [
-    { data: clasificacionRow },
-    { data: estadoPaqueteRow },
-    { data: estadoCobranzaRow },
-    { data: planes },
-    { data: plantillas },
-    { data: rutinas },
-    { data: avances },
-  ] = await Promise.all([
-    supabase
-      .from("v_clasificacion_alumnos")
-      .select("clasificacion")
-      .eq("alumno_id", a.id)
-      .maybeSingle(),
-    // Sprint 19, Parte 2: contador de clases restantes del paquete vigente.
-    supabase
-      .from("v_estado_paquetes_alumnos")
-      .select("*")
-      .eq("alumno_id", a.id)
-      .maybeSingle(),
+  const [{ data: estadoCobranzaRow }, { data: planes }, { data: rutinas }] = await Promise.all([
     // Spec 01, R1: mismo estado de pago que ve el listado de Pagos y el panel Hoy.
-    supabase
-      .from("v_estado_cobranza_alumnos")
-      .select("*")
-      .eq("alumno_id", a.id)
-      .maybeSingle(),
+    supabase.from("v_estado_cobranza_alumnos").select("*").eq("alumno_id", a.id).maybeSingle(),
     supabase
       .from("planes")
       .select("*")
-      .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
+      .eq("gimnasio_id", gimnasioId)
       .order("dias_por_semana", { ascending: true }),
-    supabase
-      .from("rutina_plantillas")
-      .select("*")
-      .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
-      .order("nombre", { ascending: true }),
     supabase
       .from("rutinas")
       .select("*")
       .eq("alumno_id", a.id)
       .order("fecha_asignacion", { ascending: false }),
-    supabase
-      .from("avances")
-      .select("*")
-      .eq("alumno_id", a.id)
-      .order("fecha", { ascending: false }),
   ]);
-  const clasificacion = (
-    clasificacionRow as Pick<ClasificacionAlumnoRow, "clasificacion"> | null
-  )?.clasificacion;
-  const estadoPaquete = estadoPaqueteRow as EstadoPaqueteAlumno | null;
   const estadoCobranza = estadoCobranzaRow as EstadoCobranzaAlumno | null;
-
-  const listaPlantillas = (plantillas ?? []) as RutinaPlantilla[];
+  const listaPlanes = (planes ?? []) as Plan[];
   const listaRutinas = (rutinas ?? []) as Rutina[];
   const rutinaActiva = listaRutinas.find((r) => r.activa);
-  const historialAvances = (avances ?? []) as Avance[];
-  const planAlumno = ((planes ?? []) as Plan[]).find((p) => p.id === a.plan_id);
+  const planAlumno = listaPlanes.find((p) => p.id === a.plan_id);
 
-  // Sprint 18, Parte 2: historial y gráficos por ejercicio se mueven a esta ficha
-  // (antes vivían apilados en la pantalla de Bitácora) — solo se consultan cuando
-  // se abre la pestaña "Progreso", no en la carga normal de la ficha.
-  let listaRegistros: RegistroRutina[] = [];
-  if (vista === "progreso") {
-    const { data: registros } = await supabase
-      .from("registros_rutina")
-      .select("*")
-      .eq("alumno_id", a.id)
-      .order("fecha", { ascending: false });
-    listaRegistros = (registros ?? []) as RegistroRutina[];
-  }
+  const updateAlumnoConId = updateAlumno.bind(null, a.id);
 
   return (
     <div className="flex flex-col gap-6">
@@ -161,307 +150,412 @@ export default async function FichaAlumnoPage({
           <ArrowLeft className="h-3.5 w-3.5" />
           Volver a alumnos
         </Link>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
-              Ficha de alumno
-            </div>
-            <h2 className="text-2xl">
-              {a.nombres} {a.apellidos}
-            </h2>
+        <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          Ficha de alumno
+        </div>
+        <h2 className="text-2xl">
+          {a.nombres} {a.apellidos}
+        </h2>
+
+        {/* Tres estados, cada uno en dos filas: título y detalle. */}
+        <div className="mt-4 grid max-w-2xl grid-cols-3 gap-x-6 gap-y-1 rounded-[9px] border border-border px-4 py-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Pago
           </div>
-          <div className="flex items-center gap-3">
-            {/* Sprint 22, Parte C: en mobile la cabecera amontonaba hasta 5-6
-                elementos (uno quedaba cortado fuera de pantalla). Se deja a
-                simple vista solo lo imprescindible — estado de cuenta y estado
-                de paquete —, el resto ("Ver pagos", clases restantes, ficha de
-                salud) se mueve a la pestaña "Datos" (ver más abajo) y solo
-                reaparece acá desde `sm:` en adelante, sin sacar nada de la
-                versión desktop. */}
-            <Link
-              href={`/protected/pagos/${a.id}`}
-              className="hidden text-xs text-muted-foreground hover:text-primary hover:underline sm:inline"
-            >
-              Ver pagos
-            </Link>
-            {!a.activo && <Badge variant="secondary">De baja</Badge>}
-            {estadoPaquete && estadoPaquete.paquete_id && (
-              <span className="hidden text-xs text-muted-foreground sm:inline">
-                {estadoPaquete.clases_restantes} clase
-                {estadoPaquete.clases_restantes === 1 ? "" : "s"} restante
-                {estadoPaquete.clases_restantes === 1 ? "" : "s"}
-              </span>
-            )}
-            <ToggleActivoButton
-              id={a.id}
-              activo={a.activo}
-              nombreCompleto={`${a.nombres} ${a.apellidos}`}
-            />
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Plan
+          </div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Estado
+          </div>
+          <div>
+            {estadoCobranza ? <EstadoPagoBadge estado={estadoCobranza.estado_pago} /> : "—"}
+          </div>
+          <div className="text-sm text-foreground">{planAlumno?.nombre ?? "—"}</div>
+          <div>
+            <Badge variant={a.activo ? "success" : "secondary"}>
+              {a.activo ? "Activo" : "De baja"}
+            </Badge>
           </div>
         </div>
-        <Table className="mt-4 max-w-2xl">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Concepto</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Qué significa</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow>
-              <TableCell>Pago</TableCell>
-              <TableCell>
-                {estadoCobranza ? (
-                  <EstadoPagoBadge estado={estadoCobranza.estado_pago} />
-                ) : (
-                  "—"
-                )}
-              </TableCell>
-              <TableCell className="text-xs text-muted-foreground">
-                {SIGNIFICADO_ESTADOS_ALUMNO.pago}
-              </TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell>Plan</TableCell>
-              <TableCell>{planAlumno?.nombre ?? "—"}</TableCell>
-              <TableCell className="text-xs text-muted-foreground">
-                {SIGNIFICADO_ESTADOS_ALUMNO.plan}
-              </TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell>Clasificación</TableCell>
-              <TableCell>
-                {clasificacion ? <ClasificacionBadge clasificacion={clasificacion} /> : "—"}
-              </TableCell>
-              <TableCell className="text-xs text-muted-foreground">
-                {SIGNIFICADO_ESTADOS_ALUMNO.clasificacion}
-              </TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell>Ficha de salud</TableCell>
-              <TableCell>
-                <FichaSaludBadge pendiente={fichaSaludPendiente(a)} />
-              </TableCell>
-              <TableCell className="text-xs text-muted-foreground">
-                {SIGNIFICADO_ESTADOS_ALUMNO.fichaSalud}
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
       </div>
 
-      {/* Sprint 18, Parte 2: pestañas "Datos"/"Progreso" — el historial y los
-          gráficos por ejercicio (antes en la Bitácora) pasan a vivir acá, para
-          consulta posterior en vez de estorbar el registro de la sesión. Mismo
-          patrón de tabs por query param que usa `CalendarioTurnos`. */}
-      <div className="flex items-center gap-1 self-start rounded-full border border-border p-1">
-        <Button asChild size="sm" variant={vista === "datos" ? "default" : "ghost"}>
-          <Link href={`/protected/alumnos/${a.id}`}>Datos</Link>
-        </Button>
-        <Button asChild size="sm" variant={vista === "progreso" ? "default" : "ghost"}>
-          <Link href={`/protected/alumnos/${a.id}?vista=progreso`}>Progreso</Link>
-        </Button>
+      <div className="flex flex-wrap items-center gap-1 self-start rounded-full border border-border p-1">
+        {VISTAS.map((v) => (
+          <Button key={v.value} asChild size="sm" variant={vista === v.value ? "default" : "ghost"}>
+            <Link href={v.value === "datos" ? `/protected/alumnos/${a.id}` : `/protected/alumnos/${a.id}?vista=${v.value}`}>
+              {v.label}
+            </Link>
+          </Button>
+        ))}
       </div>
 
       {vista === "datos" && (
         <>
           <Card>
             <CardContent className="pt-6">
-              <div className="mb-6 flex flex-wrap items-center gap-x-8 gap-y-1 text-xs text-muted-foreground">
-                <span>RUT {formatRut(a.rut, a.dig_ver)}</span>
-                <span>Alumno desde {formatFecha(a.fecha_inicio)}</span>
-                <Badge variant={a.user_id ? "success" : "secondary"}>
-                  {a.user_id ? "Cuenta propia vinculada" : "Sin cuenta propia"}
-                </Badge>
-              </div>
-
-              {/* Sprint 22, Parte C: versión mobile de lo que la cabecera oculta
-                  desde `sm:` hacia abajo ("Ver pagos", clases restantes, ficha de
-                  salud) — nada se pierde, solo cambia de lugar en pantallas
-                  angostas. */}
-              <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:hidden">
-                <Link
-                  href={`/protected/pagos/${a.id}`}
-                  className="text-muted-foreground hover:text-primary hover:underline"
-                >
-                  Ver pagos
-                </Link>
-                {estadoPaquete && estadoPaquete.paquete_id && (
-                  <span className="text-muted-foreground">
-                    {estadoPaquete.clases_restantes} clase
-                    {estadoPaquete.clases_restantes === 1 ? "" : "s"} restante
-                    {estadoPaquete.clases_restantes === 1 ? "" : "s"}
-                  </span>
-                )}
-              </div>
               <AlumnoForm
                 action={updateAlumnoConId}
                 alumno={a}
-                planes={(planes ?? []) as Plan[]}
                 submitLabel="Guardar cambios"
-              />
-            </CardContent>
-          </Card>
-
-          {/* Rutina asignada */}
-          <Card>
-            <CardContent className="pt-6">
-              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Asignar rutina
-              </h3>
-              {rutinaOk === "1" && (
-                <div className="mb-4 rounded-[9px] border border-success/35 bg-success/10 px-4 py-3 text-sm text-success">
-                  Rutina asignada correctamente.
-                </div>
-              )}
-              <AsignarRutinaForm action={asignarRutinaConId} plantillas={listaPlantillas} />
-              {rutinaActiva && (
-                <Acordeon
-                  className="mt-5"
-                  titulo={
-                    <div>
-                      <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                        Rutina asignada
-                      </div>
-                      <div className="text-base font-semibold text-foreground">
-                        {rutinaActiva.nombre}
-                      </div>
-                    </div>
-                  }
-                >
-                  <RutinaCard rutina={rutinaActiva} />
-                </Acordeon>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Avance corporal */}
-          <Card>
-            <CardContent className="pt-6">
-              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Registrar avance corporal
-              </h3>
-              {avanceOk === "1" && (
-                <div className="mb-4 rounded-[9px] border border-success/35 bg-success/10 px-4 py-3 text-sm text-success">
-                  Avance registrado correctamente.
-                </div>
-              )}
-              <AvanceForm action={createAvanceConId} />
-
-              <div className="mt-6 border-t border-border pt-6">
-                <h4 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Historial de avances
-                </h4>
-                <div className="mb-6">
-                  <LineChart
-                    data={historialAvances
-                      .filter((av) => av.peso_kg != null)
-                      .map((av) => ({ x: av.fecha, y: av.peso_kg! }))}
-                    unidad=" kg"
+                acciones={
+                  <ToggleActivoButton
+                    id={a.id}
+                    activo={a.activo}
+                    nombreCompleto={`${a.nombres} ${a.apellidos}`}
                   />
-                </div>
-                {historialAvances.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">
-                    Aún no hay avances registrados para este alumno.
+                }
+              />
+            </CardContent>
+          </Card>
+
+          <Seccion titulo="Permisos del alumno">
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Registro de avances propios
+                  </h4>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {a.puede_registrar_avances
+                      ? "Este alumno puede registrar sus propios avances desde su portal."
+                      : "Solo tú puedes registrar avances para este alumno."}
                   </p>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Fecha</TableHead>
-                        <TableHead>Peso</TableHead>
-                        <TableHead>Medidas</TableHead>
-                        <TableHead>Notas</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {historialAvances.map((avance) => (
-                        <TableRow key={avance.id}>
-                          <TableCell>{formatFecha(avance.fecha)}</TableCell>
-                          <TableCell className="font-medium text-foreground">
-                            {avance.peso_kg ? `${avance.peso_kg} kg` : "—"}
-                          </TableCell>
-                          <TableCell>
-                            <MedidasDialog
-                              fecha={avance.fecha}
-                              pesoKg={avance.peso_kg}
-                              medidas={avance.medidas}
-                            />
-                          </TableCell>
-                          <TableCell className="max-w-[220px] truncate text-muted-foreground">
-                            {avance.notas || "—"}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
+                </div>
+                <ToggleAvancesButton id={a.id} puedeRegistrarAvances={a.puede_registrar_avances} />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="flex flex-col gap-6 pt-6">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Permisos del alumno
-              </h3>
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Registro de avances propios
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {a.puede_registrar_avances
-                    ? "Este alumno puede registrar sus propios avances desde su portal."
-                    : "Solo tú puedes registrar avances para este alumno."}
-                </p>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Registro de bitácora propio
+                  </h4>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {a.puede_registrar_bitacora
+                      ? "Este alumno puede registrar sus propias sesiones de rutina desde su portal."
+                      : "Solo tú puedes registrar sesiones de rutina para este alumno."}
+                  </p>
+                </div>
+                <ToggleBitacoraButton id={a.id} puedeRegistrarBitacora={a.puede_registrar_bitacora} />
               </div>
-              <ToggleAvancesButton
-                id={a.id}
-                puedeRegistrarAvances={a.puede_registrar_avances}
-              />
             </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Registro de bitácora propio
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {a.puede_registrar_bitacora
-                    ? "Este alumno puede registrar sus propias sesiones de rutina desde su portal."
-                    : "Solo tú puedes registrar sesiones de rutina para este alumno."}
-                </p>
-              </div>
-              <ToggleBitacoraButton
-                id={a.id}
-                puedeRegistrarBitacora={a.puede_registrar_bitacora}
-              />
-            </div>
-
-
-            </CardContent>
-          </Card>
+          </Seccion>
         </>
       )}
 
-      {vista === "progreso" && (
-        <Card>
-          <CardContent className="pt-6">
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Historial de bitácora
-            </h3>
-            <BitacoraHistorial registros={listaRegistros} />
+      {vista === "membresia" && (
+        <MembresiaVista
+          alumno={a}
+          hoy={hoy}
+          gimnasioId={gimnasioId}
+          estadoCobranza={estadoCobranza}
+          planes={listaPlanes}
+          rutinaActiva={rutinaActiva}
+          ok={ok === "1"}
+          ajuste={ajuste === "1"}
+        />
+      )}
 
-            <div className="mt-6 border-t border-border pt-6">
-              <h4 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Progreso por ejercicio
-              </h4>
-              <ProgresoRutina registros={listaRegistros} />
-            </div>
-          </CardContent>
-        </Card>
+      {vista === "progreso" && (
+        <ProgresoVista
+          alumno={a}
+          rutinas={listaRutinas}
+          avanceOk={avanceOk === "1"}
+          hoy={hoy}
+        />
       )}
     </div>
+  );
+}
+
+async function MembresiaVista({
+  alumno: a,
+  hoy,
+  gimnasioId,
+  estadoCobranza,
+  planes,
+  rutinaActiva,
+  ok,
+  ajuste,
+}: {
+  alumno: Alumno;
+  hoy: string;
+  gimnasioId: string;
+  estadoCobranza: EstadoCobranzaAlumno | null;
+  planes: Plan[];
+  rutinaActiva: Rutina | undefined;
+  ok: boolean;
+  ajuste: boolean;
+}) {
+  const supabase = await createClient();
+  const [{ data: catalogo }, { data: pagos }, zonas, ejercicios] = await Promise.all([
+    supabase
+      .from("rutina_plantillas")
+      .select("*")
+      .eq("gimnasio_id", gimnasioId)
+      .order("nombre", { ascending: true }),
+    supabase
+      .from("pagos")
+      .select("*, plan:planes(nombre)")
+      .eq("alumno_id", a.id)
+      .order("fecha_pago", { ascending: false }),
+    fetchZonas(),
+    fetchEjercicios({ soloActivos: true }),
+  ]);
+  const rutinasCatalogo = (catalogo ?? []) as RutinaPlantilla[];
+  const listaPagos = (pagos ?? []) as (Pago & { plan: { nombre: string } | null })[];
+
+  const vencimiento = estadoCobranza?.vencimiento_actual ?? null;
+  const cicloEnCurso = !!vencimiento && vencimiento >= hoy;
+  // Se ofrecen los planes vigentes y, siempre, el que el alumno ya tiene.
+  const planesOpcion = planes
+    .filter((p) => p.id === a.plan_id || estadoPlan(p, hoy) !== "de_baja")
+    .map((p) => ({ id: p.id, nombre: p.nombre }));
+
+  return (
+    <>
+      <Seccion titulo="Membresía">
+        {ok && <Aviso>Membresía actualizada correctamente.</Aviso>}
+        <MembresiaForm
+          action={actualizarMembresia.bind(null, a.id)}
+          planes={planesOpcion}
+          rutinas={rutinasCatalogo.map((r) => ({ id: r.id, nombre: r.nombre }))}
+          planActualId={a.plan_id}
+          rutinaActualId={rutinaActiva?.plantilla_id ?? null}
+          tieneRutina={!!rutinaActiva}
+          cicloEnCurso={cicloEnCurso}
+          fechaAsignacion={rutinaActiva?.fecha_asignacion ?? hoy}
+        />
+
+        {rutinaActiva && (
+          <>
+            {ajuste && <div className="mt-4"><Aviso>Ajustes de la rutina guardados.</Aviso></div>}
+            <Acordeon
+              className="mt-5"
+              titulo={
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Rutina asignada
+                  </div>
+                  <div className="text-base font-semibold text-foreground">{rutinaActiva.nombre}</div>
+                </div>
+              }
+            >
+              <RutinaCard rutina={rutinaActiva} />
+            </Acordeon>
+            <Acordeon
+              className="mt-5"
+              titulo={
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Ajustes personalizados
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Cambia ejercicios o cargas solo para este alumno.
+                  </div>
+                </div>
+              }
+            >
+              <PersonalizarRutinaForm
+                key={rutinaActiva.id}
+                action={personalizarRutinaAlumno.bind(null, a.id, rutinaActiva.id)}
+                contenido={rutinaActiva.contenido}
+                zonas={zonas}
+                ejercicios={ejercicios}
+              />
+            </Acordeon>
+          </>
+        )}
+      </Seccion>
+
+      <Seccion titulo="Pagos">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+            <span className="flex items-center gap-2">
+              <span className="text-muted-foreground">Estado:</span>
+              {estadoCobranza ? <EstadoPagoBadge estado={estadoCobranza.estado_pago} /> : "—"}
+            </span>
+            <span>
+              <span className="text-muted-foreground">Vencimiento: </span>
+              {vencimiento ? formatFecha(vencimiento) : "—"}
+            </span>
+          </div>
+          <IconAction
+            icon={Banknote}
+            label="Registrar pago"
+            href={`/protected/pagos/${a.id}#registrar-pago`}
+          />
+        </div>
+        {listaPagos.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Este alumno aún no tiene pagos registrados.
+          </p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Fecha de pago</TableHead>
+                <TableHead>Período</TableHead>
+                <TableHead>Forma de pago</TableHead>
+                <TableHead>Plan</TableHead>
+                <TableHead>Monto</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {listaPagos.map((pago) => (
+                <TableRow key={pago.id}>
+                  <TableCell>{formatFecha(pago.fecha_pago)}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {formatFecha(pago.periodo_desde)} – {formatFecha(pago.periodo_hasta)}
+                  </TableCell>
+                  <TableCell>{METODO_LABEL[pago.metodo] ?? pago.metodo}</TableCell>
+                  <TableCell>{pago.plan?.nombre ?? "—"}</TableCell>
+                  <TableCell className="font-medium text-foreground">
+                    {formatMonto(pago.monto)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Seccion>
+    </>
+  );
+}
+
+async function ProgresoVista({
+  alumno: a,
+  rutinas,
+  avanceOk,
+  hoy,
+}: {
+  alumno: Alumno;
+  rutinas: Rutina[];
+  avanceOk: boolean;
+  hoy: string;
+}) {
+  const supabase = await createClient();
+  const [{ data: registros }, { data: avances }] = await Promise.all([
+    supabase
+      .from("registros_rutina")
+      .select("*")
+      .eq("alumno_id", a.id)
+      .order("fecha", { ascending: false }),
+    supabase.from("avances").select("*").eq("alumno_id", a.id).order("fecha", { ascending: false }),
+  ]);
+  const listaRegistros = (registros ?? []) as RegistroRutina[];
+  const historialAvances = (avances ?? []) as Avance[];
+  const sesiones = agruparSesiones(listaRegistros, rutinas);
+  const rutinaPorId = new Map(rutinas.map((r) => [r.id, r]));
+
+  const anioActual = Number(hoy.slice(0, 4));
+  const anios = [
+    ...new Set([
+      anioActual,
+      ...listaRegistros.map((r) => Number(r.fecha.slice(0, 4))),
+      ...historialAvances.map((av) => Number(av.fecha.slice(0, 4))),
+    ]),
+  ].sort((x, y) => y - x);
+
+  return (
+    <>
+      <Seccion titulo="Progreso">
+        <div className="mb-6">
+          <ProgresoPdfSelector alumnoId={a.id} anios={anios} anioInicial={anioActual} />
+        </div>
+        {sesiones.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Aún no hay sesiones registradas en la bitácora.
+          </p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Rutina</TableHead>
+                <TableHead>Notas</TableHead>
+                <TableHead className="w-px text-right">Detalle</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sesiones.map((s) => (
+                <TableRow key={s.clave}>
+                  <TableCell className="whitespace-nowrap">{formatFecha(s.fecha)}</TableCell>
+                  <TableCell className="font-medium text-foreground">{s.rutinaNombre}</TableCell>
+                  <TableCell className="max-w-[320px] truncate text-muted-foreground" title={s.notas || undefined}>
+                    {s.notas || "—"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end">
+                      <SesionDetalleDialog
+                        detalle={detalleSesion(s, rutinaPorId.get(s.registros[0].rutina_id))}
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Seccion>
+
+      <Seccion titulo="Progreso por ejercicio">
+        <ProgresoRutina registros={listaRegistros} />
+      </Seccion>
+
+      <Seccion titulo="Avance corporal">
+        {avanceOk && <Aviso>Avance registrado correctamente.</Aviso>}
+        <AvanceForm action={createAvance.bind(null, a.id)} />
+
+        <div className="mt-6 border-t border-border pt-6">
+          <h4 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Historial de avances
+          </h4>
+          <div className="mb-6">
+            <LineChart
+              data={historialAvances
+                .filter((av) => av.peso_kg != null)
+                .map((av) => ({ x: av.fecha, y: av.peso_kg! }))}
+              unidad=" kg"
+            />
+          </div>
+          {historialAvances.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Aún no hay avances registrados para este alumno.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Peso</TableHead>
+                  <TableHead>Medidas</TableHead>
+                  <TableHead>Notas</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {historialAvances.map((avance) => (
+                  <TableRow key={avance.id}>
+                    <TableCell>{formatFecha(avance.fecha)}</TableCell>
+                    <TableCell className="font-medium text-foreground">
+                      {avance.peso_kg ? `${avance.peso_kg} kg` : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <MedidasDialog
+                        fecha={avance.fecha}
+                        pesoKg={avance.peso_kg}
+                        medidas={avance.medidas}
+                      />
+                    </TableCell>
+                    <TableCell className="max-w-[220px] truncate text-muted-foreground">
+                      {avance.notas || "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+      </Seccion>
+    </>
   );
 }

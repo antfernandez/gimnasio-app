@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 import { AplicarPresetButton } from "@/components/turnos/aplicar-preset-button";
@@ -16,10 +17,16 @@ import {
 } from "@/components/ui/table";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
-import { formatHora, NOMBRES_DIA } from "@/lib/turnos";
+import { formatHora, NOMBRES_DIA, NOMBRES_DIA_CORTO, ORDEN_DIAS } from "@/lib/turnos";
 import type { DiaSemana, HorarioDisponible } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
-export default async function HorarioPage() {
+export default async function HorarioPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ dia?: string }>;
+}) {
+  const params = await searchParams;
   const perfilData = await getPerfilActual();
   if (!perfilData) return null; // el layout ya redirige a /auth/login
 
@@ -32,25 +39,29 @@ export default async function HorarioPage() {
     .order("hora_inicio", { ascending: true });
 
   const lista = (horarios ?? []) as HorarioDisponible[];
-  const diasConHorario = [...new Set(lista.map((h) => h.dia_semana))].sort(
-    (a, b) => a - b,
-  ) as DiaSemana[];
+  const diasConHorario = ORDEN_DIAS.filter((d) => lista.some((h) => h.dia_semana === d));
+  // Se muestra un solo día; por defecto el primero con horarios (semana desde lunes).
+  const diaPedido = Number(params.dia);
+  const diaVisible: DiaSemana =
+    params.dia !== undefined && ORDEN_DIAS.includes(diaPedido as DiaSemana)
+      ? (diaPedido as DiaSemana)
+      : (diasConHorario[0] ?? 1);
+  const delDia = lista.filter((h) => h.dia_semana === diaVisible);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
+        <Link
+          href="/protected/turnos"
+          className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Volver a turnos
+        </Link>
         <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
           Panel del dueño
         </div>
         <h2 className="text-2xl">Configurar horario</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Define qué días y horas atiendes, y cuántos cupos hay por turno. El
-          calendario de{" "}
-          <Link href="/protected/turnos" className="text-primary hover:underline">
-            turnos
-          </Link>{" "}
-          se arma automáticamente a partir de esto.
-        </p>
       </div>
 
       {lista.length === 0 && (
@@ -66,9 +77,8 @@ export default async function HorarioPage() {
         </Card>
       )}
 
-      {/* Sprint 18, Parte 3: "semana tipo de una vez" + "duplicar día" — pensado
-          para armar una grilla real (ej. 15 bloques × 6 días) en minutos en vez de
-          repetir el formulario "Agregar" bloque por bloque. */}
+      {/* Bloques de un día (varios o uno suelto) en un mismo recuadro, separados
+          sutilmente; después, duplicar a otros días. */}
       <Card>
         <CardContent className="pt-6">
           <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -79,6 +89,13 @@ export default async function HorarioPage() {
             después duplícalo a los demás días con el mismo horario.
           </p>
           <SemanaTipoForm />
+
+          <div className="mt-6 border-t border-border/60 pt-6">
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Agregar un bloque suelto
+            </h3>
+            <HorarioForm />
+          </div>
         </CardContent>
       </Card>
 
@@ -98,15 +115,6 @@ export default async function HorarioPage() {
       <Card>
         <CardContent className="pt-6">
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Agregar un bloque suelto
-          </h3>
-          <HorarioForm />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="pt-6">
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Horarios configurados
           </h3>
           {lista.length === 0 ? (
@@ -114,32 +122,56 @@ export default async function HorarioPage() {
               Todavía no hay horarios configurados.
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Día</TableHead>
-                  <TableHead>Hora</TableHead>
-                  <TableHead>Duración</TableHead>
-                  <TableHead>Cupos</TableHead>
-                  <TableHead className="text-right">Estado</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lista.map((h) => (
-                  <TableRow key={h.id} className={h.activo ? "" : "opacity-50"}>
-                    <TableCell className="font-medium text-foreground">
-                      {NOMBRES_DIA[h.dia_semana]}
-                    </TableCell>
-                    <TableCell>{formatHora(h.hora_inicio)}</TableCell>
-                    <TableCell>{h.duracion_min} min</TableCell>
-                    <TableCell>{h.cupos}</TableCell>
-                    <TableCell className="text-right">
-                      <HorarioRowActions id={h.id} activo={h.activo} />
-                    </TableCell>
-                  </TableRow>
+            <>
+              <div className="mb-4 flex flex-wrap gap-2">
+                {ORDEN_DIAS.map((d) => (
+                  <Link
+                    key={d}
+                    href={{ pathname: "/protected/turnos/horario", query: { dia: d } }}
+                    aria-label={NOMBRES_DIA[d]}
+                    className={cn(
+                      "rounded-full border border-border px-4 py-1.5 text-xs text-muted-foreground transition-colors",
+                      diaVisible === d &&
+                        "border-transparent bg-primary font-semibold text-primary-foreground",
+                    )}
+                  >
+                    {NOMBRES_DIA_CORTO[d]}
+                  </Link>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+              {delDia.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  No hay horarios configurados el {NOMBRES_DIA[diaVisible].toLowerCase()}.
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Día</TableHead>
+                      <TableHead>Hora</TableHead>
+                      <TableHead>Duración</TableHead>
+                      <TableHead>Cupos</TableHead>
+                      <TableHead className="text-right">Estado</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {delDia.map((h) => (
+                      <TableRow key={h.id} className={h.activo ? "" : "opacity-50"}>
+                        <TableCell className="font-medium text-foreground">
+                          {NOMBRES_DIA[h.dia_semana]}
+                        </TableCell>
+                        <TableCell>{formatHora(h.hora_inicio)}</TableCell>
+                        <TableCell>{h.duracion_min} min</TableCell>
+                        <TableCell>{h.cupos}</TableCell>
+                        <TableCell className="text-right">
+                          <HorarioRowActions id={h.id} activo={h.activo} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

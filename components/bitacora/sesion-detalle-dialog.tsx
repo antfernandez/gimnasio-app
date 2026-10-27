@@ -1,0 +1,64 @@
+"use client";
+
+import { Eye, X } from "lucide-react";
+import { useRef } from "react";
+
+import { IconAction } from "@/components/ui/icon-action";
+import { formatFecha } from "@/lib/format";
+import type { DetalleSesion } from "@/lib/progreso";
+
+/** Icono "ojo" que abre un modal con lo que consideraba la rutina y lo registrado en
+ * la bitácora de esa sesión. */
+export function SesionDetalleDialog({ detalle }: { detalle: DetalleSesion }) {
+  const ref = useRef<HTMLDialogElement>(null);
+
+  return (
+    <>
+      <IconAction icon={Eye} label="Ver detalle" onClick={() => ref.current?.showModal()} />
+      <dialog
+        ref={ref}
+        onClick={(e) => {
+          if (e.target === ref.current) ref.current?.close();
+        }}
+        className="m-auto w-[min(94vw,720px)] rounded-[12px] border border-border bg-card p-6 text-card-foreground backdrop:bg-black/50"
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-base font-semibold">{detalle.rutinaNombre}</h3>
+            <p className="text-xs text-muted-foreground">{formatFecha(detalle.fecha)}</p>
+          </div>
+          <button
+            type="button"
+            aria-label="Cerrar"
+            onClick={() => ref.current?.close()}
+            className="rounded-full p-1 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <th className="py-2 pr-3 font-medium">Ejercicio</th>
+                <th className="py-2 pr-3 font-medium">Rutina</th>
+                <th className="py-2 pr-3 font-medium">Registro</th>
+                <th className="py-2 font-medium">Notas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {detalle.filas.map((f, i) => (
+                <tr key={i} className="border-b border-border/60 last:border-0">
+                  <td className="py-2 pr-3 font-medium text-foreground">{f.ejercicio}</td>
+                  <td className="py-2 pr-3 text-muted-foreground">{f.planificado}</td>
+                  <td className="py-2 pr-3">{f.realizado}</td>
+                  <td className="py-2 text-muted-foreground">{f.notas || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </dialog>
+    </>
+  );
+}

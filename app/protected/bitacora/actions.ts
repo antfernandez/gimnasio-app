@@ -3,22 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { buildFilasRegistroRutina } from "@/lib/bitacora";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
+import { hoyIso } from "@/lib/turnos";
 import type { Asistencia, Rutina } from "@/lib/types";
 
-export type BitacoraFormState = {
-  error?: string;
-};
-
-/** Sprint 19, Parte 1: check rápido de asistencia desde la lista de "Alumnos
- * citados" del bloque, sin necesidad de entrar a la ficha ni a la rutina. Solo
- * "presente" pasa `estado` a 'realizada' — eso es lo único que dispara
- * `consumir_clase_paquete` (migración 0007), así que "ausente"/"justificado"
- * quedan registrados sin descontar clase del paquete, tal como pide la auditoría
- * UX. No se permite volver a marcar una reserva que ya quedó en 'realizada'
- * (evita descontar dos veces o revertir una clase ya consumida). */
+/** Asistencia de una reserva (Spec 16; Bitácora y Turnos usan esta misma acción):
+ * - "presente": camino feliz, la clase queda realizada y se descuenta del paquete.
+ * - "ausente": no fue; la clase **se cuenta como realizada** (`estado` pasa a
+ *   'realizada', lo que dispara `consumir_clase_paquete`, migración 0007) y ya no se
+ *   puede reprogramar.
+ * - "justificado": no fue, pero la clase **no** se cuenta; `estado` sigue en
+ *   'reservada' (no dispara el trigger) y el saldo del paquete queda intacto.
+ * La fecha de la clase queda siempre en la propia reserva. Una reserva ya 'realizada'
+ * no se vuelve a marcar (evita descontar dos veces o revertir una clase consumida). */
 export async function marcarAsistencia(
   reservaId: string,
   asistencia: Asistencia,
@@ -28,7 +26,7 @@ export async function marcarAsistencia(
 
   const supabase = await createClient();
   const update: { asistencia: Asistencia; estado?: "realizada" } = { asistencia };
-  if (asistencia === "presente") update.estado = "realizada";
+  if (asistencia !== "justificado") update.estado = "realizada";
 
   await supabase
     .from("reservas")
@@ -41,22 +39,51 @@ export async function marcarAsistencia(
   revalidatePath("/protected/turnos");
 }
 
-/** Movido desde `app/protected/alumnos/actions.ts` (Sprint 15, Parte B): registro de
- * sesión de bitácora hecho por el dueño/entrenador, ahora desde la pantalla propia
- * "Bitácora" (organizada por fecha + bloque horario) en vez de la ficha del alumno —
- * sin restricción de fecha (a diferencia del registro propio del alumno). `fechaBloque`
- * y `horaBloque` solo se usan para volver a la misma selección después de guardar. */
-export async function createRegistroRutina(
+export type GuardarEjercicioInput = {
+  series: string;
+  reps: string;
+  peso: string;
+  notas: string;
+};
+
+export type GuardarEjercicioResult = { ok: true } | { ok: false; error: string };
+
+function numero(v: string): number | null {
+  const t = v.trim().replace(",", ".");
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Spec 13: registra (o actualiza) un solo ejercicio de la sesión, para guardar fila
+ * por fila a medida que el alumno entrena. Hay un registro por alumno + rutina +
+ * fecha + ejercicio: guardar de nuevo la misma fila lo modifica. Series, reps y peso
+ * son obligatorios; notas no. No se aceptan fechas posteriores a hoy. */
+export async function guardarRegistroEjercicio(
   alumnoId: string,
   rutinaId: string,
-  fechaBloque: string,
-  horaBloque: string,
-  _prevState: BitacoraFormState,
-  formData: FormData,
-): Promise<BitacoraFormState> {
-  const fecha = String(formData.get("fecha") ?? "").trim();
-  if (!fecha) {
-    return { error: "Selecciona una fecha." };
+  fecha: string,
+  ejercicioIndex: number,
+  input: GuardarEjercicioInput,
+): Promise<GuardarEjercicioResult> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    return { ok: false, error: "Fecha inválida." };
+  }
+  if (fecha > hoyIso()) {
+    return { ok: false, error: "No se puede registrar la bitácora de una fecha futura." };
+  }
+
+  const series = numero(input.series);
+  const reps = numero(input.reps);
+  const peso = numero(input.peso);
+  if (series === null || reps === null || peso === null) {
+    return { ok: false, error: "Series, reps y peso son obligatorios." };
+  }
+  if (!Number.isInteger(series) || series < 1 || !Number.isInteger(reps) || reps < 1) {
+    return { ok: false, error: "Series y reps deben ser números enteros mayores a 0." };
+  }
+  if (peso < 0 || peso > 9999) {
+    return { ok: false, error: "El peso no es válido." };
   }
 
   const perfilData = await getPerfilActual();
@@ -67,39 +94,51 @@ export async function createRegistroRutina(
     .from("rutinas")
     .select("*")
     .eq("id", rutinaId)
+    .eq("alumno_id", alumnoId)
+    .maybeSingle();
+  const ej = (rutina as Rutina | null)?.contenido[ejercicioIndex];
+  if (!rutina || !ej) {
+    return { ok: false, error: "No se encontró el ejercicio de la rutina." };
+  }
+
+  const valores = {
+    series_realizadas: series,
+    reps_realizadas: reps,
+    peso_kg: peso,
+    notas: input.notas.trim() || null,
+  };
+
+  const { data: existente } = await supabase
+    .from("registros_rutina")
+    .select("id")
+    .eq("alumno_id", alumnoId)
+    .eq("rutina_id", rutinaId)
+    .eq("fecha", fecha)
+    .eq("ejercicio_index", ejercicioIndex)
+    .limit(1)
     .maybeSingle();
 
-  if (!rutina) {
-    return { error: "No se encontró la rutina." };
-  }
-
-  const filas = buildFilasRegistroRutina((rutina as Rutina).contenido, formData);
-  if (filas.length === 0) {
-    return { error: "Registra al menos un ejercicio de la sesión." };
-  }
-
-  const { error } = await supabase.from("registros_rutina").insert(
-    filas.map((f) => ({
-      gimnasio_id: perfilData.perfil.gimnasio_id,
-      alumno_id: alumnoId,
-      rutina_id: rutinaId,
-      fecha,
-      registrado_por: perfilData.perfil.id,
-      origen: "dueño",
-      ...f,
-    })),
-  );
+  const { error } = existente
+    ? await supabase.from("registros_rutina").update(valores).eq("id", existente.id)
+    : await supabase.from("registros_rutina").insert({
+        gimnasio_id: perfilData.perfil.gimnasio_id,
+        alumno_id: alumnoId,
+        rutina_id: rutinaId,
+        fecha,
+        registrado_por: perfilData.perfil.id,
+        origen: "dueño",
+        ejercicio_index: ejercicioIndex,
+        ejercicio: ej.ejercicio,
+        series_planificadas: ej.series || null,
+        reps_planificadas: ej.reps || null,
+        peso_planificado: ej.peso ?? null,
+        ...valores,
+      });
 
   if (error) {
-    return { error: "No se pudo registrar la sesión. Intenta de nuevo." };
+    return { ok: false, error: "No se pudo guardar el ejercicio. Intenta de nuevo." };
   }
 
   revalidatePath("/protected/bitacora");
-  const query = new URLSearchParams({
-    fecha: fechaBloque,
-    hora: horaBloque,
-    alumno: alumnoId,
-    bitacora: "1",
-  });
-  redirect(`/protected/bitacora?${query.toString()}`);
+  return { ok: true };
 }

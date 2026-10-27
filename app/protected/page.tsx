@@ -1,4 +1,5 @@
 import {
+  Banknote,
   DollarSign,
   type LucideIcon,
   UserMinus,
@@ -10,6 +11,7 @@ import Link from "next/link";
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
 import { WhatsAppCobranzaButton } from "@/components/pagos/whatsapp-cobranza-button";
 import { Card, CardContent } from "@/components/ui/card";
+import { IconAction } from "@/components/ui/icon-action";
 import { formatFecha, formatMonto } from "@/lib/format";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
@@ -27,12 +29,22 @@ import type {
   ReservaConAlumno,
 } from "@/lib/types";
 
-function Bloque({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+function Bloque({
+  titulo,
+  fecha,
+  children,
+}: {
+  titulo: string;
+  /** Texto de fecha que acompaña al título, con su mismo estilo. */
+  fecha?: string;
+  children: React.ReactNode;
+}) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 pt-6">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           {titulo}
+          {fecha && <span> · {fecha}</span>}
         </h3>
         {children}
       </CardContent>
@@ -46,8 +58,11 @@ function StatCard({
   value,
   detail,
   progress,
+  iconClass,
 }: {
   icon: LucideIcon;
+  /** Clases de color del círculo del icono. */
+  iconClass: string;
   label: string;
   value: number | string;
   detail?: string;
@@ -57,7 +72,7 @@ function StatCard({
   return (
     <Card>
       <CardContent className="flex items-center gap-4 pt-6">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-secondary-foreground">
+        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${iconClass}`}>
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
@@ -248,6 +263,7 @@ export default async function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           icon={DollarSign}
+          iconClass="bg-sky-100 text-sky-600"
           label="Cobrado este mes"
           value={formatMonto(cobradoMes)}
           progress={pct(cobradoMes, esperadoMes)}
@@ -255,13 +271,15 @@ export default async function DashboardPage() {
         />
         <StatCard
           icon={Users}
+          iconClass="bg-emerald-100 text-emerald-600"
           label="Alumnos activos"
           value={alumnos.length}
           detail={`${altasMes ?? 0} alta${altasMes === 1 ? "" : "s"} este mes`}
         />
-        <StatCard icon={UserMinus} label="Alumnos en baja" value={alumnosEnBaja ?? 0} />
+        <StatCard icon={UserMinus} iconClass="bg-red-100 text-red-500" label="Alumnos en baja" value={alumnosEnBaja ?? 0} />
         <StatCard
           icon={Wallet}
+          iconClass="bg-red-100 text-red-500"
           label="Alumnos morosos"
           value={atrasados.length}
           detail={`${formatMonto(porCobrarMonto)} por cobrar`}
@@ -270,7 +288,7 @@ export default async function DashboardPage() {
 
       {/* Fila 2 — pendientes de hoy */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <Bloque titulo={`Clases de hoy · ${formatFecha(hoy)}`}>
+        <Bloque titulo="Clases de hoy" fecha={formatFecha(hoy)}>
           <p className="text-sm text-muted-foreground">
             {slotsHoy.length} clase{slotsHoy.length === 1 ? "" : "s"}, {alumnosCitadosHoy} alumno
             {alumnosCitadosHoy === 1 ? "" : "s"}
@@ -304,7 +322,7 @@ export default async function DashboardPage() {
           )}
         </Bloque>
 
-        <Bloque titulo="Cobranza">
+        <Bloque titulo="ESTADO DE PAGOS">
           {cobranzaPendiente.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">
               No hay alumnos atrasados ni por vencer esta semana.
@@ -332,12 +350,11 @@ export default async function DashboardPage() {
                   <div className="flex items-center gap-2">
                     <EstadoPagoBadge estado={row.estado_pago} />
                     <WhatsAppCobranzaButton alumno={row} />
-                    <Link
-                      href={`/protected/pagos/${row.alumno_id}`}
-                      className="text-xs text-muted-foreground hover:text-primary hover:underline"
-                    >
-                      Registrar pago
-                    </Link>
+                    <IconAction
+                      icon={Banknote}
+                      label="Registrar pago"
+                      href={`/protected/pagos/${row.alumno_id}#registrar-pago`}
+                    />
                   </div>
                 </div>
               ))}

@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getPerfilActual } from "@/lib/perfil";
+import { estadoPlan } from "@/lib/planes";
 import { parseRut } from "@/lib/rut";
 import { createClient } from "@/lib/supabase/server";
+import { hoyIso } from "@/lib/turnos";
 import type { MedidasAvance } from "@/lib/types";
 
 export type AlumnoFormState = {
@@ -87,17 +89,27 @@ export async function createAlumno(
   redirect("/protected/alumnos?creado=1");
 }
 
+/** Spec 14: con el alumno ya creado solo se modifican teléfono, correo y ficha de
+ * salud; el resto (RUT, nombre, fechas) queda bloqueado y el plan se cambia desde
+ * "Membresía". Se arma el update campo a campo para no pisar nada más. */
 export async function updateAlumno(
   id: string,
   _prevState: AlumnoFormState,
   formData: FormData,
 ): Promise<AlumnoFormState> {
   const data = readAlumnoForm(formData);
-  const validationError = validateAlumnoInput(data);
-  if (validationError) return { error: validationError };
-
   const supabase = await createClient();
-  const { error } = await supabase.from("alumnos").update(data).eq("id", id);
+  const { error } = await supabase
+    .from("alumnos")
+    .update({
+      email: data.email,
+      telefono: data.telefono,
+      alergias: data.alergias,
+      enfermedades: data.enfermedades,
+      lesiones: data.lesiones,
+      objetivos_salud: data.objetivos_salud,
+    })
+    .eq("id", id);
 
   if (error) {
     return { error: "No se pudo guardar la ficha. Intenta de nuevo." };
@@ -187,50 +199,86 @@ export async function rechazarAlumno(id: string) {
   revalidatePath("/protected");
 }
 
-export type AsignarRutinaFormState = {
+export type MembresiaFormState = {
   error?: string;
 };
 
-/** Sprint 14, Parte C: asigna una plantilla del catálogo (`rutina_plantillas`) a un
- * alumno — copia el contenido como snapshot a una nueva fila de `rutinas` (mismo
- * criterio de snapshot que ya usaba la rutina antes de este sprint, para que editar
- * la plantilla después no reescriba el historial de alumnos que ya la tuvieron
- * asignada).
- *
- * Sprint 15, Parte A: la desactivación de la rutina vigente y la inserción de la
- * nueva pasan por la función transaccional `asignar_rutina_alumno` (RPC) en vez de
- * dos llamadas separadas — si `plantilla_id` ya no existe o no pertenece al
- * gimnasio, la función lanza una excepción y el alumno no queda sin rutina activa. */
-export async function asignarRutina(
+/** Spec 14: plan y rutina del alumno se cambian solo cuando terminó el ciclo (no hay
+ * período pagado en curso); si todavía no tiene plan o rutina, se puede asignar en
+ * cualquier momento. La rutina se asigna copiando la del catálogo como snapshot por
+ * alumno (RPC transaccional `asignar_rutina_alumno`, Sprint 15). `fecha` es la fecha
+ * de asignación de la rutina. Las reglas se validan acá aunque la UI ya bloquee. */
+export async function actualizarMembresia(
   alumnoId: string,
-  _prevState: AsignarRutinaFormState,
+  _prevState: MembresiaFormState,
   formData: FormData,
-): Promise<AsignarRutinaFormState> {
-  const plantillaId = String(formData.get("plantilla_id") ?? "").trim();
-  const fechaAsignacion = String(formData.get("fecha_asignacion") ?? "").trim() || null;
-
-  if (!plantillaId) {
-    return { error: "Selecciona una plantilla." };
-  }
+): Promise<MembresiaFormState> {
+  const planId = String(formData.get("plan_id") ?? "").trim();
+  const rutinaCatalogoId = String(formData.get("plantilla_id") ?? "").trim();
+  const fecha = String(formData.get("fecha_asignacion") ?? "").trim() || null;
 
   const perfilData = await getPerfilActual();
   if (!perfilData) redirect("/auth/login");
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("asignar_rutina_alumno", {
-    p_alumno_id: alumnoId,
-    p_gimnasio_id: perfilData.perfil.gimnasio_id,
-    p_plantilla_id: plantillaId,
-    p_creado_por: perfilData.perfil.id,
-    p_fecha_asignacion: fechaAsignacion,
-  });
+  const gimnasioId = perfilData.perfil.gimnasio_id;
+  const hoy = hoyIso();
 
-  if (error) {
-    return { error: error.message || "No se pudo asignar la rutina. Intenta de nuevo." };
+  const [{ data: alumno }, { data: cobranza }, { data: rutinaActiva }] = await Promise.all([
+    supabase.from("alumnos").select("plan_id").eq("id", alumnoId).maybeSingle(),
+    supabase
+      .from("v_estado_cobranza_alumnos")
+      .select("vencimiento_actual")
+      .eq("alumno_id", alumnoId)
+      .maybeSingle(),
+    supabase
+      .from("rutinas")
+      .select("plantilla_id")
+      .eq("alumno_id", alumnoId)
+      .eq("activa", true)
+      .maybeSingle(),
+  ]);
+  if (!alumno) return { error: "No se encontró al alumno." };
+
+  const cicloEnCurso = !!cobranza?.vencimiento_actual && cobranza.vencimiento_actual >= hoy;
+
+  if (planId && planId !== alumno.plan_id) {
+    if (cicloEnCurso && alumno.plan_id) {
+      return { error: "El plan solo se puede cambiar cuando termina el ciclo en curso." };
+    }
+    const { data: plan } = await supabase
+      .from("planes")
+      .select("id, fecha_vigencia_desde, fecha_vigencia_hasta")
+      .eq("id", planId)
+      .eq("gimnasio_id", gimnasioId)
+      .maybeSingle();
+    if (!plan || estadoPlan(plan, hoy) === "de_baja") {
+      return { error: "El plan seleccionado no está vigente." };
+    }
+    const { error } = await supabase.from("alumnos").update({ plan_id: planId }).eq("id", alumnoId);
+    if (error) return { error: "No se pudo cambiar el plan. Intenta de nuevo." };
+  }
+
+  if (rutinaCatalogoId && rutinaCatalogoId !== rutinaActiva?.plantilla_id) {
+    if (cicloEnCurso && rutinaActiva) {
+      return { error: "La rutina solo se puede cambiar cuando termina el ciclo en curso." };
+    }
+    const { error } = await supabase.rpc("asignar_rutina_alumno", {
+      p_alumno_id: alumnoId,
+      p_gimnasio_id: gimnasioId,
+      p_plantilla_id: rutinaCatalogoId,
+      p_creado_por: perfilData.perfil.id,
+      p_fecha_asignacion: fecha,
+    });
+    if (error) {
+      return { error: error.message || "No se pudo asignar la rutina. Intenta de nuevo." };
+    }
   }
 
   revalidatePath(`/protected/alumnos/${alumnoId}`);
-  redirect(`/protected/alumnos/${alumnoId}?rutina=1`);
+  revalidatePath("/protected/alumnos");
+  revalidatePath("/protected");
+  redirect(`/protected/alumnos/${alumnoId}?vista=membresia&ok=1`);
 }
 
 export type AvanceFormState = {
@@ -311,5 +359,5 @@ export async function createAvance(
   }
 
   revalidatePath(`/protected/alumnos/${alumnoId}`);
-  redirect(`/protected/alumnos/${alumnoId}?avance=1`);
+  redirect(`/protected/alumnos/${alumnoId}?vista=progreso&avance=1`);
 }

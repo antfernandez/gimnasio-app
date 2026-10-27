@@ -13,14 +13,16 @@ import {
   esMismoMes,
   formatHora,
   grillaMes,
+  inicioDeSemana,
   NOMBRES_DIA,
   NOMBRES_DIA_CORTO,
   NOMBRES_MES,
+  ORDEN_DIAS,
   sumarDias,
   sumarMinutos,
   yaPaso,
 } from "@/lib/turnos";
-import type { ReservaConAlumno } from "@/lib/types";
+import type { Asistencia, ReservaConAlumno } from "@/lib/types";
 import type { SlotBase } from "@/lib/turnos";
 
 export type Vista = "mes" | "semana" | "dia";
@@ -50,7 +52,7 @@ type Props = {
     formData: FormData,
   ) => Promise<ReservaFormState>;
   marcarVisto?: (id: string) => Promise<void>;
-  marcarRealizada?: (id: string) => Promise<void>;
+  marcarAsistencia?: (id: string, asistencia: Asistencia) => Promise<void>;
 };
 
 function hrefVista(vista: Vista, fecha: string) {
@@ -117,7 +119,7 @@ export function CalendarioTurnos(props: Props) {
           cancelarReserva={props.cancelarReserva}
           reprogramarReserva={props.reprogramarReserva}
           marcarVisto={props.marcarVisto}
-          marcarRealizada={props.marcarRealizada}
+          marcarAsistencia={props.marcarAsistencia}
           onCerrar={() => setClaveSeleccionada(null)}
         />
       )}
@@ -191,7 +193,7 @@ function VistaMes({ fecha, slots }: { fecha: string; slots: SlotOcupado[] }) {
   return (
     <div className="overflow-x-auto">
       <div className="grid min-w-[560px] grid-cols-7 gap-1.5 text-xs">
-        {([0, 1, 2, 3, 4, 5, 6] as const).map((d) => (
+        {ORDEN_DIAS.map((d) => (
           <div
             key={d}
             className="px-2 pb-1 text-center font-semibold uppercase tracking-wide text-muted-foreground"
@@ -250,8 +252,7 @@ export function VistaSemana({
   claveSeleccionada: string | null;
   onSeleccionar: (s: SlotOcupado) => void;
 }) {
-  const dia0 = diaSemanaDeFecha(fecha);
-  const inicioSemana = sumarDias(fecha, -dia0);
+  const inicioSemana = inicioDeSemana(fecha);
   const dias = Array.from({ length: 7 }, (_, i) => sumarDias(inicioSemana, i));
 
   const horas = Array.from(new Set(slots.map((s) => s.horaInicio))).sort();
@@ -400,7 +401,7 @@ function PanelDetalle({
   cancelarReserva,
   reprogramarReserva,
   marcarVisto,
-  marcarRealizada,
+  marcarAsistencia,
   onCerrar,
 }: {
   slot: SlotOcupado;
@@ -411,7 +412,7 @@ function PanelDetalle({
   cancelarReserva: Props["cancelarReserva"];
   reprogramarReserva: Props["reprogramarReserva"];
   marcarVisto?: Props["marcarVisto"];
-  marcarRealizada?: Props["marcarRealizada"];
+  marcarAsistencia?: Props["marcarAsistencia"];
   onCerrar: () => void;
 }) {
   const [reservaEnReprogramacion, setReservaEnReprogramacion] = useState<string | null>(
@@ -449,15 +450,24 @@ function PanelDetalle({
                   <span className="text-sm text-foreground">
                     {r.alumno?.nombres} {r.alumno?.apellidos}
                   </span>
-                  {r.estado === "realizada" && (
-                    <Badge variant="secondary">Realizada</Badge>
+                  {r.asistencia ? (
+                    <Badge variant={ASISTENCIA_BADGE[r.asistencia].variant}>
+                      {ASISTENCIA_BADGE[r.asistencia].label}
+                    </Badge>
+                  ) : (
+                    r.estado === "realizada" && <Badge variant="secondary">Realizada</Badge>
                   )}
+                  {r.sobrecupo && <Badge variant="outline">Sobrecupo</Badge>}
                   {!r.atendido_por_dueno && (
                     <Badge variant="destructive">Cambio del alumno</Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  {r.estado === "reservada" ? (
+                  {r.estado === "reservada" && marcarAsistencia && !r.asistencia &&
+                    yaPaso(slot.fecha, slot.horaInicio) && (
+                      <AsistenciaBotones id={r.id} marcarAsistencia={marcarAsistencia} />
+                    )}
+                  {r.estado === "reservada" && !r.asistencia ? (
                     reservaEnReprogramacion === r.id ? (
                       <ReprogramarForm
                         reservaId={r.id}
@@ -466,12 +476,6 @@ function PanelDetalle({
                       />
                     ) : (
                       <>
-                        {marcarRealizada && yaPaso(slot.fecha, slot.horaInicio) && (
-                          <MarcarRealizadaButton
-                            id={r.id}
-                            marcarRealizada={marcarRealizada}
-                          />
-                        )}
                         <Button
                           type="button"
                           variant="outline"
@@ -492,13 +496,12 @@ function PanelDetalle({
             ))
           )}
 
-          {hayCupo && (
-            <ReservarDuenoForm
-              slot={slot}
-              alumnos={alumnos ?? []}
-              crearReserva={crearReserva}
-            />
-          )}
+          <ReservarDuenoForm
+            slot={slot}
+            alumnos={alumnos ?? []}
+            crearReserva={crearReserva}
+            sobrecupo={!hayCupo}
+          />
         </div>
       )}
 
@@ -573,24 +576,39 @@ function CancelarButton({
   );
 }
 
-function MarcarRealizadaButton({
+const ASISTENCIA_BADGE: Record<
+  Asistencia,
+  { label: string; variant: "success" | "destructive" | "secondary" }
+> = {
+  presente: { label: "Presente", variant: "success" },
+  ausente: { label: "Ausente", variant: "destructive" },
+  justificado: { label: "Justificado", variant: "secondary" },
+};
+
+/** Spec 16: Presente / Ausente / Justificado, cada uno como una acción. */
+function AsistenciaBotones({
   id,
-  marcarRealizada,
+  marcarAsistencia,
 }: {
   id: string;
-  marcarRealizada: NonNullable<Props["marcarRealizada"]>;
+  marcarAsistencia: NonNullable<Props["marcarAsistencia"]>;
 }) {
   const [isPending, startTransition] = useTransition();
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      disabled={isPending}
-      onClick={() => startTransition(() => marcarRealizada(id))}
-    >
-      {isPending ? "…" : "Marcar realizada"}
-    </Button>
+    <div className="flex items-center gap-1.5">
+      {(["presente", "ausente", "justificado"] as Asistencia[]).map((a) => (
+        <Button
+          key={a}
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={isPending}
+          onClick={() => startTransition(() => marcarAsistencia(id, a))}
+        >
+          {ASISTENCIA_BADGE[a].label}
+        </Button>
+      ))}
+    </div>
   );
 }
 
@@ -674,10 +692,13 @@ function ReservarDuenoForm({
   slot,
   alumnos,
   crearReserva,
+  sobrecupo,
 }: {
   slot: SlotOcupado;
   alumnos: AlumnoOpcion[];
   crearReserva: Props["crearReserva"];
+  /** Bloque lleno: la reserva se registra como sobrecupo. */
+  sobrecupo: boolean;
 }) {
   const [state, formAction, isPending] = useActionState(crearReserva, {});
   const disponibles = alumnos.filter(
@@ -689,9 +710,10 @@ function ReservarDuenoForm({
       <input type="hidden" name="fecha" value={slot.fecha} />
       <input type="hidden" name="hora_inicio" value={slot.horaInicio} />
       <input type="hidden" name="duracion_min" value={slot.duracionMin} />
+      {sobrecupo && <input type="hidden" name="sobrecupo" value="1" />}
       <div className="grid gap-1">
         <Label htmlFor={`alumno-${slot.fecha}-${slot.horaInicio}`} className="text-xs">
-          Reservar para
+          {sobrecupo ? "Sin cupos: registrar sobrecupo para" : "Reservar para"}
         </Label>
         <Select
           id={`alumno-${slot.fecha}-${slot.horaInicio}`}
@@ -708,7 +730,7 @@ function ReservarDuenoForm({
         </Select>
       </div>
       <Button type="submit" size="sm" disabled={isPending || disponibles.length === 0}>
-        {isPending ? "Reservando…" : "Reservar"}
+        {isPending ? "Reservando…" : sobrecupo ? "Registrar sobrecupo" : "Reservar"}
       </Button>
       {state.error && <span className="text-xs text-destructive">{state.error}</span>}
     </form>

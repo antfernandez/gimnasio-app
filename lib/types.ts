@@ -363,6 +363,8 @@ export interface Reserva {
   cancelado_por: OrigenCambio | null;
   cancelado_dentro_ventana: boolean | null;
   atendido_por_dueno: boolean;
+  /** Spec 16: reserva registrada por encima del cupo del bloque (migración 0018). */
+  sobrecupo?: boolean;
   reserva_previa_id: string | null;
   notas: string | null;
   created_at: string;

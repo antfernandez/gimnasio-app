@@ -46,16 +46,24 @@ export async function createPago(
     return { error: "El fin del período no puede ser anterior al inicio." };
   }
 
-  // Sprint 14: el pago elige el plan del próximo período en vez de tipear un n° de
-  // clases — el paquete (si el plan viene con valor) se crea con
-  // `dias_por_semana × 4`, mismo cálculo sugerido del Sprint 13. Plan vacío = pago
-  // que no renueva período (ej. un ajuste), sin paquete ni cambio de plan.
-  const planId = trim("plan_id") || null;
-
   const perfilData = await getPerfilActual();
   if (!perfilData) redirect("/auth/login");
 
   const supabase = await createClient();
+
+  // Spec 17: el plan ya no se elige al pagar; se asigna en la ficha del alumno
+  // (Membresía). El pago toma el plan vigente del alumno: el paquete se crea con
+  // `dias_por_semana × 4` (cálculo del Sprint 13). Sin plan asignado, el pago se
+  // registra igual, sin paquete.
+  const { data: alumno } = await supabase
+    .from("alumnos")
+    .select("plan_id")
+    .eq("id", alumnoId)
+    .maybeSingle();
+  if (!alumno) {
+    return { error: "No se encontró al alumno." };
+  }
+  const planId = (alumno as { plan_id: string | null }).plan_id;
 
   let clasesIncluidas: number | null = null;
   if (planId) {
@@ -65,7 +73,7 @@ export async function createPago(
       .eq("id", planId)
       .maybeSingle();
     if (!plan) {
-      return { error: "El plan seleccionado ya no existe. Elige otro." };
+      return { error: "El plan del alumno ya no existe. Asígnale otro en su ficha." };
     }
     clasesIncluidas = (plan as { dias_por_semana: number }).dias_por_semana * 4;
   }
@@ -102,24 +110,6 @@ export async function createPago(
         error:
           "El pago se registró, pero no se pudo crear el paquete de clases. Créalo manualmente.",
       };
-    }
-
-    const { data: alumnoActual } = await supabase
-      .from("alumnos")
-      .select("plan_id")
-      .eq("id", alumnoId)
-      .maybeSingle();
-    if ((alumnoActual as { plan_id: string | null } | null)?.plan_id !== planId) {
-      const { error: errorPlan } = await supabase
-        .from("alumnos")
-        .update({ plan_id: planId })
-        .eq("id", alumnoId);
-      if (errorPlan) {
-        return {
-          error:
-            "El pago y el paquete se registraron, pero no se pudo actualizar el plan del alumno. Actualízalo manualmente.",
-        };
-      }
     }
   }
 

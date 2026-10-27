@@ -253,6 +253,9 @@ export async function crearReservaDueno(
   const perfilData = await getPerfilActual();
   if (!perfilData) redirect("/auth/login");
 
+  // Spec 16: el dueño puede reservar por encima del cupo; la base lo valida (0018).
+  const sobrecupo = trim("sobrecupo") === "1";
+
   const supabase = await createClient();
   const { error } = await supabase.from("reservas").insert({
     gimnasio_id: perfilData.perfil.gimnasio_id,
@@ -261,6 +264,7 @@ export async function crearReservaDueno(
     hora_inicio: horaInicio,
     duracion_min: duracionMin,
     creado_por: "dueño",
+    ...(sobrecupo ? { sobrecupo: true } : {}),
   });
 
   if (error) {
@@ -329,23 +333,6 @@ export async function marcarAlertaVista(id: string): Promise<void> {
 
   const supabase = await createClient();
   await supabase.from("reservas").update({ atendido_por_dueno: true }).eq("id", id);
-
-  revalidatePath("/protected/turnos");
-  revalidatePath("/protected");
-}
-
-/** Sprint 9: marca una reserva pasada como "realizada" — asistencia normal o
- * inasistencia sin aviso, ambas se cobran igual (regla del Sprint 8) y ambas
- * descuentan una clase del paquete vigente vía el trigger `consumir_clase_paquete`
- * (migración 0007). Las cancelaciones tardías ya llegan a 'realizada' solas, por el
- * trigger `reservas_before_update`; este botón cubre el resto de los casos, donde
- * nadie canceló nada. */
-export async function marcarReservaRealizada(id: string): Promise<void> {
-  const perfilData = await getPerfilActual();
-  if (!perfilData) redirect("/auth/login");
-
-  const supabase = await createClient();
-  await supabase.from("reservas").update({ estado: "realizada" }).eq("id", id);
 
   revalidatePath("/protected/turnos");
   revalidatePath("/protected");

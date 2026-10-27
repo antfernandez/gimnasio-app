@@ -63,10 +63,13 @@ export function sumarDias(fechaIso: string, dias: number): string {
   return dt.toISOString().slice(0, 10);
 }
 
-/** Domingo de la semana que contiene `fechaIso` (mismo criterio 0=domingo que
- * `diaSemanaDeFecha`). */
+/** Orden en que se muestran los días: la semana parte el lunes y el domingo queda al
+ * final (los valores siguen siendo 0 = domingo, como en `diaSemanaDeFecha`). */
+export const ORDEN_DIAS: readonly DiaSemana[] = [1, 2, 3, 4, 5, 6, 0];
+
+/** Lunes de la semana que contiene `fechaIso`. */
 export function inicioDeSemana(fechaIso: string): string {
-  return sumarDias(fechaIso, -diaSemanaDeFecha(fechaIso));
+  return sumarDias(fechaIso, -((diaSemanaDeFecha(fechaIso) + 6) % 7));
 }
 
 export function diasDeLaSemana(fechaIso: string): string[] {
@@ -84,8 +87,8 @@ export function diasDelMes(fechaIso: string): string[] {
   );
 }
 
-/** Grilla de 6 semanas (42 días) para la vista Mes, empezando el domingo previo (o
- * igual) al día 1 y terminando el sábado que cierra la última semana del mes. */
+/** Grilla de 6 semanas (42 días) para la vista Mes, empezando el lunes previo (o
+ * igual) al día 1 y terminando el domingo que cierra la última semana del mes. */
 export function grillaMes(fechaIso: string): string[] {
   const [y, m] = fechaIso.split("-").map(Number);
   const primerDia = `${y}-${String(m).padStart(2, "0")}-01`;

@@ -99,7 +99,7 @@ export default async function PlanesPage({
               Intermedio y Avanzado.
             </p>
           ) : (
-            <Table>
+            <Table className="text-[13px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
@@ -128,7 +128,7 @@ export default async function PlanesPage({
                       <TableCell>{NIVEL_LABEL[plan.nivel]}</TableCell>
                       <TableCell>{plan.dias_por_semana}</TableCell>
                       <TableCell>{plan.precio ? formatMonto(plan.precio) : "—"}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
+                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                         {formatFecha(plan.fecha_vigencia_desde)} –{" "}
                         {plan.fecha_vigencia_hasta
                           ? formatFecha(plan.fecha_vigencia_hasta)
@@ -148,7 +148,7 @@ export default async function PlanesPage({
                         </Badge>
                       </TableCell>
                       <TableCell>{alumnosPorPlan.get(plan.id) ?? 0}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="w-px whitespace-nowrap text-right">
                         <PlanAcciones
                           id={plan.id}
                           nombre={plan.nombre}

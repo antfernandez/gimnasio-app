@@ -1,9 +1,9 @@
 import Link from "next/link";
 
-import { createRegistroRutina, marcarAsistencia } from "@/app/protected/bitacora/actions";
-import { BitacoraForm } from "@/components/bitacora/bitacora-form";
+import { guardarRegistroEjercicio, marcarAsistencia } from "@/app/protected/bitacora/actions";
 import { ListaAlumnosBloque } from "@/components/bitacora/lista-alumnos-bloque";
 import { SelectorFechaHora } from "@/components/bitacora/selector-fecha-hora";
+import { SesionTabla, type RegistroGuardado } from "@/components/bitacora/sesion-tabla";
 import { ExportMenu } from "@/components/export/export-menu";
 import { Acordeon } from "@/components/ui/acordeon";
 import { RutinaCard } from "@/components/rutinas/rutina-card";
@@ -93,6 +93,7 @@ export default async function BitacoraPage({
     alumnoId && hora ? (alumnosDelBloque.find((a) => a.id === alumnoId) ?? null) : null;
 
   let rutinaActiva: Rutina | null = null;
+  const guardados: Record<number, RegistroGuardado> = {};
 
   if (alumnoSeleccionado) {
     const { data: rutina } = await supabase
@@ -102,6 +103,25 @@ export default async function BitacoraPage({
       .eq("activa", true)
       .maybeSingle();
     rutinaActiva = (rutina as Rutina | null) ?? null;
+
+    if (rutinaActiva) {
+      // Lo ya registrado ese día; si hubiera varios por ejercicio gana el más reciente.
+      const { data: registros } = await supabase
+        .from("registros_rutina")
+        .select("ejercicio_index, series_realizadas, reps_realizadas, peso_kg, notas")
+        .eq("alumno_id", alumnoSeleccionado.id)
+        .eq("rutina_id", rutinaActiva.id)
+        .eq("fecha", fecha)
+        .order("created_at", { ascending: true });
+      for (const reg of registros ?? []) {
+        guardados[reg.ejercicio_index] = {
+          series: String(reg.series_realizadas ?? ""),
+          reps: String(reg.reps_realizadas ?? ""),
+          peso: String(reg.peso_kg ?? ""),
+          notas: reg.notas ?? "",
+        };
+      }
+    }
   }
 
   return (
@@ -159,11 +179,6 @@ export default async function BitacoraPage({
       {alumnoSeleccionado && rutinaActiva && (
         <Card>
           <CardContent className="pt-6">
-            {params.bitacora === "1" && (
-              <div className="mb-4 rounded-[9px] border border-success/35 bg-success/10 px-4 py-3 text-sm text-success">
-                Sesión registrada en la bitácora.
-              </div>
-            )}
             <Acordeon
               titulo={
                 <div>
@@ -191,15 +206,17 @@ export default async function BitacoraPage({
                   Ver historial y progreso →
                 </Link>
               </div>
-              <BitacoraForm
-                action={createRegistroRutina.bind(
+              <SesionTabla
+                key={`${alumnoSeleccionado.id}-${fecha}`}
+                rutina={rutinaActiva}
+                guardar={guardarRegistroEjercicio.bind(
                   null,
                   alumnoSeleccionado.id,
                   rutinaActiva.id,
                   fecha,
-                  hora!,
                 )}
-                rutina={rutinaActiva}
+                guardados={guardados}
+                fechaFutura={fecha > hoyIso()}
               />
             </div>
           </CardContent>

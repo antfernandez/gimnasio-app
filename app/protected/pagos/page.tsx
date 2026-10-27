@@ -131,7 +131,7 @@ export default async function PagosPage({
                 : "Aún no tienes alumnos activos registrados."}
             </p>
           ) : (
-            <Table>
+            <Table className="text-[13px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Alumno</TableHead>
@@ -153,7 +153,7 @@ export default async function PagosPage({
                         {row.nombres} {row.apellidos}
                       </Link>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       {row.vencimiento_actual
                         ? formatFecha(row.vencimiento_actual)
                         : "—"}
@@ -165,8 +165,8 @@ export default async function PagosPage({
                     <TableCell>
                       {row.ultimo_metodo ? METODO_LABEL[row.ultimo_metodo] : "—"}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
+                    <TableCell className="w-px whitespace-nowrap text-right">
+                      <div className="flex items-center justify-end">
                         {(row.estado_pago === "atrasado" || row.estado_pago === "por_vencer") && (
                           <WhatsAppCobranzaButton alumno={row} />
                         )}

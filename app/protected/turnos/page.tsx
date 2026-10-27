@@ -1,10 +1,10 @@
 import Link from "next/link";
 
+import { marcarAsistencia } from "@/app/protected/bitacora/actions";
 import {
   cancelarReservaDueno,
   crearReservaDueno,
   marcarAlertaVista,
-  marcarReservaRealizada,
   reprogramarReservaDueno,
 } from "@/app/protected/turnos/actions";
 import { AlertasPendientes } from "@/components/turnos/alertas-pendientes";
@@ -120,7 +120,7 @@ export default async function TurnosPage({
             cancelarReserva={cancelarReservaDueno}
             reprogramarReserva={reprogramarReservaDueno}
             marcarVisto={marcarAlertaVista}
-            marcarRealizada={marcarReservaRealizada}
+            marcarAsistencia={marcarAsistencia}
           />
         </CardContent>
       </Card>

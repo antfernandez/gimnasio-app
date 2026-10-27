@@ -90,7 +90,15 @@ export function ListaAlumnosBloque({
             </Link>
 
             {yaTomada ? (
-              <Badge variant={a.asistencia === "ausente" ? "destructive" : "success"}>
+              <Badge
+                variant={
+                  a.asistencia === "ausente"
+                    ? "destructive"
+                    : a.asistencia === "justificado"
+                      ? "secondary"
+                      : "success"
+                }
+              >
                 {a.asistencia === "ausente"
                   ? "Ausente"
                   : a.asistencia === "justificado"
