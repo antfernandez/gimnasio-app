@@ -7,6 +7,9 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
  * cliente ni tocar tablas de negocio de un tenant (alumnos, pagos, sitios, etc.)
  * con este cliente — eso rompería el aislamiento "sin visibilidad de nada más" del
  * Superadmin (ver `supabase/migrations/0008_roles_superadmin_aprobacion.sql`).
+ * Excepción (Spec 23): el módulo Pagar plan lo usa SOLO para `solicitudes_pago` y la
+ * función `aplicar_solicitud_pago` (inserción de solicitudes con monto calculado en el
+ * servidor y confirmación desde el webhook de Mercado Pago).
  * Requiere `SUPABASE_SERVICE_ROLE_KEY` también en las variables de entorno de
  * Vercel (hoy solo confirmado en `.env.local`), o el panel de Superadmin falla en
  * producción.

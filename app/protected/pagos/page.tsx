@@ -89,7 +89,12 @@ export default async function PagosPage({
           </div>
           <h2 className="text-2xl">Pagos</h2>
         </div>
-        <ExportMenu resource="pagos" filtros={{ q, estado }} />
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href="/protected/pagos/solicitudes">Transferencias por validar</Link>
+          </Button>
+          <ExportMenu resource="pagos" filtros={{ q, estado }} />
+        </div>
       </div>
 
       <Card>

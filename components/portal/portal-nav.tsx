@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Dumbbell, LayoutDashboard } from "lucide-react";
+import { CalendarDays, CreditCard, Dumbbell, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -10,6 +10,7 @@ const items = [
   { href: "/portal", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/portal/turnos", label: "Mis turnos", icon: CalendarDays },
   { href: "/portal/bitacora", label: "Bitácora", icon: Dumbbell },
+  { href: "/portal/pagar-plan", label: "Pagar plan", icon: CreditCard },
 ];
 
 export function PortalNav() {

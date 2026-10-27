@@ -387,3 +387,35 @@ export interface DisponibilidadTurno {
   cupos: number;
   cupos_ocupados: number;
 }
+
+export type MetodoSolicitud = "mercado_pago" | "transferencia";
+export type EstadoSolicitud = "pendiente" | "confirmado" | "rechazado";
+
+export interface SolicitudPago {
+  id: string;
+  gimnasio_id: string;
+  flujo: "alumno" | "suscripcion";
+  alumno_id: string | null;
+  plan_id: string | null;
+  plan_sistema_id: string | null;
+  meses: number;
+  monto: number;
+  metodo: MetodoSolicitud;
+  estado: EstadoSolicitud;
+  comprobante_path: string | null;
+  fecha_transferencia: string | null;
+  nota: string | null;
+  motivo_rechazo: string | null;
+  created_at: string;
+}
+
+export interface CuentaTransferencia {
+  id: string;
+  gimnasio_id: string | null;
+  banco: string;
+  tipo_cuenta: string;
+  numero_cuenta: string;
+  titular: string;
+  rut_titular: string;
+  email_contacto: string | null;
+}
