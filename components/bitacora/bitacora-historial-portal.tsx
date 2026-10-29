@@ -2,71 +2,50 @@
 
 import { useMemo, useState } from "react";
 
-import { Acordeon } from "@/components/ui/acordeon";
+import { SesionDetalleDialog } from "@/components/bitacora/sesion-detalle-dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PaginadorLocal } from "@/components/ui/paginador-local";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { formatFecha } from "@/lib/format";
 import { cortarPagina } from "@/lib/paginacion";
-import type { RegistroRutina } from "@/lib/types";
+import { agruparSesiones, detalleSesion, textoRealizado } from "@/lib/progreso";
+import type { RegistroRutina, Rutina } from "@/lib/types";
 
 type Props = {
   registros: RegistroRutina[];
-  /** Nombre de cada rutina por id. */
-  rutinas: Record<string, string>;
+  rutinas: Rutina[];
 };
 
-type Sesion = {
-  clave: string;
-  fecha: string;
-  rutinaId: string;
-  rutina: string;
-  filas: RegistroRutina[];
-};
-
-function realizado(r: RegistroRutina): string {
-  if (!r.series_realizadas && !r.reps_realizadas && !r.peso_kg) return "—";
-  const base = `${r.series_realizadas ?? "—"} × ${r.reps_realizadas ?? "—"}`;
-  return r.peso_kg ? `${base} · ${r.peso_kg} kg` : base;
-}
-
-/** Spec 33: historial del alumno resumido por sesión (rutina + fecha), con filtros de
- * rango de fechas y rutina; el detalle de ejercicios se abre en un acordeón. */
+/** Spec 42: historial del alumno como grilla por sesión (rutina + fecha), con filtros de
+ * fechas y rutina, paginador de 10 y un ojo que abre el detalle en una ventana flotante. */
 export function BitacoraHistorialPortal({ registros, rutinas }: Props) {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [rutinaId, setRutinaId] = useState("");
   const [pagina, setPagina] = useState(1);
 
-  const sesiones = useMemo(() => {
-    const mapa = new Map<string, Sesion>();
-    for (const r of registros) {
-      const clave = `${r.fecha}|${r.rutina_id}`;
-      const s = mapa.get(clave) ?? {
-        clave,
-        fecha: r.fecha,
-        rutinaId: r.rutina_id,
-        rutina: rutinas[r.rutina_id] ?? "Rutina",
-        filas: [],
-      };
-      s.filas.push(r);
-      mapa.set(clave, s);
-    }
-    return [...mapa.values()]
-      .map((s) => ({
-        ...s,
-        filas: s.filas.sort((a, b) => a.ejercicio_index - b.ejercicio_index),
-      }))
-      .sort((a, b) => b.fecha.localeCompare(a.fecha));
-  }, [registros, rutinas]);
+  const sesiones = useMemo(() => agruparSesiones(registros, rutinas), [registros, rutinas]);
+  const rutinaPorId = useMemo(() => new Map(rutinas.map((r) => [r.id, r])), [rutinas]);
 
   const visibles = sesiones.filter(
     (s) =>
       (!desde || s.fecha >= desde) &&
       (!hasta || s.fecha <= hasta) &&
-      (!rutinaId || s.rutinaId === rutinaId),
+      (!rutinaId || s.registros[0]?.rutina_id === rutinaId),
   );
 
-  const opcionesRutina = [...new Set(sesiones.map((s) => s.rutinaId))];
+  const opcionesRutina = [...new Set(sesiones.map((s) => s.registros[0]?.rutina_id))].filter(
+    (id): id is string => !!id,
+  );
+  const hayFiltros = desde || hasta || rutinaId;
 
   if (sesiones.length === 0) {
     return (
@@ -116,42 +95,60 @@ export function BitacoraHistorialPortal({ registros, rutinas }: Props) {
             <option value="">Todas</option>
             {opcionesRutina.map((id) => (
               <option key={id} value={id}>
-                {rutinas[id] ?? "Rutina"}
+                {rutinaPorId.get(id)?.nombre ?? "Rutina"}
               </option>
             ))}
           </select>
         </label>
       </div>
+      {hayFiltros && (
+        <div>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setDesde("");
+              setHasta("");
+              setRutinaId("");
+              setPagina(1);
+            }}
+          >
+            Limpiar
+          </Button>
+        </div>
+      )}
 
       {visibles.length === 0 ? (
         <p className="py-4 text-center text-sm text-muted-foreground">
           No hay sesiones con esos filtros.
         </p>
       ) : (
-        <div className="flex flex-col gap-2">
-          {cortarPagina(visibles, pagina).map((s) => (
-            <div key={s.clave} className="rounded-[9px] border border-border px-3.5 py-1">
-              <Acordeon
-                titulo={
-                  <div className="flex min-h-11 flex-col justify-center">
-                    <span className="font-medium text-foreground">{s.rutina}</span>
-                    <span className="text-xs text-muted-foreground">{formatFecha(s.fecha)}</span>
-                  </div>
-                }
-              >
-                <ul className="flex flex-col divide-y divide-border/60 pb-3">
-                  {s.filas.map((r) => (
-                    <li key={r.id} className="py-2 text-sm">
-                      <div className="font-medium text-foreground">{r.ejercicio}</div>
-                      <div className="text-muted-foreground">{realizado(r)}</div>
-                      {r.notas && <div className="text-xs text-muted-foreground">{r.notas}</div>}
-                    </li>
-                  ))}
-                </ul>
-              </Acordeon>
-            </div>
-          ))}
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Sesión</TableHead>
+              <TableHead className="text-right">Ejercicios</TableHead>
+              <TableHead className="w-10" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {cortarPagina(visibles, pagina).map((s) => (
+              <TableRow key={s.clave}>
+                <TableCell>
+                  <div className="font-medium text-foreground">{s.rutinaNombre}</div>
+                  <div className="text-xs text-muted-foreground">{formatFecha(s.fecha)}</div>
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-right">
+                  {s.registros.filter((r) => textoRealizado(r) !== "—").length}/{s.registros.length}
+                </TableCell>
+                <TableCell className="px-0">
+                  <SesionDetalleDialog
+                    detalle={detalleSesion(s, rutinaPorId.get(s.registros[0].rutina_id))}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
 
       <PaginadorLocal pagina={pagina} total={visibles.length} onCambiar={setPagina} />

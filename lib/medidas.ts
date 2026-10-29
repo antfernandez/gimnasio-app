@@ -28,7 +28,7 @@ const CAMPOS_MEDIDA_ANTIGUOS = [
 /** Pares etiqueta/valor de las medidas cargadas, incluidas las claves antiguas. */
 export function listarMedidas(medidas: MedidasAvance): { etiqueta: string; valor: number }[] {
   return [...CAMPOS_MEDIDA, ...CAMPOS_MEDIDA_ANTIGUOS]
-    .filter((m) => medidas[m.campo])
+    .filter((m) => medidas[m.campo] != null)
     .map((m) => ({ etiqueta: m.etiqueta, valor: medidas[m.campo]! }));
 }
 

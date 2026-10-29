@@ -145,11 +145,11 @@ export default async function RutinasPage({
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead>Ejercicios</TableHead>
-                  <TableHead>Alumnos</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
+                  <TableHead className="w-px whitespace-nowrap">Categoría</TableHead>
+                  <TableHead className="w-px whitespace-nowrap">Ejercicios</TableHead>
+                  <TableHead className="w-px whitespace-nowrap">Alumnos</TableHead>
+                  <TableHead className="w-px whitespace-nowrap">Estado</TableHead>
+                  <TableHead className="w-px whitespace-nowrap text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -158,17 +158,17 @@ export default async function RutinasPage({
                   const asignados = asignadosPorRutina.get(plantilla.id) ?? 0;
                   return (
                   <TableRow key={plantilla.id} className={deBaja ? "opacity-60" : ""}>
-                    <TableCell className="font-medium text-foreground">
+                    <TableCell className="max-w-[320px] truncate font-medium text-foreground" title={plantilla.nombre}>
                       {plantilla.nombre}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <Badge variant="secondary">
                         {CATEGORIA_LABEL[plantilla.categoria]}
                       </Badge>
                     </TableCell>
                     <TableCell>{plantilla.contenido.length}</TableCell>
                     <TableCell>{asignados}</TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <Badge variant={deBaja ? "secondary" : "success"}>
                         {deBaja ? "De baja" : "Activa"}
                       </Badge>

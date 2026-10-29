@@ -1,9 +1,7 @@
 import Link from "next/link";
 
-import { LineChart } from "@/components/charts/line-chart";
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
 import { ContactoForm } from "@/components/portal/contacto-form";
-import { TablaAvances } from "@/components/portal/tabla-avances";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { getAlumnoActual } from "@/lib/alumno-portal";
@@ -275,38 +273,6 @@ export default async function PortalPage() {
           <ContactoForm alumno={alumno} />
         </CardContent>
       </Card>
-
-      {alumno.medicion_corporal_habilitada && (
-      <Card>
-        <CardContent className="pt-6">
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Mis avances
-          </h3>
-          {historialAvances.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              {alumno.puede_registrar_avances
-                ? "Aún no tienes avances registrados."
-                : "Tu entrenador aún no registró avances para ti."}
-            </p>
-          ) : (
-            <details>
-              <summary className="cursor-pointer text-xs text-muted-foreground hover:text-primary">
-                Ver detalle completo ({historialAvances.length})
-              </summary>
-              <div className="mt-4 mb-6">
-                <LineChart
-                  data={historialAvances
-                    .filter((av) => av.peso_kg != null)
-                    .map((av) => ({ x: av.fecha, y: av.peso_kg! }))}
-                  unidad=" kg"
-                />
-              </div>
-              <TablaAvances avances={historialAvances} />
-            </details>
-          )}
-        </CardContent>
-      </Card>
-      )}
       </div>
     </div>
   );

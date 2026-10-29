@@ -97,6 +97,13 @@ export default async function AlumnosPage({
     .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
     .eq("estado_aprobacion", "pendiente");
 
+  // Spec 44: acceso fijo a la bandeja de cambios de plan, con contador de pendientes.
+  const { count: cambiosPlanCount } = await supabase
+    .from("solicitudes_cambio_plan")
+    .select("*", { count: "exact", head: true })
+    .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
+    .eq("estado", "pendiente");
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -115,6 +122,15 @@ export default async function AlumnosPage({
               {pendientesCount} pendiente{pendientesCount === 1 ? "" : "s"} de aprobación
             </Link>
           )}
+          <Link
+            href={`/protected/alumnos/cambios-plan${cambiosPlanCount ? "?estado=pendiente" : ""}`}
+            className="flex items-center gap-1.5 rounded-full border border-border px-3.5 py-1.5 text-xs font-semibold text-secondary-foreground hover:bg-primary/10"
+          >
+            Cambios de plan
+            {!!cambiosPlanCount && (
+              <span className="rounded-full bg-primary px-1.5 text-primary-foreground">{cambiosPlanCount}</span>
+            )}
+          </Link>
           <ExportMenu resource="alumnos" />
           {perfilData.perfil.rol === "dueño" && (
             <Button asChild variant="outline" size="lg">

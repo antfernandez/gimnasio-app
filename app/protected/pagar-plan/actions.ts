@@ -12,7 +12,7 @@ import {
   COMPROBANTE_MIME,
   esMesesValido,
 } from "@/lib/pagar-plan";
-import { calcularMontoSuscripcion, planSistemaPorNombre } from "@/lib/planes-sistema";
+import { calcularMontoSuscripcion, planSistemaPorId } from "@/lib/planes-sistema";
 import { getPerfilActual } from "@/lib/perfil";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -51,19 +51,11 @@ export async function iniciarPagoSuscripcion(
     const { data } = await supabase.rpc("plan_sistema_requerido", { p_gimnasio_id: gimnasioId });
     planId = (data as string | null) ?? null;
   }
-  const { data: plan } = planId
-    ? await supabase
-        .from("planes_sistema")
-        .select("nombre, precio_mensual")
-        .eq("id", planId)
-        .maybeSingle()
-    : { data: null };
+  const plan = planId ? await planSistemaPorId(supabase, planId) : null;
   if (!planId || !plan) return { error: "No hay un plan del sistema disponible." };
 
-  // El monto (con IVA) lo calcula el servidor desde la definición de planes.
-  const def = planSistemaPorNombre(plan.nombre);
-  if (!def) return { error: "No hay un plan del sistema disponible." };
-  const monto = calcularMontoSuscripcion(def.precioNeto, meses);
+  // El monto (con IVA) lo calcula el servidor desde la fila del plan en la BD.
+  const monto = calcularMontoSuscripcion(plan.precioNeto, meses, plan.ivaPct);
 
   const admin = createAdminClient();
   const base = {

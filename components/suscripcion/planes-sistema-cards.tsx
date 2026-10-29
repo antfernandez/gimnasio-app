@@ -7,41 +7,41 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatMonto } from "@/lib/format";
-import {
-  FUNCIONES_SISTEMA,
-  FUNCIONES_VISIBLES,
-  PLANES_SISTEMA,
-} from "@/lib/planes-sistema";
+import { FUNCIONES_VISIBLES, type PlanSistema } from "@/lib/planes-sistema";
 import { cn } from "@/lib/utils";
 
 export function PlanesSistemaCards({
+  planes,
   planActual,
   alumnosActivos,
 }: {
+  planes: PlanSistema[];
   planActual: string | null;
   alumnosActivos: number | null;
 }) {
   const [expandido, setExpandido] = useState(false);
-  const funciones = expandido ? FUNCIONES_SISTEMA : FUNCIONES_SISTEMA.slice(0, FUNCIONES_VISIBLES);
+  // Las funciones son las mismas en todos los planes; se toman del primero.
+  const todas = planes[0]?.caracteristicas ?? [];
+  const funciones = expandido ? todas : todas.slice(0, FUNCIONES_VISIBLES);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 md:grid-cols-3">
-        {PLANES_SISTEMA.map((p) => {
+        {planes.map((p) => {
           const actual = p.nombre === planActual;
           return (
-            <Card key={p.nombre} className={cn(actual && "border-2 border-primary")}>
+            <Card key={p.id} className={cn(actual && "border-2 border-primary")}>
               <CardContent className="flex flex-col gap-1 py-5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-lg font-semibold">{p.nombre}</div>
                   {actual && <Badge variant="success">Plan actual</Badge>}
                 </div>
-                <div className="text-sm text-muted-foreground">Hasta {p.maxAlumnos} alumnos</div>
+                <div className="text-sm text-muted-foreground">{p.maxAlumnos === null ? "Alumnos sin tope" : `Hasta ${p.maxAlumnos} alumnos`}</div>
                 <div className="mt-2 text-2xl font-bold">{formatMonto(p.precioNeto)}</div>
-                <div className="text-xs text-muted-foreground">+ IVA por mes</div>
+                <div className="text-xs text-muted-foreground">+ IVA ({p.ivaPct}%) por mes</div>
                 {actual && alumnosActivos !== null && (
                   <div className="mt-2 text-xs text-muted-foreground">
-                    {alumnosActivos} de {p.maxAlumnos} alumnos activos
+                    {alumnosActivos} de {p.maxAlumnos ?? "∞"} alumnos activos
                   </div>
                 )}
               </CardContent>
@@ -63,6 +63,7 @@ export function PlanesSistemaCards({
               </li>
             ))}
           </ul>
+          {todas.length > FUNCIONES_VISIBLES && (
           <Button
             type="button"
             variant="link"
@@ -71,6 +72,7 @@ export function PlanesSistemaCards({
           >
             {expandido ? "− funciones" : "+ funciones"}
           </Button>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -423,6 +423,22 @@ export interface SolicitudPago {
   created_at: string;
 }
 
+export type EstadoCambioPlan = "pendiente" | "aprobada" | "rechazada" | "cancelada" | "aplicada";
+
+export interface SolicitudCambioPlan {
+  id: string;
+  gimnasio_id: string;
+  alumno_id: string;
+  plan_actual_id: string | null;
+  plan_nuevo_id: string;
+  nota: string | null;
+  estado: EstadoCambioPlan;
+  aplica_desde: string | null;
+  resuelta_at: string | null;
+  aplicada_at: string | null;
+  created_at: string;
+}
+
 export interface CuentaTransferencia {
   id: string;
   gimnasio_id: string | null;

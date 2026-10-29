@@ -8,7 +8,7 @@ import { buildFilasRegistroRutina } from "@/lib/bitacora";
 import { createClient } from "@/lib/supabase/server";
 import type { GuardarEjercicioInput, GuardarEjercicioResult } from "@/app/protected/bitacora/actions";
 import { hoyIso, inicioDeSemana, sumarDias } from "@/lib/turnos";
-import type { MedidasAvance, Rutina } from "@/lib/types";
+import type { Rutina } from "@/lib/types";
 
 export type ContactoFormState = {
   error?: string;
@@ -37,86 +37,6 @@ export async function updateContactoAlumno(
 
   revalidatePath("/portal");
   return { ok: true };
-}
-
-export type AvanceFormState = {
-  error?: string;
-};
-
-const CAMPOS_MEDIDA: (keyof MedidasAvance)[] = [
-  "cintura_cm",
-  "cadera_cm",
-  "pecho_cm",
-  "cuello_cm",
-  "brazo_izq_cm",
-  "brazo_der_cm",
-  "muslo_izq_cm",
-  "muslo_der_cm",
-  "pantorrilla_izq_cm",
-  "pantorrilla_der_cm",
-];
-
-function readMedidas(formData: FormData): MedidasAvance {
-  const medidas: MedidasAvance = {};
-  for (const campo of CAMPOS_MEDIDA) {
-    const raw = String(formData.get(campo) ?? "").trim();
-    if (!raw) continue;
-    const valor = Number(raw);
-    if (Number.isFinite(valor) && valor > 0) medidas[campo] = valor;
-  }
-  return medidas;
-}
-
-export async function createAvancePropio(
-  _prevState: AvanceFormState,
-  formData: FormData,
-): Promise<AvanceFormState> {
-  const trim = (key: string) => String(formData.get(key) ?? "").trim();
-
-  const fecha = trim("fecha");
-  if (!fecha) {
-    return { error: "Selecciona una fecha." };
-  }
-
-  const pesoInput = trim("peso_kg");
-  let pesoKg: number | null = null;
-  if (pesoInput) {
-    pesoKg = Number(pesoInput);
-    if (!Number.isFinite(pesoKg) || pesoKg <= 0) {
-      return { error: "Ingresa un peso válido." };
-    }
-  }
-
-  const medidas = readMedidas(formData);
-  const notas = trim("notas") || null;
-
-  if (pesoKg === null && Object.keys(medidas).length === 0 && !notas) {
-    return { error: "Registra al menos el peso, una medida o una nota." };
-  }
-
-  const alumno = await getAlumnoActual();
-  if (!alumno) redirect("/auth/login");
-  if (!alumno.puede_registrar_avances) {
-    return { error: "Tu entrenador aún no habilitó el registro de avances propios." };
-  }
-
-  const supabase = await createClient();
-  const { error } = await supabase.from("avances").insert({
-    gimnasio_id: alumno.gimnasio_id,
-    alumno_id: alumno.id,
-    fecha,
-    peso_kg: pesoKg,
-    medidas,
-    notas,
-  });
-
-  if (error) {
-    return { error: "No se pudo registrar el avance. Intenta de nuevo." };
-  }
-
-  revalidatePath("/portal");
-  revalidatePath("/portal/bitacora");
-  return {};
 }
 
 export type BitacoraFormState = {

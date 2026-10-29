@@ -50,7 +50,10 @@ export default async function PortalLayout({
               <LogoutButton />
             </div>
           </div>
-          <PortalNav nutricion={alumno.plan_nutricional_habilitado} />
+          <PortalNav
+            nutricion={alumno.plan_nutricional_habilitado}
+            medicionCorporal={alumno.medicion_corporal_habilitada}
+          />
         </div>
       </aside>
 

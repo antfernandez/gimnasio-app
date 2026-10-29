@@ -31,14 +31,15 @@ export function RutinaAcciones({
     <div className="flex flex-col items-end gap-1">
       <div className="flex justify-end gap-1">
         {bloqueada ? (
-          <IconAction icon={Pencil} label={`No se puede editar: ${motivo}`} disabled />
+          <IconAction icon={Pencil} label={`No se puede editar: ${motivo}`} disabled tooltipDerecha />
         ) : (
-          <IconAction icon={Pencil} label="Editar" href={`/protected/rutinas/${id}`} />
+          <IconAction icon={Pencil} label="Editar" href={`/protected/rutinas/${id}`} tooltipDerecha />
         )}
         {deBaja ? (
           <IconAction
             icon={ArchiveRestore}
             label="Reactivar"
+            tooltipDerecha
             disabled={isPending}
             onClick={() =>
               startTransition(async () => {
@@ -52,6 +53,7 @@ export function RutinaAcciones({
             icon={ArchiveX}
             label={bloqueada ? `No se puede dar de baja: ${motivo}` : "Dar de baja"}
             disabled={bloqueada || isPending}
+            tooltipDerecha
             onClick={() => setConfirmando(true)}
           />
         )}

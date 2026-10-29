@@ -1,5 +1,4 @@
-import { createAvancePropio, guardarRegistroEjercicioPropio } from "@/app/portal/actions";
-import { AvanceForm } from "@/components/avances/avance-form";
+import { guardarRegistroEjercicioPropio } from "@/app/portal/actions";
 import { BitacoraHistorialPortal } from "@/components/bitacora/bitacora-historial-portal";
 import { SesionTabla, type RegistroGuardado } from "@/components/bitacora/sesion-tabla";
 import { ResumenEvolucionRutina } from "@/components/bitacora/resumen-evolucion-rutina";
@@ -52,7 +51,6 @@ export default async function PortalBitacoraPage() {
   const listaRutinas = (rutinas ?? []) as Rutina[];
   const rutinaActiva = listaRutinas.find((r) => r.activa);
   const listaRegistros = (registros ?? []) as RegistroRutina[];
-  const nombresRutina = Object.fromEntries(listaRutinas.map((r) => [r.id, r.nombre]));
 
   // Ejercicios ya guardados hoy en la rutina vigente (Spec 33: guardado fila por fila).
   const hoy = hoyIso();
@@ -104,17 +102,6 @@ export default async function PortalBitacoraPage() {
         </Card>
       )}
 
-      {alumno.medicion_corporal_habilitada && alumno.puede_registrar_avances && (
-        <Card>
-          <CardContent className="pt-6">
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Registrar un avance corporal
-            </h3>
-            <AvanceForm action={createAvancePropio} />
-          </CardContent>
-        </Card>
-      )}
-
       <Card>
         <CardContent className="pt-6">
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -125,7 +112,7 @@ export default async function PortalBitacoraPage() {
               Tu entrenador aún no registró sesiones de bitácora para ti.
             </p>
           ) : (
-            <BitacoraHistorialPortal registros={listaRegistros} rutinas={nombresRutina} />
+            <BitacoraHistorialPortal registros={listaRegistros} rutinas={listaRutinas} />
           )}
         </CardContent>
       </Card>

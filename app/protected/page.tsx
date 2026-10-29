@@ -146,6 +146,7 @@ export default async function DashboardPage() {
     { data: pagos6Meses },
     { count: altasMes },
     { count: alumnosEnBaja },
+    { count: cambiosPlanPendientes },
   ] = await Promise.all([
     supabase.from("horarios_disponibles").select("*").eq("gimnasio_id", gimnasioId),
     supabase
@@ -184,6 +185,12 @@ export default async function DashboardPage() {
       .select("*", { count: "exact", head: true })
       .eq("gimnasio_id", gimnasioId)
       .eq("activo", false),
+    // Spec 44: solicitudes de cambio de plan por resolver.
+    supabase
+      .from("solicitudes_cambio_plan")
+      .select("*", { count: "exact", head: true })
+      .eq("gimnasio_id", gimnasioId)
+      .eq("estado", "pendiente"),
   ]);
 
   const listaHorarios = (horarios ?? []) as HorarioDisponible[];
@@ -258,6 +265,15 @@ export default async function DashboardPage() {
         </div>
         <h2 className="text-2xl">Dashboard</h2>
       </div>
+
+      {!!cambiosPlanPendientes && (
+        <Link
+          href="/protected/alumnos/cambios-plan?estado=pendiente"
+          className="w-fit rounded-full border border-primary/40 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-secondary-foreground hover:bg-primary/20"
+        >
+          {cambiosPlanPendientes} solicitud{cambiosPlanPendientes === 1 ? "" : "es"} de cambio de plan por resolver
+        </Link>
+      )}
 
       {/* Fila 1 — indicadores */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

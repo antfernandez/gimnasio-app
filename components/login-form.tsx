@@ -125,19 +125,20 @@ export function LoginForm({
   };
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <BrandMark className="mx-auto" />
+    <div className={cn("flex flex-col gap-6 sm:-mx-8", className)} {...props}>
+      <BrandMark grande className="mx-auto" />
       <Card>
-        <CardContent className="pt-8">
-          <h1 className="mb-1 text-center text-xl">{copy.titulo}</h1>
-          <p className="mb-7 text-center text-sm text-muted-foreground">
+        <CardContent className="px-6 pb-7 pt-8 sm:px-8">
+          <h1 className="mb-1.5 text-center text-[1.375rem]">{copy.titulo}</h1>
+          <p className="mb-7 text-center text-[0.95rem] text-muted-foreground">
             {copy.subtitulo}
           </p>
           <form onSubmit={handleLogin}>
             <div className="flex flex-col gap-5">
               <div className="grid gap-2">
-                <Label htmlFor="email">Correo electrónico</Label>
+                <Label htmlFor="email" className="text-sm">Correo electrónico</Label>
                 <Input
+                  className="h-11 text-[0.95rem]"
                   id="email"
                   type="email"
                   placeholder="tu@correo.cl"
@@ -148,15 +149,16 @@ export function LoginForm({
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Contraseña</Label>
+                  <Label htmlFor="password" className="text-sm">Contraseña</Label>
                   <Link
                     href="/auth/forgot-password"
-                    className="text-xs text-muted-foreground underline-offset-4 hover:text-primary hover:underline"
+                    className="text-sm text-muted-foreground underline-offset-4 hover:text-primary hover:underline"
                   >
                     ¿Olvidaste tu contraseña?
                   </Link>
                 </div>
                 <Input
+                  className="h-11 text-[0.95rem]"
                   id="password"
                   type="password"
                   required
@@ -164,13 +166,13 @@ export function LoginForm({
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
-              <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
+              {error && <p className="text-[0.95rem] text-destructive">{error}</p>}
+              <Button type="submit" size="lg" className="h-11 w-full text-[0.95rem]" disabled={isLoading}>
                 {isLoading ? "Ingresando…" : "Ingresar"}
               </Button>
             </div>
             {tipo === "alumno" && (
-              <p className="mt-6 text-center text-sm text-muted-foreground">
+              <p className="mt-6 text-center text-[0.95rem] text-muted-foreground">
                 ¿Aún no tienes cuenta?{" "}
                 <Link
                   href="/auth/sign-up/alumno"
@@ -181,11 +183,11 @@ export function LoginForm({
               </p>
             )}
             {tipo === "dueno" && (
-              <p className="mt-6 text-center text-sm text-muted-foreground">
+              <p className="mt-6 text-center text-[0.95rem] text-muted-foreground">
                 Las cuentas de dueño/a las crea el equipo de Valinor.
               </p>
             )}
-            <p className="mt-3 text-center text-sm text-muted-foreground">
+            <p className="mt-3 text-center text-[0.95rem] text-muted-foreground">
               <Link
                 href="/auth/login"
                 className="underline underline-offset-4 hover:text-primary"

@@ -9,14 +9,16 @@ import { hoyIso } from "@/lib/turnos";
 import type { Asistencia, Rutina } from "@/lib/types";
 
 /** Asistencia de una reserva (Spec 16; Bitácora y Turnos usan esta misma acción):
- * - "presente": camino feliz, la clase queda realizada y se descuenta del paquete.
+ * - "presente": la clase queda realizada y se descuenta del paquete.
  * - "ausente": no fue; la clase **se cuenta como realizada** (`estado` pasa a
  *   'realizada', lo que dispara `consumir_clase_paquete`, migración 0007) y ya no se
  *   puede reprogramar.
  * - "justificado": no fue, pero la clase **no** se cuenta; `estado` sigue en
  *   'reservada' (no dispara el trigger) y el saldo del paquete queda intacto.
- * La fecha de la clase queda siempre en la propia reserva. Una reserva ya 'realizada'
- * no se vuelve a marcar (evita descontar dos veces o revertir una clase consumida). */
+ * Spec 40: una reserva ya 'realizada' con asistencia presente/ausente se puede corregir
+ * entre esos dos valores. Solo cambia `asistencia`: `estado` no se toca, así que el
+ * trigger de consumo (que exige la transición a 'realizada') no vuelve a descontar.
+ * Cualquier otro cambio sobre una reserva realizada se ignora. */
 export async function marcarAsistencia(
   reservaId: string,
   asistencia: Asistencia,
@@ -25,14 +27,29 @@ export async function marcarAsistencia(
   if (!perfilData) redirect("/auth/login");
 
   const supabase = await createClient();
-  const update: { asistencia: Asistencia; estado?: "realizada" } = { asistencia };
-  if (asistencia !== "justificado") update.estado = "realizada";
-
-  await supabase
+  const { data: reserva } = await supabase
     .from("reservas")
-    .update(update)
+    .select("estado, asistencia")
     .eq("id", reservaId)
-    .eq("estado", "reservada");
+    .maybeSingle();
+
+  if (reserva?.estado === "reservada") {
+    const update: { asistencia: Asistencia; estado?: "realizada" } = { asistencia };
+    if (asistencia !== "justificado") update.estado = "realizada";
+    await supabase.from("reservas").update(update).eq("id", reservaId).eq("estado", "reservada");
+  } else if (
+    reserva?.estado === "realizada" &&
+    (reserva.asistencia === "presente" || reserva.asistencia === "ausente") &&
+    (asistencia === "presente" || asistencia === "ausente") &&
+    asistencia !== reserva.asistencia
+  ) {
+    await supabase
+      .from("reservas")
+      .update({ asistencia })
+      .eq("id", reservaId)
+      .eq("estado", "realizada")
+      .eq("asistencia", reserva.asistencia);
+  }
 
   revalidatePath("/protected/bitacora");
   revalidatePath("/protected");

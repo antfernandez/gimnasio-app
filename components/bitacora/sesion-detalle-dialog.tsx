@@ -36,28 +36,20 @@ export function SesionDetalleDialog({ detalle }: { detalle: DetalleSesion }) {
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <th className="py-2 pr-3 font-medium">Ejercicio</th>
-                <th className="py-2 pr-3 font-medium">Rutina</th>
-                <th className="py-2 pr-3 font-medium">Registro</th>
-                <th className="py-2 font-medium">Notas</th>
-              </tr>
-            </thead>
-            <tbody>
-              {detalle.filas.map((f, i) => (
-                <tr key={i} className="border-b border-border/60 last:border-0">
-                  <td className="py-2 pr-3 font-medium text-foreground">{f.ejercicio}</td>
-                  <td className="py-2 pr-3 text-muted-foreground">{f.planificado}</td>
-                  <td className="py-2 pr-3">{f.realizado}</td>
-                  <td className="py-2 text-muted-foreground">{f.notas || "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ul className="flex max-h-[70vh] flex-col divide-y divide-border/60 overflow-y-auto text-sm">
+          {detalle.filas.map((f, i) => (
+            <li key={i} className="py-2">
+              <div className="font-medium text-foreground">{f.ejercicio}</div>
+              <div className="flex flex-wrap gap-x-4 text-xs text-muted-foreground">
+                <span>Rutina: {f.planificado}</span>
+                <span>
+                  Registro: <span className="text-foreground">{f.realizado}</span>
+                </span>
+              </div>
+              {f.notas && <div className="text-xs text-muted-foreground">{f.notas}</div>}
+            </li>
+          ))}
+        </ul>
       </dialog>
     </>
   );

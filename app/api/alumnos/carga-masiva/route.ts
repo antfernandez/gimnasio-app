@@ -47,7 +47,12 @@ export async function POST(request: NextRequest) {
   const [planes, { data: alumnos }, { data: tramos }, { count: activos }] = await Promise.all([
     planesVigentes(supabase, gimnasioId, hoy),
     supabase.from("alumnos").select("rut, email").eq("gimnasio_id", gimnasioId),
-    supabase.from("planes_sistema").select("max_alumnos").eq("activo", true),
+    supabase
+      .from("planes_sistema")
+      .select("max_alumnos")
+      .eq("activo", true)
+      .lte("vigente_desde", hoy)
+      .or(`vigente_hasta.is.null,vigente_hasta.gte.${hoy}`),
     supabase
       .from("alumnos")
       .select("id", { count: "exact", head: true })

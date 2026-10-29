@@ -1,4 +1,3 @@
-import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
 import { iniciarPago } from "@/app/portal/pagar-plan/actions";
 import { PlanesGimnasioCards } from "@/components/portal/planes-gimnasio-cards";
 import { PagoSuscripcionForm } from "@/components/suscripcion/pago-suscripcion-form";
@@ -19,13 +18,16 @@ import { getAlumnoActual } from "@/lib/alumno-portal";
 import { formatFecha, formatMonto } from "@/lib/format";
 import { leerPagina, rangoPagina } from "@/lib/paginacion";
 import { ESTADO_SOLICITUD_LABEL } from "@/lib/pagar-plan";
+import { estadoPlan } from "@/lib/planes";
 import { tokenValinor } from "@/lib/mercadopago";
 import { createClient } from "@/lib/supabase/server";
 import { hoyIso } from "@/lib/turnos";
+import { ESTADO_CAMBIO_PLAN_LABEL, ESTADO_CAMBIO_PLAN_VARIANTE } from "@/lib/cambio-plan";
 import type {
   CuentaTransferencia,
   EstadoPago,
   Plan,
+  SolicitudCambioPlan,
   SolicitudPago,
 } from "@/lib/types";
 
@@ -49,7 +51,7 @@ export default async function PagarPlanPage({
   if (!alumno) return null; // el layout ya redirige a /auth/login
 
   const supabase = await createClient();
-  const [{ data: plan }, { data: estado }, { data: gimnasio }, { data: cuenta }, { data: solicitudes, count: totalSolicitudes }, { data: planesGimnasio }] =
+  const [{ data: plan }, { data: estado }, { data: gimnasio }, { data: cuenta }, { data: solicitudes, count: totalSolicitudes }, { data: planesGimnasio }, { data: cambios }] =
     await Promise.all([
       alumno.plan_id
         ? supabase.from("planes").select("*").eq("id", alumno.plan_id).maybeSingle()
@@ -82,11 +84,22 @@ export default async function PagarPlanPage({
         .from("planes")
         .select("*")
         .eq("gimnasio_id", alumno.gimnasio_id)
-        .is("fecha_vigencia_hasta", null)
         .order("precio", { ascending: true }),
+      supabase
+        .from("solicitudes_cambio_plan")
+        .select("*")
+        .eq("alumno_id", alumno.id)
+        .order("created_at", { ascending: false })
+        .limit(5),
     ]);
 
   const planActual = plan as Plan | null;
+  const hoy = hoyIso();
+  const planesVigentes = ((planesGimnasio ?? []) as Plan[]).filter((p) => estadoPlan(p, hoy) === "vigente");
+  const cambiosPlan = (cambios ?? []) as SolicitudCambioPlan[];
+  const abierta = cambiosPlan.find((c) => c.estado === "pendiente" || c.estado === "aprobada") ?? null;
+  const ultimaResuelta = cambiosPlan.find((c) => c.estado === "rechazada" || c.estado === "aplicada") ?? null;
+  const nombrePlan = (id: string) => ((planesGimnasio ?? []) as Plan[]).find((x) => x.id === id)?.nombre ?? "otro plan";
   const estadoPago = estado as { estado_pago: EstadoPago; vencimiento_actual: string | null } | null;
   const historial = (solicitudes ?? []) as SolicitudPago[];
   const puedePagar =
@@ -111,29 +124,38 @@ export default async function PagarPlanPage({
       )}
 
       <PlanesGimnasioCards
-        planes={(planesGimnasio ?? []) as Plan[]}
+        planes={planesVigentes}
         planActualId={alumno.plan_id}
+        abierta={abierta}
+        puedeSolicitar={alumno.estado_aprobacion === "aprobado"}
+        estadoPago={estadoPago?.estado_pago ?? null}
+        vencimiento={estadoPago?.vencimiento_actual ?? null}
       />
 
-      <Card>
-        <CardContent className="flex flex-wrap items-center justify-between gap-4 py-5">
-          <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Plan contratado</div>
-            <div className="text-lg font-semibold">{planActual?.nombre ?? "Sin plan asignado"}</div>
-            {planActual?.precio ? (
-              <div className="text-sm text-muted-foreground">{formatMonto(Number(planActual.precio))} por mes</div>
-            ) : null}
-          </div>
-          <div className="text-right">
-            {estadoPago && <EstadoPagoBadge estado={estadoPago.estado_pago} />}
-            {estadoPago?.vencimiento_actual && (
-              <div className="mt-1 text-xs text-muted-foreground">
-                Vence el {formatFecha(estadoPago.vencimiento_actual)}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {(abierta ?? ultimaResuelta) && (
+        <Card>
+          <CardContent className="py-4 text-sm">
+            {(() => {
+              const c = (abierta ?? ultimaResuelta)!;
+              return (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span>Cambio a {nombrePlan(c.plan_nuevo_id)}:</span>
+                  <Badge variant={ESTADO_CAMBIO_PLAN_VARIANTE[c.estado]}>{ESTADO_CAMBIO_PLAN_LABEL[c.estado]}</Badge>
+                  {c.estado === "aprobada" && c.aplica_desde && (
+                    <span className="text-muted-foreground">
+                      Seguirás con tu plan actual hasta el fin de tu periodo; el nuevo rige desde el{" "}
+                      {formatFecha(c.aplica_desde)}.
+                    </span>
+                  )}
+                  {c.estado === "pendiente" && (
+                    <span className="text-muted-foreground">Esperando la aprobación de tu gimnasio.</span>
+                  )}
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
+      )}
 
       {puedePagar ? (
         <PagoSuscripcionForm

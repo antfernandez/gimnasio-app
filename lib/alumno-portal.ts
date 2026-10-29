@@ -74,5 +74,16 @@ export const getAlumnoActual = cache(async (): Promise<Alumno | null> => {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  return ensureAlumnoLink(supabase, user);
+  const alumno = await ensureAlumnoLink(supabase, user);
+  if (!alumno) return null;
+
+  // Spec 43: aplica los cambios de plan aprobados cuyo periodo ya terminó.
+  const { data: aplicados } = await supabase.rpc("aplicar_cambios_plan_vencidos");
+  if (!aplicados) return alumno;
+  const { data: actualizado } = await supabase
+    .from("alumnos")
+    .select("*")
+    .eq("id", alumno.id)
+    .maybeSingle();
+  return (actualizado as Alumno | null) ?? alumno;
 });

@@ -24,6 +24,7 @@ type Metodo = "transferencia" | "mercado_pago";
 export function PagoSuscripcionForm({
   accion,
   precioNeto,
+  ivaPct,
   mercadoPagoDisponible,
   cuenta,
   hoy,
@@ -31,6 +32,8 @@ export function PagoSuscripcionForm({
 }: {
   accion: Accion;
   precioNeto: number;
+  /** Solo flujo con IVA; por defecto 19. */
+  ivaPct?: number;
   mercadoPagoDisponible: boolean;
   cuenta: CuentaTransferencia | null;
   hoy: string;
@@ -42,8 +45,8 @@ export function PagoSuscripcionForm({
   const [meses, setMeses] = useState(1);
   const [copiado, setCopiado] = useState(false);
 
-  const mensual = conIva ? precioMensualConIva(precioNeto) : precioNeto;
-  const totalPara = (m: number) => (conIva ? calcularMontoSuscripcion(precioNeto, m) : precioNeto * m);
+  const mensual = conIva ? precioMensualConIva(precioNeto, ivaPct) : precioNeto;
+  const totalPara = (m: number) => (conIva ? calcularMontoSuscripcion(precioNeto, m, ivaPct) : precioNeto * m);
   const total = totalPara(meses);
 
   const filas = cuenta

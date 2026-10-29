@@ -1,37 +1,85 @@
-/** Planes del sistema que paga la dueña (Spec 30). Fuente única de precios y límites. */
-export const IVA = 0.19;
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const PLANES_SISTEMA = [
-  { nombre: "Inicial", maxAlumnos: 150, precioNeto: 29990, orden: 1 },
-  { nombre: "Crecimiento", maxAlumnos: 300, precioNeto: 49990, orden: 2 },
-  { nombre: "Escala", maxAlumnos: 450, precioNeto: 69990, orden: 3 },
-] as const;
+/** Planes del sistema que paga la dueña (Specs 30 y 41). La fuente de verdad es la tabla `planes_sistema`. */
+export const IVA_PCT_DEFECTO = 19;
 
-export type PlanSistemaDef = (typeof PLANES_SISTEMA)[number];
+export type FuncionSistema = { titulo: string; detalle: string };
 
-export function planSistemaPorNombre(nombre: string | null | undefined): PlanSistemaDef | null {
-  return PLANES_SISTEMA.find((p) => p.nombre === nombre) ?? null;
+export type PlanSistema = {
+  id: string;
+  nombre: string;
+  maxAlumnos: number | null;
+  precioNeto: number;
+  ivaPct: number;
+  descripcion: string | null;
+  caracteristicas: FuncionSistema[];
+};
+
+export const COLUMNAS_PLAN_SISTEMA =
+  "id, nombre, max_alumnos, precio_mensual, iva_pct, descripcion, caracteristicas";
+
+type FilaPlanSistema = {
+  id: string;
+  nombre: string;
+  max_alumnos: number | null;
+  precio_mensual: number | string;
+  iva_pct: number | string;
+  descripcion: string | null;
+  caracteristicas: FuncionSistema[] | null;
+};
+
+export function mapearPlanSistema(f: FilaPlanSistema): PlanSistema {
+  return {
+    id: f.id,
+    nombre: f.nombre,
+    maxAlumnos: f.max_alumnos,
+    precioNeto: Number(f.precio_mensual),
+    ivaPct: Number(f.iva_pct),
+    descripcion: f.descripcion,
+    caracteristicas: f.caracteristicas ?? [],
+  };
+}
+
+/** Planes ofrecidos hoy: activos y con vigencia que incluye `hoy` (AAAA-MM-DD), por orden. */
+export async function planesSistemaVigentes(
+  supabase: SupabaseClient,
+  hoy: string,
+): Promise<PlanSistema[]> {
+  const { data } = await supabase
+    .from("planes_sistema")
+    .select(COLUMNAS_PLAN_SISTEMA)
+    .eq("activo", true)
+    .lte("vigente_desde", hoy)
+    .or(`vigente_hasta.is.null,vigente_hasta.gte.${hoy}`)
+    .order("orden");
+  return ((data ?? []) as FilaPlanSistema[]).map(mapearPlanSistema);
+}
+
+/** Un plan por id, sin filtro de vigencia (el plan actual de un gimnasio puede haber vencido). */
+export async function planSistemaPorId(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<PlanSistema | null> {
+  const { data } = await supabase
+    .from("planes_sistema")
+    .select(COLUMNAS_PLAN_SISTEMA)
+    .eq("id", id)
+    .maybeSingle();
+  return data ? mapearPlanSistema(data as FilaPlanSistema) : null;
 }
 
 /** Precio mensual con IVA incluido. */
-export function precioMensualConIva(precioNeto: number): number {
-  return Math.round(precioNeto * (1 + IVA));
+export function precioMensualConIva(precioNeto: number, ivaPct: number = IVA_PCT_DEFECTO): number {
+  return Math.round(precioNeto * (1 + ivaPct / 100));
 }
 
 /** Total a pagar por `meses` meses, con IVA. Sin descuento por pago anticipado. */
-export function calcularMontoSuscripcion(precioNeto: number, meses: number): number {
-  return precioMensualConIva(precioNeto) * meses;
+export function calcularMontoSuscripcion(
+  precioNeto: number,
+  meses: number,
+  ivaPct: number = IVA_PCT_DEFECTO,
+): number {
+  return precioMensualConIva(precioNeto, ivaPct) * meses;
 }
-
-export const FUNCIONES_SISTEMA = [
-  { titulo: "Membresía", detalle: "Fichas, planes, vencimientos, congelamientos, pases de prueba y grupos familiares." },
-  { titulo: "Calendario de clases", detalle: "Cupos, profesores, inscripción online." },
-  { titulo: "Pagos online", detalle: "Mercado Pago, transferencia con comprobante, desde el portal." },
-  { titulo: "Portal del socio", detalle: "Membresía, clases, rutinas y pagos; versión web adaptada a móviles." },
-  { titulo: "Nutrición", detalle: "Planes y recetas con macros automáticos; cada socio ve sus calorías del día y anota lo que come." },
-  { titulo: "Inscripción online", detalle: "Página pública con fotos y planes para que socios nuevos se registren solos." },
-  { titulo: "Usuarios y permisos", detalle: "Staff con permisos por módulo y bitácora de acciones." },
-  { titulo: "Carga masiva", detalle: "Importa socios y productos desde Excel." },
-] as const;
 
 export const FUNCIONES_VISIBLES = 4;

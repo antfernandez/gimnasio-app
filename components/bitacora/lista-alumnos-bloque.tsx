@@ -1,7 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 
+import { ConfirmarDialog } from "@/components/ejercicios/confirmar-dialog";
 import { Badge } from "@/components/ui/badge";
 import type { Asistencia, EstadoReserva } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -23,10 +24,18 @@ const OPCIONES: { value: Asistencia; label: string }[] = [
  * listo. Spec 27: botones de al menos 44 px para uso táctil. */
 export function AsistenciaAlumno({ reservaId, estado, asistencia, marcarAsistencia }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [confirmando, setConfirmando] = useState(false);
   const yaTomada = estado !== "reservada" || asistencia != null;
+  // Spec 40: Presente ↔ Ausente se puede corregir (ambos cuentan la clase como realizada).
+  const otro: Asistencia | null =
+    estado === "realizada" && asistencia === "presente"
+      ? "ausente"
+      : estado === "realizada" && asistencia === "ausente"
+        ? "presente"
+        : null;
 
   if (yaTomada) {
-    return (
+    const badge = (
       <Badge
         variant={
           asistencia === "ausente"
@@ -42,6 +51,36 @@ export function AsistenciaAlumno({ reservaId, estado, asistencia, marcarAsistenc
             ? "Justificado"
             : "Presente"}
       </Badge>
+    );
+    if (!otro) return badge;
+    const otroLabel = otro === "ausente" ? "Ausente" : "Presente";
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        {badge}
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={() => setConfirmando(true)}
+          className="min-h-11 rounded-full border border-border px-4 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
+        >
+          Cambiar a {otroLabel}
+        </button>
+        <ConfirmarDialog
+          open={confirmando}
+          titulo={`Cambiar a ${otroLabel}`}
+          descripcion={`La asistencia pasará a ${otroLabel}. La clase se sigue contando como realizada y el saldo del paquete no cambia.`}
+          confirmLabel="Cambiar"
+          pendingLabel="Procesando…"
+          pending={isPending}
+          onCancel={() => setConfirmando(false)}
+          onConfirm={() =>
+            startTransition(async () => {
+              await marcarAsistencia(reservaId, otro);
+              setConfirmando(false);
+            })
+          }
+        />
+      </div>
     );
   }
 

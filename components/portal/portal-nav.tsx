@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, CreditCard, Dumbbell, LayoutDashboard, Salad } from "lucide-react";
+import { CalendarDays, CreditCard, Dumbbell, LayoutDashboard, Ruler, Salad } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -11,16 +11,18 @@ const items = [
   { href: "/portal/turnos", label: "Mis turnos", icon: CalendarDays },
   { href: "/portal/bitacora", label: "Bitácora", icon: Dumbbell },
   { href: "/portal/nutricion", label: "Nutrición", icon: Salad },
+  { href: "/portal/medicion-corporal", label: "Medición corporal", icon: Ruler },
   { href: "/portal/pagar-plan", label: "Plan", icon: CreditCard },
 ];
 
-export function PortalNav({ nutricion }: { nutricion: boolean }) {
+export function PortalNav({ nutricion, medicionCorporal }: { nutricion: boolean; medicionCorporal: boolean }) {
   const pathname = usePathname();
 
   return (
     <nav className="flex flex-col gap-1">
       {items
         .filter((item) => nutricion || item.href !== "/portal/nutricion")
+        .filter((item) => medicionCorporal || item.href !== "/portal/medicion-corporal")
         .map((item) => {
         const active = item.exact
           ? pathname === item.href

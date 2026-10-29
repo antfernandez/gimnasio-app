@@ -51,6 +51,13 @@ export default async function AlumnosPendientesPage() {
           >
             Ver todos los alumnos
           </Link>
+          {" · "}
+          <Link
+            href="/protected/alumnos/cambios-plan"
+            className="text-secondary-foreground underline underline-offset-4"
+          >
+            Solicitudes de cambio de plan
+          </Link>
         </p>
       </div>
 

@@ -18,7 +18,7 @@ import { formatFecha, formatMonto } from "@/lib/format";
 import { leerPagina, rangoPagina } from "@/lib/paginacion";
 import { tokenAntonio } from "@/lib/mercadopago";
 import { ESTADO_SOLICITUD_LABEL } from "@/lib/pagar-plan";
-import { planSistemaPorNombre } from "@/lib/planes-sistema";
+import { planSistemaPorId, planesSistemaVigentes } from "@/lib/planes-sistema";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import { hoyIso } from "@/lib/turnos";
@@ -89,11 +89,11 @@ export default async function SuscripcionPage({
     const { data } = await supabase.rpc("plan_sistema_requerido", { p_gimnasio_id: gimnasioId });
     planId = (data as string | null) ?? null;
   }
-  const { data: plan } = planId
-    ? await supabase.from("planes_sistema").select("nombre, precio_mensual").eq("id", planId).maybeSingle()
-    : { data: null };
+  const [plan, planes] = await Promise.all([
+    planId ? planSistemaPorId(supabase, planId) : Promise.resolve(null),
+    planesSistemaVigentes(supabase, hoyIso()),
+  ]);
 
-  const def = planSistemaPorNombre(plan?.nombre);
   const uso_ = uso as Uso | null;
   const historial = (solicitudes ?? []) as SolicitudPago[];
   const vence = gimnasio?.suscripcion_hasta as string | null | undefined;
@@ -138,14 +138,16 @@ export default async function SuscripcionPage({
       </div>
 
       <PlanesSistemaCards
+        planes={planes}
         planActual={plan?.nombre ?? null}
         alumnosActivos={uso_?.alumnos_activos ?? null}
       />
 
-      {plan && def ? (
+      {plan ? (
         <PagoSuscripcionForm
           accion={iniciarPagoSuscripcion}
-          precioNeto={def.precioNeto}
+          precioNeto={plan.precioNeto}
+          ivaPct={plan.ivaPct}
           mercadoPagoDisponible={!!tokenAntonio()}
           cuenta={(cuenta as CuentaTransferencia | null) ?? null}
           hoy={hoyIso()}
