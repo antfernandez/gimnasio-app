@@ -30,8 +30,6 @@ type Props = {
   fechaFutura: boolean;
 };
 
-const CAMPO = "w-full";
-
 /** Registro de sesión del dueño (Spec 13): cada fila se guarda sola con su botón, así
  * se va registrando el ejercicio que hace el alumno sin completar toda la tabla.
  * Una fila guardada muestra "OK" y se puede editar y guardar de nuevo. */
@@ -87,95 +85,90 @@ export function SesionTabla({ rutina, guardar, guardados, fechaFutura }: Props) 
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-[9px] border border-border">
-        <table className="w-full min-w-[720px] text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-3 py-2 font-medium">Ejercicio</th>
-              <th className="px-3 py-2 font-medium">Series</th>
-              <th className="px-3 py-2 font-medium">Reps</th>
-              <th className="px-3 py-2 font-medium">Peso (kg)</th>
-              <th className="px-3 py-2 font-medium">Notas</th>
-              <th className="px-3 py-2 font-medium">Registro</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rutina.contenido.map((ej, i) => {
-              const fila = filas[i];
-              const incompleta =
-                fila.series.trim() === "" || fila.reps.trim() === "" || fila.peso.trim() === "";
-              return (
-                <tr key={i} className="border-b border-border/70 align-top last:border-0">
-                  <td className="px-3 py-2">
-                    <div className="font-medium text-foreground">{ej.ejercicio}</div>
-                    {ej.peso && (
-                      <div className="text-xs text-muted-foreground">Plan: {ej.peso}</div>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <Input
-                      inputMode="numeric"
-                      className={`${CAMPO} w-16`}
-                      value={fila.series}
-                      disabled={fechaFutura}
-                      onChange={(e) => actualizar(i, "series", e.target.value)}
-                      aria-label={`Series de ${ej.ejercicio}`}
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <Input
-                      inputMode="numeric"
-                      className={`${CAMPO} w-16`}
-                      value={fila.reps}
-                      disabled={fechaFutura}
-                      onChange={(e) => actualizar(i, "reps", e.target.value)}
-                      aria-label={`Reps de ${ej.ejercicio}`}
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <Input
-                      inputMode="decimal"
-                      className={`${CAMPO} w-20`}
-                      value={fila.peso}
-                      placeholder={ej.peso ?? ""}
-                      disabled={fechaFutura}
-                      onChange={(e) => actualizar(i, "peso", e.target.value)}
-                      aria-label={`Peso de ${ej.ejercicio}`}
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <Input
-                      className={CAMPO}
-                      value={fila.notas}
-                      placeholder="Opcional"
-                      disabled={fechaFutura}
-                      onChange={(e) => actualizar(i, "notas", e.target.value)}
-                      aria-label={`Notas de ${ej.ejercicio}`}
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex h-11 items-center gap-3">
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={fechaFutura || incompleta || guardando === i}
-                        onClick={() => guardarFila(i)}
-                      >
-                        {guardando === i ? "Guardando…" : "Guardar"}
-                      </Button>
-                      {fila.guardado && (
-                        <span className="text-sm font-semibold text-success">OK</span>
-                      )}
-                    </div>
-                    {fila.error && (
-                      <p className="mt-1 max-w-[180px] text-xs text-destructive">{fila.error}</p>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      {/* Spec 27: mobile first — cada ejercicio es una tarjeta sin scroll horizontal,
+          con su botón de guardar siempre visible al pie. */}
+      <div className="flex flex-col gap-3">
+        {rutina.contenido.map((ej, i) => {
+          const fila = filas[i];
+          const incompleta =
+            fila.series.trim() === "" || fila.reps.trim() === "" || fila.peso.trim() === "";
+          return (
+            <div key={i} className="rounded-[9px] border border-border p-3">
+              <div className="mb-3">
+                <div className="font-medium text-foreground">{ej.ejercicio}</div>
+                {ej.peso && (
+                  <div className="text-xs text-muted-foreground">Plan: {ej.peso}</div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <label className="grid gap-1 text-xs text-muted-foreground">
+                  Series
+                  <Input
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className="h-11 w-full"
+                    value={fila.series}
+                    disabled={fechaFutura}
+                    onChange={(e) => actualizar(i, "series", e.target.value)}
+                    aria-label={`Series de ${ej.ejercicio}`}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs text-muted-foreground">
+                  Reps
+                  <Input
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className="h-11 w-full"
+                    value={fila.reps}
+                    disabled={fechaFutura}
+                    onChange={(e) => actualizar(i, "reps", e.target.value)}
+                    aria-label={`Reps de ${ej.ejercicio}`}
+                  />
+                </label>
+                <label className="grid gap-1 text-xs text-muted-foreground">
+                  Peso (kg)
+                  <Input
+                    inputMode="decimal"
+                    className="h-11 w-full"
+                    value={fila.peso}
+                    placeholder={ej.peso ?? ""}
+                    disabled={fechaFutura}
+                    onChange={(e) => actualizar(i, "peso", e.target.value)}
+                    aria-label={`Peso de ${ej.ejercicio}`}
+                  />
+                </label>
+              </div>
+
+              <label className="mt-2 grid gap-1 text-xs text-muted-foreground">
+                Notas
+                <Input
+                  className="h-11 w-full"
+                  value={fila.notas}
+                  placeholder="Opcional"
+                  disabled={fechaFutura}
+                  onChange={(e) => actualizar(i, "notas", e.target.value)}
+                  aria-label={`Notas de ${ej.ejercicio}`}
+                />
+              </label>
+
+              <div className="mt-3 flex min-h-11 items-center gap-3">
+                <Button
+                  type="button"
+                  size="lg"
+                  disabled={fechaFutura || incompleta || guardando === i}
+                  onClick={() => guardarFila(i)}
+                >
+                  {guardando === i ? "Guardando…" : "Guardar"}
+                </Button>
+                {fila.guardado && (
+                  <span className="text-sm font-semibold text-success">OK</span>
+                )}
+              </div>
+              {fila.error && <p className="mt-1 text-xs text-destructive">{fila.error}</p>}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

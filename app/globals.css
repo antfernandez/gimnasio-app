@@ -32,6 +32,9 @@
     --input: 32 32% 82%;
     --ring: 41 53% 55%; /* --gold */
     --radius: 0.875rem; /* --radius 14px */
+    --logout: 41 53% 55%; /* spec 25: fondo "Cerrar sesión" #C9A34F */
+    --logout-hover: 41 53% 48%;
+    --logout-foreground: 40 68% 6%; /* #1A1305 */
   }
 }
 

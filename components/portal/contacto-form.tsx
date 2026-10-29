@@ -16,7 +16,7 @@ export function ContactoForm({ alumno }: { alumno: Alumno }) {
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         <div className="grid gap-2">
           <Label htmlFor="email">Correo electrónico</Label>
           <Input

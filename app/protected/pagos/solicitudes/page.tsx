@@ -25,7 +25,13 @@ type Fila = SolicitudPago & {
   comprobante_url: string | null;
 };
 
-export default async function SolicitudesPagoPage() {
+export default async function SolicitudesPagoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const params = await searchParams;
+  const q = (params.q ?? "").trim().toLowerCase();
   const perfilData = await getPerfilActual();
   if (!perfilData) return null;
 
@@ -38,8 +44,11 @@ export default async function SolicitudesPagoPage() {
     .eq("estado", "pendiente")
     .order("created_at", { ascending: true });
 
+  const pendientes = ((data ?? []) as Fila[]).filter(
+    (s) => !q || `${s.alumnos?.nombres ?? ""} ${s.alumnos?.apellidos ?? ""}`.toLowerCase().includes(q),
+  );
   const filas: Fila[] = await Promise.all(
-    ((data ?? []) as Fila[]).map(async (s) => {
+    pendientes.map(async (s) => {
       const { data: firmada } = s.comprobante_path
         ? await supabase.storage.from("comprobantes-pago").createSignedUrl(s.comprobante_path, 600)
         : { data: null };
@@ -56,10 +65,28 @@ export default async function SolicitudesPagoPage() {
         <h2 className="text-2xl">Transferencias por validar</h2>
       </div>
 
+      <form className="flex flex-wrap items-center gap-3" action="/protected/pagos/solicitudes">
+        <Input
+          type="search"
+          name="q"
+          placeholder="Buscar por alumno…"
+          defaultValue={params.q ?? ""}
+          className="min-w-[220px] max-w-xs flex-1"
+        />
+        <Button type="submit" variant="outline">
+          Filtrar
+        </Button>
+        {q && (
+          <Button asChild variant="ghost">
+            <Link href="/protected/pagos/solicitudes">Limpiar</Link>
+          </Button>
+        )}
+      </form>
+
       {filas.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            No hay transferencias pendientes.
+            {q ? "No hay transferencias que coincidan." : "No hay transferencias pendientes."}
           </CardContent>
         </Card>
       ) : (

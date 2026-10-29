@@ -1,4 +1,5 @@
 import { PlayCircle } from "lucide-react";
+import { redirect } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +26,7 @@ import { createClient } from "@/lib/supabase/server";
 export default async function PortalNutricionPage() {
   const alumno = await getAlumnoActual();
   if (!alumno) return null; // el layout ya redirige a /auth/login
+  if (!alumno.plan_nutricional_habilitado) redirect("/portal");
 
   const supabase = await createClient();
   const { data: asignacionData } = await supabase

@@ -230,7 +230,7 @@ async function MembresiaVista({
   ajuste: boolean;
 }) {
   const supabase = await createClient();
-  const [{ data: catalogo }, { data: pagos }, zonas, ejercicios] = await Promise.all([
+  const [{ data: catalogo }, { data: pagos }, zonas, ejercicios, { count: asignacionesNutricion }] = await Promise.all([
     supabase
       .from("rutina_plantillas")
       .select("*")
@@ -243,6 +243,11 @@ async function MembresiaVista({
       .order("fecha_pago", { ascending: false }),
     fetchZonas(),
     fetchEjercicios({ soloActivos: true }),
+    supabase
+      .from("asignaciones_nutricionales")
+      .select("id", { count: "exact", head: true })
+      .eq("alumno_id", a.id)
+      .eq("estado", "activo"),
   ]);
   const rutinasCatalogo = (catalogo ?? []) as RutinaPlantilla[];
   const listaPagos = (pagos ?? []) as (Pago & { plan: { nombre: string } | null })[];
@@ -269,6 +274,9 @@ async function MembresiaVista({
           tieneRutina={!!rutinaActiva}
           cicloEnCurso={cicloEnCurso}
           fechaAsignacion={rutinaActiva?.fecha_asignacion ?? hoy}
+          medicionCorporal={a.medicion_corporal_habilitada}
+          planNutricional={a.plan_nutricional_habilitado}
+          tieneAsignacionNutricional={!!asignacionesNutricion}
         />
 
         {rutinaActiva && (
@@ -385,7 +393,9 @@ async function ProgresoVista({
       .select("*")
       .eq("alumno_id", a.id)
       .order("fecha", { ascending: false }),
-    supabase.from("avances").select("*").eq("alumno_id", a.id).order("fecha", { ascending: false }),
+    a.medicion_corporal_habilitada
+      ? supabase.from("avances").select("*").eq("alumno_id", a.id).order("fecha", { ascending: false })
+      : Promise.resolve({ data: [] }),
   ]);
   const listaRegistros = (registros ?? []) as RegistroRutina[];
   const historialAvances = (avances ?? []) as Avance[];
@@ -447,6 +457,7 @@ async function ProgresoVista({
         <ProgresoRutina registros={listaRegistros} />
       </Seccion>
 
+      {a.medicion_corporal_habilitada && (
       <Seccion titulo="Avance corporal">
         {avanceOk && <Aviso>Avance registrado correctamente.</Aviso>}
         <AvanceForm action={createAvance.bind(null, a.id)} />
@@ -501,6 +512,7 @@ async function ProgresoVista({
           )}
         </div>
       </Seccion>
+      )}
     </>
   );
 }

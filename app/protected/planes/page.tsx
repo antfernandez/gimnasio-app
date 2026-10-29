@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { PlanAcciones } from "@/components/planes/plan-acciones";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -28,7 +30,7 @@ const NIVEL_LABEL: Record<string, string> = {
 export default async function PlanesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ creado?: string; actualizado?: string }>;
+  searchParams: Promise<{ creado?: string; actualizado?: string; q?: string; estado?: string }>;
 }) {
   const params = await searchParams;
 
@@ -48,8 +50,14 @@ export default async function PlanesPage({
       .eq("gimnasio_id", perfilData.perfil.gimnasio_id),
   ]);
 
-  const lista = (planes ?? []) as Plan[];
   const hoy = new Date().toISOString().slice(0, 10);
+  const q = (params.q ?? "").trim();
+  const estado = params.estado ?? "";
+  const lista = ((planes ?? []) as Plan[]).filter(
+    (p) =>
+      (!q || p.nombre.toLowerCase().includes(q.toLowerCase())) &&
+      (!estado || estadoPlan(p, hoy) === estado),
+  );
 
   // Columna "Alumnos" cuenta solo activos; la regla de baja usa el total.
   const alumnosPorPlan = new Map<string, number>();
@@ -93,10 +101,36 @@ export default async function PlanesPage({
 
       <Card>
         <CardContent className="pt-6">
+          {/* Sin `pagina` en el form: cambiar un filtro reinicia la lista. */}
+          <form className="mb-5 flex flex-wrap items-center gap-3" action="/protected/planes">
+            <Input
+              type="search"
+              name="q"
+              placeholder="Buscar por nombre…"
+              defaultValue={q}
+              className="min-w-[220px] max-w-xs flex-1"
+            />
+            <Select name="estado" defaultValue={estado} aria-label="Filtrar por estado" className="w-auto">
+              <option value="">Todos</option>
+              <option value="vigente">Vigente</option>
+              <option value="proximo">Próximo</option>
+              <option value="vencido">Vencido</option>
+            </Select>
+            <Button type="submit" variant="outline">
+              Filtrar
+            </Button>
+            {(q || estado) && (
+              <Button asChild variant="ghost">
+                <Link href="/protected/planes">Limpiar</Link>
+              </Button>
+            )}
+          </form>
+
           {lista.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
-              Aún no tienes planes creados. Los tres niveles habituales son Básico,
-              Intermedio y Avanzado.
+              {q || estado
+                ? "No hay planes que coincidan con los filtros."
+                : "Aún no tienes planes creados. Los tres niveles habituales son Básico, Intermedio y Avanzado."}
             </p>
           ) : (
             <Table className="text-[13px]">

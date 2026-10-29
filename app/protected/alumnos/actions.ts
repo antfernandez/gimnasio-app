@@ -188,6 +188,8 @@ export async function actualizarMembresia(
   const planId = String(formData.get("plan_id") ?? "").trim();
   const rutinaCatalogoId = String(formData.get("plantilla_id") ?? "").trim();
   const fecha = String(formData.get("fecha_asignacion") ?? "").trim() || null;
+  const medicionCorporal = formData.get("medicion_corporal_habilitada") === "on";
+  const planNutricional = formData.get("plan_nutricional_habilitado") === "on";
 
   const perfilData = await getPerfilActual();
   if (!perfilData) redirect("/auth/login");
@@ -211,6 +213,16 @@ export async function actualizarMembresia(
       .maybeSingle(),
   ]);
   if (!alumno) return { error: "No se encontró al alumno." };
+
+  // Spec 28: opciones de la membresía. Los datos guardados no se tocan.
+  const { error: errorOpciones } = await supabase
+    .from("alumnos")
+    .update({
+      medicion_corporal_habilitada: medicionCorporal,
+      plan_nutricional_habilitado: planNutricional,
+    })
+    .eq("id", alumnoId);
+  if (errorOpciones) return { error: "No se pudieron guardar las opciones. Intenta de nuevo." };
 
   const cicloEnCurso = !!cobranza?.vencimiento_actual && cobranza.vencimiento_actual >= hoy;
 
@@ -258,7 +270,9 @@ export async function actualizarMembresia(
 
   revalidatePath(`/protected/alumnos/${alumnoId}`);
   revalidatePath("/protected/alumnos");
+  revalidatePath("/protected/nutricion");
   revalidatePath("/protected");
+  revalidatePath("/portal", "layout");
   redirect(`/protected/alumnos/${alumnoId}?vista=membresia&ok=1`);
 }
 

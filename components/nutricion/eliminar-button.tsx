@@ -12,10 +12,13 @@ export function EliminarButton({
   nombre,
   entidad,
   accion,
+  bloqueadoPor,
 }: {
   nombre: string;
   entidad: string;
   accion: () => Promise<NutricionFormState>;
+  /** Si se indica, el botón queda deshabilitado y este texto va de tooltip. */
+  bloqueadoPor?: string;
 }) {
   const [confirmando, setConfirmando] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -25,8 +28,8 @@ export function EliminarButton({
     <div className="flex flex-col items-end gap-1">
       <IconAction
         icon={Trash2}
-        label="Eliminar"
-        disabled={isPending}
+        label={bloqueadoPor ?? "Eliminar"}
+        disabled={isPending || !!bloqueadoPor}
         onClick={() => setConfirmando(true)}
       />
       {error && <p className="max-w-[16rem] text-xs text-destructive">{error}</p>}

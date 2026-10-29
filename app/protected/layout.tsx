@@ -45,7 +45,7 @@ export default async function ProtectedLayout({
   return (
     <div className="grid min-h-svh grid-cols-1 md:grid-cols-[260px_1fr]">
       <aside className="flex flex-col border-b border-border bg-[hsl(33_50%_86%)] px-5 py-5 md:border-b-0 md:border-r md:py-7">
-        <BrandMark className="mb-2 px-1 md:mb-8" />
+        <BrandMark fijo className="mb-2 px-1 md:mb-8" />
         <SidebarMobileToggle>
           <div className="mb-6 border-b border-border pb-6 text-center">
             <div className="mx-auto mb-3 flex h-20 w-20 items-center justify-center rounded-full bg-primary font-display text-2xl text-primary-foreground">

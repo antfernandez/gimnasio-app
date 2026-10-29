@@ -130,7 +130,7 @@ export function PagarPlanForm({
               </p>
             )}
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <div className="grid gap-2">
                 <Label htmlFor="fecha_transferencia">Fecha de la transferencia</Label>
                 <Input id="fecha_transferencia" name="fecha_transferencia" type="date" max={hoy} required />

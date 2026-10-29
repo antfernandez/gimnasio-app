@@ -1,7 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { AsignarForm } from "@/components/nutricion/asignar-form";
 import { getPerfilActual } from "@/lib/perfil";
-import { formatRut } from "@/lib/rut";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AsignarAlumnoPage() {
@@ -13,10 +12,11 @@ export default async function AsignarAlumnoPage() {
   const [{ data: alumnos }, { data: planes }, { data: responsables }] = await Promise.all([
     supabase
       .from("alumnos")
-      .select("id, nombres, apellidos, rut, dig_ver")
+      .select("id, nombres, apellidos")
       .eq("gimnasio_id", gimnasioId)
       .eq("activo", true)
       .eq("estado_aprobacion", "aprobado")
+      .eq("plan_nutricional_habilitado", true)
       .order("nombres"),
     // Un plan archivado no se puede asignar.
     supabase
@@ -36,7 +36,6 @@ export default async function AsignarAlumnoPage() {
           alumnos={(alumnos ?? []).map((a) => ({
             id: a.id as string,
             nombre: `${a.nombres} ${a.apellidos}`.trim(),
-            rut: formatRut(a.rut as number, a.dig_ver as string),
           }))}
           planes={(planes ?? []).map((p) => ({ id: p.id as string, nombre: p.nombre as string }))}
           responsables={(responsables ?? []).map((r) => ({

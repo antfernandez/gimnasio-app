@@ -109,7 +109,7 @@ export async function guardarAlimento(
   }
 
   revalidatePath("/protected/nutricion/alimentos");
-  redirect("/protected/nutricion/alimentos?guardado=1");
+  redirect(`/protected/nutricion/alimentos?guardado=${Date.now()}`);
 }
 
 export async function eliminarAlimento(id: string): Promise<NutricionFormState> {
@@ -117,6 +117,15 @@ export async function eliminarAlimento(id: string): Promise<NutricionFormState> 
   if (!perfilData) redirect("/auth/login");
 
   const supabase = await createClient();
+  const { data: usos } = await supabase
+    .from("receta_ingredientes")
+    .select("receta_id")
+    .eq("alimento_id", id);
+  const enRecetas = new Set((usos ?? []).map((u) => u.receta_id as string)).size;
+  if (enRecetas > 0) {
+    return { error: `Está en uso en ${enRecetas} ${enRecetas === 1 ? "receta" : "recetas"}.` };
+  }
+
   const { error } = await supabase
     .from("alimentos")
     .delete()
@@ -455,11 +464,14 @@ export async function crearAsignacion(
 
   const { data: alumno } = await supabase
     .from("alumnos")
-    .select("id")
+    .select("id, plan_nutricional_habilitado")
     .eq("id", alumnoId)
     .eq("gimnasio_id", gimnasioId)
     .maybeSingle();
   if (!alumno) return { error: "No se encontró el alumno." };
+  if (!alumno.plan_nutricional_habilitado) {
+    return { error: "El alumno no tiene habilitado el plan nutricional en su membresía." };
+  }
 
   let duracion: number | null = null;
   if (planId) {

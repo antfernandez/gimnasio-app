@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -22,7 +23,6 @@ import {
   type EstadoAsignacion,
 } from "@/lib/nutricion";
 import { getPerfilActual } from "@/lib/perfil";
-import { formatRut } from "@/lib/rut";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
@@ -51,7 +51,11 @@ export default async function NutricionPanelPage({
   const perfilData = await getPerfilActual();
   if (!perfilData) return null;
 
-  const filtroEstado = ESTADOS_ASIGNACION.find((e) => e.value === params.estado)?.value;
+  // Por defecto solo Activos; "todos" desactiva el filtro.
+  const verTodos = params.estado === "todos";
+  const filtroEstado = verTodos
+    ? undefined
+    : (ESTADOS_ASIGNACION.find((e) => e.value === params.estado)?.value ?? "activo");
   const q = (params.q ?? "").trim().toLowerCase();
 
   const supabase = await createClient();
@@ -62,7 +66,7 @@ export default async function NutricionPanelPage({
       .select("*")
       .eq("gimnasio_id", gimnasioId)
       .order("fecha_inicio", { ascending: false }),
-    supabase.from("alumnos").select("id, nombres, apellidos, rut, dig_ver").eq("gimnasio_id", gimnasioId),
+    supabase.from("alumnos").select("id, nombres, apellidos").eq("gimnasio_id", gimnasioId),
     supabase.from("planes_nutricionales").select("id, nombre").eq("gimnasio_id", gimnasioId),
   ]);
 
@@ -70,10 +74,7 @@ export default async function NutricionPanelPage({
   const alumnoPorId = new Map(
     (alumnos ?? []).map((a) => [
       a.id as string,
-      {
-        nombre: `${a.nombres} ${a.apellidos}`.trim(),
-        rut: formatRut(a.rut as number, a.dig_ver as string),
-      },
+      { nombre: `${a.nombres} ${a.apellidos}`.trim() },
     ]),
   );
   const planPorId = new Map((planes ?? []).map((p) => [p.id as string, p.nombre as string]));
@@ -84,12 +85,13 @@ export default async function NutricionPanelPage({
   ) as Record<EstadoAsignacion, number>;
   const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
 
-  const visibles = lista.filter((a) => {
-    if (filtroEstado && a.estado !== filtroEstado) return false;
-    if (!q) return true;
-    const al = alumnoPorId.get(a.alumno_id);
-    return !!al && `${al.nombre} ${al.rut}`.toLowerCase().includes(q);
-  });
+  const nombreDe = (a: Asignacion) => alumnoPorId.get(a.alumno_id)?.nombre ?? "";
+  const visibles = lista
+    .filter((a) => {
+      if (filtroEstado && a.estado !== filtroEstado) return false;
+      return !q || nombreDe(a).toLowerCase().includes(q);
+    })
+    .sort((a, b) => nombreDe(a).localeCompare(nombreDe(b), "es"));
 
   return (
     <div className="flex flex-col gap-6">
@@ -103,7 +105,7 @@ export default async function NutricionPanelPage({
         {ESTADOS_ASIGNACION.map((e) => (
           <Link
             key={e.value}
-            href={filtroEstado === e.value ? "/protected/nutricion" : `/protected/nutricion?estado=${e.value}`}
+            href={`/protected/nutricion?estado=${e.value}`}
             className={cn(
               "rounded-[9px] border bg-card px-5 py-4 transition-colors hover:border-primary",
               filtroEstado === e.value ? "border-primary" : "border-border",
@@ -159,8 +161,15 @@ export default async function NutricionPanelPage({
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-base">Alumnos asignados</h3>
             <form className="flex gap-2" action="/protected/nutricion">
-              {filtroEstado && <input type="hidden" name="estado" value={filtroEstado} />}
-              <Input name="q" placeholder="Buscar alumno o RUT" defaultValue={params.q ?? ""} className="w-56" />
+              <Select name="estado" defaultValue={filtroEstado ?? "todos"} className="w-40" aria-label="Estado">
+                {ESTADOS_ASIGNACION.map((e) => (
+                  <option key={e.value} value={e.value}>
+                    {e.label}
+                  </option>
+                ))}
+                <option value="todos">Todos</option>
+              </Select>
+              <Input name="q" placeholder="Buscar alumno" defaultValue={params.q ?? ""} className="w-56" />
               <Button type="submit" variant="outline">
                 Buscar
               </Button>
@@ -200,7 +209,6 @@ export default async function NutricionPanelPage({
                     <TableRow key={a.id}>
                       <TableCell className="font-medium text-foreground">
                         {al?.nombre ?? "—"}
-                        <span className="block text-xs font-normal text-muted-foreground">{al?.rut}</span>
                       </TableCell>
                       <TableCell>{a.plan_id ? (planPorId.get(a.plan_id) ?? "—") : "Sin plan"}</TableCell>
                       <TableCell className="whitespace-nowrap">{formatFecha(a.fecha_inicio)}</TableCell>

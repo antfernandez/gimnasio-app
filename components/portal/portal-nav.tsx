@@ -14,12 +14,14 @@ const items = [
   { href: "/portal/pagar-plan", label: "Pagar plan", icon: CreditCard },
 ];
 
-export function PortalNav() {
+export function PortalNav({ nutricion }: { nutricion: boolean }) {
   const pathname = usePathname();
 
   return (
     <nav className="flex flex-col gap-1">
-      {items.map((item) => {
+      {items
+        .filter((item) => nutricion || item.href !== "/portal/nutricion")
+        .map((item) => {
         const active = item.exact
           ? pathname === item.href
           : pathname.startsWith(item.href);

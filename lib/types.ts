@@ -54,6 +54,9 @@ export interface Alumno {
   /** Sprint 13: permiso independiente de `puede_registrar_avances` — habilita el
    * registro propio de sesiones de la bitácora de rutina. */
   puede_registrar_bitacora: boolean;
+  /** Spec 28: opciones de la membresía. Sin ellas se oculta Medición corporal / Nutrición. */
+  medicion_corporal_habilitada: boolean;
+  plan_nutricional_habilitado: boolean;
   /** Aprobación manual del Admin (Sprint 12) — 'aprobado' por defecto para altas
    * hechas por el dueño; 'pendiente' solo en el autorregistro del propio alumno. */
   estado_aprobacion: EstadoAprobacionAlumno;

@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ESTADOS_ASIGNACION } from "@/lib/nutricion";
 
 type Props = {
-  alumnos: { id: string; nombre: string; rut: string }[];
+  alumnos: { id: string; nombre: string }[];
   planes: { id: string; nombre: string }[];
   responsables: { id: string; nombre: string }[];
   responsableActual: string;
@@ -32,7 +32,7 @@ export function AsignarForm({ alumnos, planes, responsables, responsableActual, 
             </option>
             {alumnos.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.nombre} · {a.rut}
+                {a.nombre}
               </option>
             ))}
           </Select>

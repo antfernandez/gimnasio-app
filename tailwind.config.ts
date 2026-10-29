@@ -41,6 +41,11 @@ export default {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
+        logout: {
+          DEFAULT: "hsl(var(--logout))",
+          hover: "hsl(var(--logout-hover))",
+          foreground: "hsl(var(--logout-foreground))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

@@ -103,11 +103,13 @@ export default async function PortalPage() {
       .select("*")
       .eq("alumno_id", alumno.id)
       .maybeSingle(),
-    supabase
-      .from("avances")
-      .select("*")
-      .eq("alumno_id", alumno.id)
-      .order("fecha", { ascending: false }),
+    alumno.medicion_corporal_habilitada
+      ? supabase
+          .from("avances")
+          .select("*")
+          .eq("alumno_id", alumno.id)
+          .order("fecha", { ascending: false })
+      : Promise.resolve({ data: [] }),
     alumno.plan_id
       ? supabase.from("planes").select("*").eq("id", alumno.plan_id).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -306,7 +308,7 @@ export default async function PortalPage() {
               </Link>
             </div>
             <div className="flex flex-col gap-1 text-sm">
-              {historialAvances.length === 0 ? (
+              {!alumno.medicion_corporal_habilitada ? null : historialAvances.length === 0 ? (
                 <span className="text-muted-foreground">Sin avances corporales registrados.</span>
               ) : (
                 <span className="text-foreground">
@@ -345,7 +347,7 @@ export default async function PortalPage() {
         </CardContent>
       </Card>
 
-      {alumno.puede_registrar_avances && (
+      {alumno.medicion_corporal_habilitada && alumno.puede_registrar_avances && (
         <Card>
           <CardContent className="pt-6">
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -356,6 +358,7 @@ export default async function PortalPage() {
         </Card>
       )}
 
+      {alumno.medicion_corporal_habilitada && (
       <Card>
         <CardContent className="pt-6">
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -408,6 +411,7 @@ export default async function PortalPage() {
           )}
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

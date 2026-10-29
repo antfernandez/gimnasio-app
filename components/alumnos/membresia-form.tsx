@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import type { MembresiaFormState } from "@/app/protected/alumnos/actions";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,11 @@ type Props = {
   /** Hay un período pagado en curso: plan y rutina vigentes no se pueden cambiar. */
   cicloEnCurso: boolean;
   fechaAsignacion: string;
+  /** Spec 28: opciones de la membresía. */
+  medicionCorporal: boolean;
+  planNutricional: boolean;
+  /** El alumno tiene una asignación nutricional activa (se avisa al desmarcar). */
+  tieneAsignacionNutricional: boolean;
 };
 
 /** Spec 14: plan, rutina y fecha de la membresía. Bloqueado (beige) mientras el ciclo
@@ -34,8 +39,12 @@ export function MembresiaForm({
   tieneRutina,
   cicloEnCurso,
   fechaAsignacion,
+  medicionCorporal,
+  planNutricional,
+  tieneAsignacionNutricional,
 }: Props) {
   const [state, formAction, isPending] = useActionState(action, {});
+  const [nutricionMarcada, setNutricionMarcada] = useState(planNutricional);
   const planBloqueado = cicloEnCurso && !!planActualId;
   const rutinaBloqueada = cicloEnCurso && tieneRutina;
 
@@ -87,6 +96,34 @@ export function MembresiaForm({
         </div>
       </div>
 
+      <div className="grid gap-3">
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="medicion_corporal_habilitada"
+            defaultChecked={medicionCorporal}
+            className="h-4 w-4 accent-primary"
+          />
+          Medición corporal
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="plan_nutricional_habilitado"
+            checked={nutricionMarcada}
+            onChange={(e) => setNutricionMarcada(e.target.checked)}
+            className="h-4 w-4 accent-primary"
+          />
+          Plan nutricional
+        </label>
+        {!nutricionMarcada && planNutricional && tieneAsignacionNutricional && (
+          <p className="text-xs text-warning">
+            El alumno tiene una asignación nutricional activa: quedará oculta para el alumno (no se
+            elimina).
+          </p>
+        )}
+      </div>
+
       {cicloEnCurso && (planBloqueado || rutinaBloqueada) && (
         <p className="text-xs text-muted-foreground">
           El plan y la rutina se pueden cambiar cuando termine el ciclo en curso.
@@ -94,13 +131,11 @@ export function MembresiaForm({
       )}
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
-      {!(planBloqueado && rutinaBloqueada) && (
-        <div>
-          <Button type="submit" disabled={isPending}>
-            {isPending ? "Guardando…" : "Guardar membresía"}
-          </Button>
-        </div>
-      )}
+      <div>
+        <Button type="submit" disabled={isPending}>
+          {isPending ? "Guardando…" : "Guardar membresía"}
+        </Button>
+      </div>
     </form>
   );
 }

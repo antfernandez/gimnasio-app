@@ -6,6 +6,8 @@ import { RutinaAcciones } from "@/components/rutinas/rutina-acciones";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -27,7 +29,7 @@ const CATEGORIA_LABEL: Record<string, string> = {
 export default async function RutinasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ creada?: string; actualizada?: string }>;
+  searchParams: Promise<{ creada?: string; actualizada?: string; q?: string; categoria?: string; estado?: string }>;
 }) {
   const params = await searchParams;
 
@@ -41,14 +43,23 @@ export default async function RutinasPage({
     .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
     .order("nombre", { ascending: true });
 
-  const lista = (plantillas ?? []) as RutinaPlantilla[];
+  const todas = (plantillas ?? []) as RutinaPlantilla[];
+  const q = (params.q ?? "").trim();
+  const categoria = params.categoria ?? "";
+  const estado = params.estado ?? "";
+  const lista = todas.filter(
+    (r) =>
+      (!q || r.nombre.toLowerCase().includes(q.toLowerCase())) &&
+      (!categoria || r.categoria === categoria) &&
+      (!estado || (estado === "baja") === (r.activa === false)),
+  );
 
   // Alumnos con cada rutina vigente: bloquea editar y dar de baja.
   const { data: asignaciones } = await supabase
     .from("rutinas")
     .select("plantilla_id")
     .eq("activa", true)
-    .in("plantilla_id", lista.length > 0 ? lista.map((r) => r.id) : [""]);
+    .in("plantilla_id", todas.length > 0 ? todas.map((r) => r.id) : [""]);
   const asignadosPorRutina = new Map<string, number>();
   for (const { plantilla_id } of (asignaciones ?? []) as { plantilla_id: string }[]) {
     asignadosPorRutina.set(plantilla_id, (asignadosPorRutina.get(plantilla_id) ?? 0) + 1);
@@ -84,13 +95,47 @@ export default async function RutinasPage({
 
       <Card>
         <CardContent className="pt-6">
-          {lista.length === 0 ? (
+          {todas.length > 0 && (
+            <form className="mb-5 flex flex-wrap items-center gap-3" action="/protected/rutinas">
+              <Input
+                type="search"
+                name="q"
+                placeholder="Buscar por nombre…"
+                defaultValue={q}
+                className="min-w-[220px] max-w-xs flex-1"
+              />
+              <Select name="categoria" defaultValue={categoria} aria-label="Filtrar por categoría" className="w-auto">
+                <option value="">Todas las categorías</option>
+                <option value="musculacion">Musculación</option>
+                <option value="cardio">Cardio</option>
+                <option value="general">General</option>
+              </Select>
+              <Select name="estado" defaultValue={estado} aria-label="Filtrar por estado" className="w-auto">
+                <option value="">Todos</option>
+                <option value="activa">Activa</option>
+                <option value="baja">De baja</option>
+              </Select>
+              <Button type="submit" variant="outline">
+                Filtrar
+              </Button>
+              {(q || (categoria || estado)) && (
+                <Button asChild variant="ghost">
+                  <Link href="/protected/rutinas">Limpiar</Link>
+                </Button>
+              )}
+            </form>
+          )}
+          {todas.length === 0 ? (
             <div className="flex flex-col items-center gap-4 py-10 text-center">
               <p className="text-sm text-muted-foreground">
                 Aún no tienes rutinas creadas.
               </p>
               <AplicarPresetRutinasButton />
             </div>
+          ) : lista.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              No hay rutinas que coincidan con los filtros.
+            </p>
           ) : (
             <Table>
               <TableHeader>

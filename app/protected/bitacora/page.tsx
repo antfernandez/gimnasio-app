@@ -1,36 +1,35 @@
 import Link from "next/link";
 
 import { guardarRegistroEjercicio, marcarAsistencia } from "@/app/protected/bitacora/actions";
-import { ListaAlumnosBloque } from "@/components/bitacora/lista-alumnos-bloque";
-import { SelectorFechaHora } from "@/components/bitacora/selector-fecha-hora";
+import { AsistenciaAlumno } from "@/components/bitacora/lista-alumnos-bloque";
 import { SesionTabla, type RegistroGuardado } from "@/components/bitacora/sesion-tabla";
 import { ExportMenu } from "@/components/export/export-menu";
 import { Acordeon } from "@/components/ui/acordeon";
 import { RutinaCard } from "@/components/rutinas/rutina-card";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
-import { diaSemanaDeFecha, hoyIso } from "@/lib/turnos";
+import { formatHora, hoyIso } from "@/lib/turnos";
 import type {
   EstadoPaqueteAlumno,
-  HorarioDisponible,
   ReservaConAlumno,
   Rutina,
 } from "@/lib/types";
 
-/** Sprint 15, Parte B: bitácora del dueño organizada por bloque horario del día —
- * se ancla a `reservas` (Sprint 8) en vez de a una lista libre de alumnos, mismo
- * criterio que ya usa `OcupacionSemanal` en el Dashboard. */
+/** Spec 27: bitácora del dueño por horario. Por defecto muestra el día actual; cada
+ * horario es un acordeón con los alumnos citados (reservas) y cada alumno, a su vez,
+ * un acordeón con la asistencia y el registro de sesión (Spec 13). Mobile first. */
 export default async function BitacoraPage({
   searchParams,
 }: {
-  searchParams: Promise<{ fecha?: string; hora?: string; alumno?: string; bitacora?: string }>;
+  searchParams: Promise<{ fecha?: string }>;
 }) {
   const params = await searchParams;
   const fecha =
     params.fecha && /^\d{4}-\d{2}-\d{2}$/.test(params.fecha) ? params.fecha : hoyIso();
-  const hora = params.hora;
-  const alumnoId = params.alumno;
 
   const perfilData = await getPerfilActual();
   if (!perfilData) return null; // el layout ya redirige a /auth/login
@@ -38,25 +37,19 @@ export default async function BitacoraPage({
 
   const supabase = await createClient();
 
-  const [{ data: horarios }, { data: reservasDelDia }, { data: estadoPaquetes }] =
-    await Promise.all([
-      supabase
-        .from("horarios_disponibles")
-        .select("*")
-        .eq("gimnasio_id", gimnasioId)
-        .eq("activo", true),
-      supabase
-        .from("reservas")
-        .select("*, alumno:alumnos(nombres, apellidos)")
-        .eq("gimnasio_id", gimnasioId)
-        .eq("fecha", fecha)
-        .neq("estado", "cancelada"),
-      // Sprint 19, Parte 2: contador de clases restantes junto a cada alumno citado.
-      supabase
-        .from("v_estado_paquetes_alumnos")
-        .select("alumno_id, clases_restantes")
-        .eq("gimnasio_id", gimnasioId),
-    ]);
+  const [{ data: reservasDelDia }, { data: estadoPaquetes }] = await Promise.all([
+    supabase
+      .from("reservas")
+      .select("*, alumno:alumnos(nombres, apellidos)")
+      .eq("gimnasio_id", gimnasioId)
+      .eq("fecha", fecha)
+      .neq("estado", "cancelada")
+      .order("hora_inicio", { ascending: true }),
+    supabase
+      .from("v_estado_paquetes_alumnos")
+      .select("alumno_id, clases_restantes")
+      .eq("gimnasio_id", gimnasioId),
+  ]);
 
   const clasesRestantesPorAlumno = new Map(
     (
@@ -64,65 +57,38 @@ export default async function BitacoraPage({
     ).map((e) => [e.alumno_id, e.clases_restantes]),
   );
 
-  const diaSemana = diaSemanaDeFecha(fecha);
-  const bloquesDelDia = ((horarios ?? []) as HorarioDisponible[])
-    .filter((h) => h.dia_semana === diaSemana)
-    .sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
-
   const reservas = (reservasDelDia ?? []) as ReservaConAlumno[];
-  const bloques = bloquesDelDia.map((h) => ({
-    horaInicio: h.hora_inicio,
-    cantidadAlumnos: reservas.filter((r) => r.hora_inicio === h.hora_inicio).length,
-  }));
+  const alumnoIds = [...new Set(reservas.map((r) => r.alumno_id))];
 
-  const alumnosDelBloque = hora
-    ? reservas
-        .filter((r) => r.hora_inicio === hora)
-        .map((r) => ({
-          id: r.alumno_id,
-          reservaId: r.id,
-          nombres: r.alumno?.nombres ?? "",
-          apellidos: r.alumno?.apellidos ?? "",
-          estado: r.estado,
-          asistencia: r.asistencia,
-          clasesRestantes: clasesRestantesPorAlumno.get(r.alumno_id) ?? null,
-        }))
-    : [];
-
-  const alumnoSeleccionado =
-    alumnoId && hora ? (alumnosDelBloque.find((a) => a.id === alumnoId) ?? null) : null;
-
-  let rutinaActiva: Rutina | null = null;
-  const guardados: Record<number, RegistroGuardado> = {};
-
-  if (alumnoSeleccionado) {
-    const { data: rutina } = await supabase
-      .from("rutinas")
-      .select("*")
-      .eq("alumno_id", alumnoSeleccionado.id)
-      .eq("activa", true)
-      .maybeSingle();
-    rutinaActiva = (rutina as Rutina | null) ?? null;
-
-    if (rutinaActiva) {
-      // Lo ya registrado ese día; si hubiera varios por ejercicio gana el más reciente.
-      const { data: registros } = await supabase
+  // Rutinas vigentes y lo ya registrado ese día, de una sola vez para todos los alumnos.
+  const rutinaPorAlumno = new Map<string, Rutina>();
+  const guardadosPorAlumno = new Map<string, Record<number, RegistroGuardado>>();
+  if (alumnoIds.length > 0) {
+    const [{ data: rutinas }, { data: registros }] = await Promise.all([
+      supabase.from("rutinas").select("*").in("alumno_id", alumnoIds).eq("activa", true),
+      supabase
         .from("registros_rutina")
-        .select("ejercicio_index, series_realizadas, reps_realizadas, peso_kg, notas")
-        .eq("alumno_id", alumnoSeleccionado.id)
-        .eq("rutina_id", rutinaActiva.id)
+        .select("alumno_id, rutina_id, ejercicio_index, series_realizadas, reps_realizadas, peso_kg, notas")
+        .in("alumno_id", alumnoIds)
         .eq("fecha", fecha)
-        .order("created_at", { ascending: true });
-      for (const reg of registros ?? []) {
-        guardados[reg.ejercicio_index] = {
-          series: String(reg.series_realizadas ?? ""),
-          reps: String(reg.reps_realizadas ?? ""),
-          peso: String(reg.peso_kg ?? ""),
-          notas: reg.notas ?? "",
-        };
-      }
+        .order("created_at", { ascending: true }),
+    ]);
+    for (const r of (rutinas ?? []) as Rutina[]) rutinaPorAlumno.set(r.alumno_id, r);
+    for (const reg of registros ?? []) {
+      if (rutinaPorAlumno.get(reg.alumno_id)?.id !== reg.rutina_id) continue;
+      const g = guardadosPorAlumno.get(reg.alumno_id) ?? {};
+      g[reg.ejercicio_index] = {
+        series: String(reg.series_realizadas ?? ""),
+        reps: String(reg.reps_realizadas ?? ""),
+        peso: String(reg.peso_kg ?? ""),
+        notas: reg.notas ?? "",
+      };
+      guardadosPorAlumno.set(reg.alumno_id, g);
     }
   }
+
+  const horarios = [...new Set(reservas.map((r) => r.hora_inicio))].sort();
+  const fechaFutura = fecha > hoyIso();
 
   return (
     <div className="flex flex-col gap-6">
@@ -138,89 +104,144 @@ export default async function BitacoraPage({
 
       <Card>
         <CardContent className="pt-6">
-          <SelectorFechaHora fecha={fecha} hora={hora} bloques={bloques} />
+          <form method="get" className="flex flex-wrap items-end gap-3">
+            <div className="grid min-w-0 flex-1 gap-2 sm:max-w-[220px]">
+              <Label htmlFor="fecha">Fecha</Label>
+              <Input id="fecha" name="fecha" type="date" defaultValue={fecha} required className="h-11" />
+            </div>
+            <Button type="submit" size="lg">
+              Filtrar
+            </Button>
+          </form>
         </CardContent>
       </Card>
 
-      {hora && (
+      {horarios.length === 0 ? (
         <Card>
-          <CardContent className="pt-6">
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Alumnos citados
-            </h3>
-            <ListaAlumnosBloque
-              fecha={fecha}
-              hora={hora}
-              alumnos={alumnosDelBloque}
-              alumnoSeleccionadoId={alumnoId}
-              marcarAsistencia={marcarAsistencia}
-            />
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            No hay alumnos citados en esta fecha.
           </CardContent>
         </Card>
-      )}
+      ) : (
+        <div className="flex flex-col gap-3">
+          {horarios.map((hora) => {
+            const delBloque = reservas.filter((r) => r.hora_inicio === hora);
+            return (
+              <Card key={hora}>
+                <CardContent className="p-4">
+                  <Acordeon
+                    defaultOpen={horarios.length === 1}
+                    titulo={
+                      <div className="flex min-h-11 items-center gap-3">
+                        <span className="text-lg font-semibold">{formatHora(hora)} h</span>
+                        <span className="text-sm text-muted-foreground">
+                          {delBloque.length} {delBloque.length === 1 ? "alumno" : "alumnos"}
+                        </span>
+                      </div>
+                    }
+                  >
+                    <div className="flex flex-col gap-3">
+                      {delBloque.map((r) => {
+                        const rutina = rutinaPorAlumno.get(r.alumno_id) ?? null;
+                        const guardados = guardadosPorAlumno.get(r.alumno_id) ?? {};
+                        const registrado = Object.keys(guardados).length > 0;
+                        const restantes = clasesRestantesPorAlumno.get(r.alumno_id);
+                        return (
+                          <div
+                            key={r.id}
+                            className="rounded-[9px] border border-border px-3.5 py-1"
+                          >
+                            <Acordeon
+                              titulo={
+                                <div className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1">
+                                  <span className="font-medium">
+                                    {r.alumno?.nombres} {r.alumno?.apellidos}
+                                  </span>
+                                  {registrado && (
+                                    <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success">
+                                      Sesión registrada
+                                    </span>
+                                  )}
+                                  {restantes != null && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {restantes} clase{restantes === 1 ? "" : "s"} restante
+                                      {restantes === 1 ? "" : "s"}
+                                    </span>
+                                  )}
+                                </div>
+                              }
+                            >
+                              <div className="flex flex-col gap-4 pb-3">
+                                <AsistenciaAlumno
+                                  reservaId={r.id}
+                                  estado={r.estado}
+                                  asistencia={r.asistencia}
+                                  marcarAsistencia={marcarAsistencia}
+                                />
 
-      {alumnoSeleccionado && !rutinaActiva && (
-        <Card>
-          <CardContent className="flex flex-col items-start gap-3 pt-6">
-            <p className="text-sm text-muted-foreground">
-              {alumnoSeleccionado.nombres} {alumnoSeleccionado.apellidos} no tiene una
-              rutina vigente asignada.
-            </p>
-            <Link
-              href={`/protected/alumnos/${alumnoSeleccionado.id}`}
-              className="text-sm text-primary hover:underline"
-            >
-              Ir a su ficha para asignarle una →
-            </Link>
-          </CardContent>
-        </Card>
-      )}
+                                {!rutina ? (
+                                  <div className="flex flex-col items-start gap-2">
+                                    <p className="text-sm text-muted-foreground">
+                                      Sin rutina vigente asignada.
+                                    </p>
+                                    <Link
+                                      href={`/protected/alumnos/${r.alumno_id}`}
+                                      className="flex min-h-11 items-center text-sm text-primary hover:underline"
+                                    >
+                                      Ir a su ficha para asignarle una →
+                                    </Link>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <Acordeon
+                                      titulo={
+                                        <p className="flex min-h-11 items-center text-base font-semibold">
+                                          {rutina.nombre}
+                                        </p>
+                                      }
+                                    >
+                                      <RutinaCard rutina={rutina} />
+                                    </Acordeon>
 
-      {alumnoSeleccionado && rutinaActiva && (
-        <Card>
-          <CardContent className="pt-6">
-            <Acordeon
-              titulo={
-                <div>
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    {alumnoSeleccionado.nombres} {alumnoSeleccionado.apellidos}
-                  </h3>
-                  <p className="text-base font-semibold text-foreground">
-                    {rutinaActiva.nombre}
-                  </p>
-                </div>
-              }
-            >
-              <RutinaCard rutina={rutinaActiva} />
-            </Acordeon>
-
-            <div className="mt-6 border-t border-border pt-6">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Registrar sesión de bitácora
-                </h4>
-                <Link
-                  href={`/protected/alumnos/${alumnoSeleccionado.id}?vista=progreso`}
-                  className="shrink-0 text-xs text-muted-foreground hover:text-primary hover:underline"
-                >
-                  Ver historial y progreso →
-                </Link>
-              </div>
-              <SesionTabla
-                key={`${alumnoSeleccionado.id}-${fecha}`}
-                rutina={rutinaActiva}
-                guardar={guardarRegistroEjercicio.bind(
-                  null,
-                  alumnoSeleccionado.id,
-                  rutinaActiva.id,
-                  fecha,
-                )}
-                guardados={guardados}
-                fechaFutura={fecha > hoyIso()}
-              />
-            </div>
-          </CardContent>
-        </Card>
+                                    <div className="border-t border-border pt-4">
+                                      <div className="mb-3 flex items-center justify-between gap-3">
+                                        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                          Registrar sesión de bitácora
+                                        </h4>
+                                        <Link
+                                          href={`/protected/alumnos/${r.alumno_id}?vista=progreso`}
+                                          className="flex min-h-11 shrink-0 items-center text-xs text-muted-foreground hover:text-primary hover:underline"
+                                        >
+                                          Historial →
+                                        </Link>
+                                      </div>
+                                      <SesionTabla
+                                        key={`${r.alumno_id}-${fecha}`}
+                                        rutina={rutina}
+                                        guardar={guardarRegistroEjercicio.bind(
+                                          null,
+                                          r.alumno_id,
+                                          rutina.id,
+                                          fecha,
+                                        )}
+                                        guardados={guardados}
+                                        fechaFutura={fechaFutura}
+                                      />
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </Acordeon>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Acordeon>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       )}
     </div>
   );
