@@ -12,6 +12,7 @@ import {
   Receipt,
   ListChecks,
   NotebookPen,
+  Salad,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -31,6 +32,8 @@ const items = [
   // Catálogo de ejercicios: solo lo gestiona el dueño (el entrenador lo lee desde
   // el selector de rutinas).
   { href: "/protected/ejercicios", label: "Ejercicios", icon: ListChecks, soloDueno: true },
+  // Spec 24: alimentos, recetas, planes nutricionales y su asignación a alumnos.
+  { href: "/protected/nutricion", label: "Nutrición", icon: Salad },
   { href: "/protected/turnos", label: "Turnos", icon: CalendarDays },
   { href: "/protected/asistencias", label: "Asistencias", icon: ClipboardCheck },
   { href: "/protected/pagos", label: "Pagos", icon: CreditCard },
