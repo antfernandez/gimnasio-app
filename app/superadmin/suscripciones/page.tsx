@@ -68,8 +68,8 @@ export default async function SuscripcionesPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link href="/superadmin" className="text-xs text-muted-foreground hover:underline">
-          ← Administradores
+        <Link href="/superadmin/gimnasios" className="text-xs text-muted-foreground hover:underline">
+          ← Gimnasios
         </Link>
         <h2 className="text-2xl">Suscripciones por validar</h2>
         <p className="mt-1 text-sm text-muted-foreground">

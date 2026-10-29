@@ -10,6 +10,8 @@ import { LogoutButton } from "@/components/logout-button";
 import { PortalNav } from "@/components/portal/portal-nav";
 import { getAlumnoActual } from "@/lib/alumno-portal";
 import { createClient } from "@/lib/supabase/server";
+import { gimnasioBloqueado } from "@/lib/suscripcion-acceso";
+import { hoyIso } from "@/lib/turnos";
 import type { Gimnasio } from "@/lib/types";
 
 export default async function PortalLayout({
@@ -28,6 +30,12 @@ export default async function PortalLayout({
     .select("*")
     .eq("id", alumno.gimnasio_id)
     .maybeSingle();
+
+  // Spec 49: gimnasio cancelado o congelado por mora, los alumnos tampoco ingresan.
+  if (gimnasio && gimnasioBloqueado(gimnasio as Gimnasio, hoyIso())) {
+    await supabase.auth.signOut();
+    redirect("/auth/login/alumno?congelado=1");
+  }
 
   const inicial = alumno.nombres.trim().charAt(0).toUpperCase() || "?";
 

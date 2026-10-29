@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { BrandMark } from "@/components/brand-mark";
 import { LogoutButton } from "@/components/logout-button";
+import { SuperadminNav } from "@/components/superadmin/superadmin-nav";
 import { getSuperadminActual } from "@/lib/superadmin";
 
 // Mismo motivo que /protected y /portal: contenido 100% dinámico por sesión, sin
@@ -24,7 +25,7 @@ export default async function SuperadminLayout({
 
   return (
     <div className="grid min-h-svh grid-cols-1 md:grid-cols-[260px_1fr]">
-      <aside className="flex flex-col justify-between border-b border-border bg-secondary/40 px-5 py-7 md:border-b-0 md:border-r">
+      <aside className="flex flex-col border-b border-border bg-[hsl(33_50%_86%)] px-5 py-7 md:border-b-0 md:border-r">
         <div>
           <BrandMark className="mb-8 px-1" />
           <div className="mb-6 border-b border-border pb-6 text-center">
@@ -37,13 +38,16 @@ export default async function SuperadminLayout({
             <span className="text-xs text-muted-foreground">
               Valinor Estudio
             </span>
+            <div className="mt-3 flex justify-center">
+              <LogoutButton />
+            </div>
           </div>
+          <SuperadminNav />
         </div>
-        <LogoutButton />
       </aside>
 
       <main className="px-6 py-8 md:px-10 md:py-10">
-        <div className="mx-auto max-w-4xl">{children}</div>
+        <div className="max-w-[1600px]">{children}</div>
       </main>
     </div>
   );

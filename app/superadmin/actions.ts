@@ -21,6 +21,11 @@ async function requireSuperadmin() {
   return superadmin;
 }
 
+function revalidarSuperadmin() {
+  revalidatePath("/superadmin");
+  revalidatePath("/superadmin/gimnasios");
+}
+
 export type CrearAdminFormState = { error?: string; ok?: boolean };
 
 /**
@@ -93,36 +98,6 @@ export async function crearAdmin(
     };
   }
 
-  revalidatePath("/superadmin");
+  revalidarSuperadmin();
   return { ok: true };
-}
-
-/** "Dar de baja" (Parte C): el dueño deja de poder operar el panel — ver el chequeo
- * de `gimnasio.estado` en `app/protected/layout.tsx`. No se borra nada. */
-export async function darDeBajaAdmin(gimnasioId: string) {
-  await requireSuperadmin();
-  const admin = createAdminClient();
-  await admin.from("gimnasios").update({ estado: "cancelado" }).eq("id", gimnasioId);
-  revalidatePath("/superadmin");
-}
-
-export async function reactivarAdmin(gimnasioId: string) {
-  await requireSuperadmin();
-  const admin = createAdminClient();
-  await admin.from("gimnasios").update({ estado: "activo" }).eq("id", gimnasioId);
-  revalidatePath("/superadmin");
-}
-
-export async function editarAdmin(formData: FormData) {
-  await requireSuperadmin();
-  const perfilId = String(formData.get("perfil_id") ?? "");
-  const gimnasioId = String(formData.get("gimnasio_id") ?? "");
-  const nombreCompleto = String(formData.get("nombre_completo") ?? "").trim();
-  const nombreGimnasio = String(formData.get("nombre_gimnasio") ?? "").trim();
-  if (!perfilId || !gimnasioId || !nombreCompleto || !nombreGimnasio) return;
-
-  const admin = createAdminClient();
-  await admin.from("perfiles").update({ nombre_completo: nombreCompleto }).eq("id", perfilId);
-  await admin.from("gimnasios").update({ nombre: nombreGimnasio }).eq("id", gimnasioId);
-  revalidatePath("/superadmin");
 }

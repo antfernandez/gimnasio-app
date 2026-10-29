@@ -17,6 +17,8 @@ import { LogoutButton } from "@/components/logout-button";
 import { SidebarMobileToggle } from "@/components/protected/sidebar-mobile-toggle";
 import { SidebarNav } from "@/components/protected/sidebar-nav";
 import { getPerfilActual } from "@/lib/perfil";
+import { gimnasioBloqueado, suscripcionCongelada } from "@/lib/suscripcion-acceso";
+import { hoyIso } from "@/lib/turnos";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ProtectedLayout({
@@ -35,10 +37,15 @@ export default async function ProtectedLayout({
   // Superadmin cambiando `gimnasios.estado` (app/superadmin/actions.ts). Se
   // revisa acá, no solo en el login, porque una sesión ya abierta debe cortarse
   // también.
-  if (gimnasio.estado === "cancelado") {
+  // Spec 49: congelado por mora (más de 1 mes vencido) también corta el acceso.
+  if (gimnasioBloqueado(gimnasio, hoyIso())) {
     const supabase = await createClient();
     await supabase.auth.signOut();
-    redirect("/auth/login/dueno?baja=1");
+    redirect(
+      suscripcionCongelada(gimnasio, hoyIso())
+        ? "/auth/login/dueno?congelado=1"
+        : "/auth/login/dueno?baja=1",
+    );
   }
   const inicial = perfil.nombre_completo.trim().charAt(0).toUpperCase() || "?";
 

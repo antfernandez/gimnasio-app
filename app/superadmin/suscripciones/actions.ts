@@ -35,6 +35,7 @@ export async function validarSuscripcion(id: string): Promise<void> {
   });
   if (error) throw new Error("No se pudo validar el pago.");
   revalidatePath("/superadmin/suscripciones");
+  revalidatePath("/superadmin", "layout");
 }
 
 export async function rechazarSuscripcion(id: string, formData: FormData): Promise<void> {
@@ -56,4 +57,5 @@ export async function rechazarSuscripcion(id: string, formData: FormData): Promi
     .eq("estado", "pendiente");
   if (error) throw new Error("No se pudo rechazar el pago.");
   revalidatePath("/superadmin/suscripciones");
+  revalidatePath("/superadmin", "layout");
 }

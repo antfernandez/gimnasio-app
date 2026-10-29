@@ -15,6 +15,8 @@ export interface Gimnasio {
   /** Sprint 9: opción configurable, no obligatoria (Valinor prefiere transferencia
    * por la comisión que cobra Mercado Pago). El cobro real llega en el Sprint 13. */
   mercado_pago_habilitado: boolean;
+  plan_sistema_id: string | null;
+  suscripcion_hasta: string | null;
   created_at: string;
 }
 
@@ -402,7 +404,7 @@ export interface DisponibilidadTurno {
   cupos_ocupados: number;
 }
 
-export type MetodoSolicitud = "mercado_pago" | "transferencia";
+export type MetodoSolicitud = "mercado_pago" | "transferencia" | "manual";
 export type EstadoSolicitud = "pendiente" | "confirmado" | "rechazado";
 
 export interface SolicitudPago {

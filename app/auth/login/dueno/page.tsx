@@ -7,15 +7,20 @@ export const instant = false;
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ baja?: string }>;
+  searchParams: Promise<{ baja?: string; congelado?: string }>;
 }) {
-  const { baja } = await searchParams;
+  const { baja, congelado } = await searchParams;
   return (
     <div className="flex flex-col gap-4">
       {baja === "1" && (
         <p className="mx-auto max-w-sm text-center text-sm text-destructive">
           Tu cuenta de gimnasio fue dada de baja. Contacta al equipo de Valinor si
           crees que es un error.
+        </p>
+      )}
+      {congelado === "1" && (
+        <p className="mx-auto max-w-sm text-center text-sm text-destructive">
+          El gimnasio tiene la suscripción vencida. Contacta a Valinor.
         </p>
       )}
       <LoginForm tipo="dueno" />

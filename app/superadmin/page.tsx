@@ -1,97 +1,177 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { AdminRow } from "@/components/superadmin/admin-row";
-import { CrearAdminForm } from "@/components/superadmin/crear-admin-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { getSuperadminActual } from "@/lib/superadmin";
+import { hoyIso } from "@/lib/turnos";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { Gimnasio, Perfil } from "@/lib/types";
+import { listarGimnasiosAdmin } from "@/lib/superadmin-datos";
+import { estadoSuscripcion } from "@/lib/superadmin-metricas";
+import { getSuperadminActual } from "@/lib/superadmin";
 
 export const instant = false;
 
-interface AdminItem {
-  perfil: Perfil;
-  gimnasio: Gimnasio;
-  email: string;
+function Tarjeta({
+  titulo,
+  valor,
+  href,
+  nota,
+}: {
+  titulo: string;
+  valor: number;
+  href: string;
+  nota?: string;
+}) {
+  return (
+    <Link href={href} className="block">
+      <Card className="h-full transition-colors hover:border-primary">
+        <CardContent className="pt-6">
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{titulo}</div>
+          <div className="mt-2 font-display text-4xl text-foreground">{valor}</div>
+          {nota && <div className="mt-1 text-xs text-muted-foreground">{nota}</div>}
+        </CardContent>
+      </Card>
+    </Link>
+  );
 }
 
-/**
- * Usa el cliente `service_role`: sin fila en `perfiles`, el Superadmin no pasa
- * ninguna política RLS sobre `perfiles`/`gimnasios` con el cliente normal (a
- * propósito, ver `supabase/migrations/0008_roles_superadmin_aprobacion.sql`).
- * Solo lee estas dos tablas — nunca alumnos/pagos/sitios de un tenant.
- */
-async function listarAdmins(): Promise<AdminItem[]> {
-  const admin = createAdminClient();
-  const { data: perfiles } = await admin
-    .from("perfiles")
-    .select("*, gimnasios(*)")
-    .eq("rol", "dueño")
-    .order("created_at", { ascending: false });
-
-  if (!perfiles) return [];
-
-  const items: AdminItem[] = [];
-  for (const row of perfiles as Array<Perfil & { gimnasios: Gimnasio | null }>) {
-    const { gimnasios: gimnasio, ...perfil } = row;
-    if (!gimnasio) continue;
-    const { data: userData } = await admin.auth.admin.getUserById(perfil.id);
-    items.push({ perfil, gimnasio, email: userData.user?.email ?? "—" });
-  }
-  return items;
-}
-
-export default async function SuperadminPage() {
+// Solo `gimnasios`, `planes_sistema` y `solicitudes_pago` con `flujo = 'suscripcion'`:
+// ninguna tabla de alumnos (el superadmin no accede a datos de un tenant).
+export default async function SuperadminDashboardPage() {
   const superadmin = await getSuperadminActual();
   if (!superadmin) redirect("/auth/login/superadmin");
 
-  const admins = await listarAdmins();
+  const hoy = hoyIso();
+  const inicioMes = `${hoy.slice(0, 7)}-01`;
+  const admin = createAdminClient();
+
+  const [gimnasios, { data: solicitudes }, { data: planes }] = await Promise.all([
+    listarGimnasiosAdmin(),
+    admin
+      .from("solicitudes_pago")
+      .select("estado, created_at, validado_at")
+      .eq("flujo", "suscripcion"),
+    admin.from("planes_sistema").select("id, nombre"),
+  ]);
+
+  const conteo = { activo: 0, moroso: 0, congelado: 0, cancelado: 0, sin_plan: 0 };
+  const porPlan = new Map<string, number>();
+  for (const g of gimnasios) {
+    const e = estadoSuscripcion(g, hoy);
+    conteo[e] += 1;
+    if (g.plan_sistema_id && e !== "cancelado") {
+      porPlan.set(g.plan_sistema_id, (porPlan.get(g.plan_sistema_id) ?? 0) + 1);
+    }
+  }
+  const suscritos = gimnasios.filter((g) => g.plan_sistema_id).length;
+
+  const filas = solicitudes ?? [];
+  const porValidar = filas.filter((s) => s.estado === "pendiente").length;
+  const delMes = (estado: string) =>
+    filas.filter((s) => s.estado === estado && (s.validado_at ?? "") >= inicioMes).length;
+  const validados = delMes("confirmado");
+  const rechazados = delMes("rechazado");
+
+  const distribucion = (planes ?? [])
+    .map((p) => ({ nombre: p.nombre as string, n: porPlan.get(p.id as string) ?? 0 }))
+    .filter((p) => p.n > 0);
+  const maximo = Math.max(1, ...distribucion.map((p) => p.n));
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
-            Panel Superadmin
-          </div>
-          <h2 className="text-2xl">Administradores</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Crea, edita y da de baja cuentas de dueño/a. Este panel no tiene acceso a
-            alumnos, pagos de alumnos ni contenido del sitio de ningún gimnasio; solo
-            valida los pagos de suscripción al sistema.
-          </p>
+      <div>
+        <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          Panel Superadmin
         </div>
-        <Button asChild variant="outline">
-          <Link href="/superadmin/suscripciones">Suscripciones por validar</Link>
-        </Button>
+        <h2 className="text-2xl">Dashboard</h2>
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Crear cuenta de Admin
-          </h3>
-          <CrearAdminForm />
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <Tarjeta titulo="Gimnasios suscritos" valor={suscritos} href="/superadmin/gimnasios" />
+        <Tarjeta
+          titulo="Activos"
+          valor={conteo.activo}
+          href="/superadmin/gimnasios?estado=activo"
+          nota="Suscripción al día"
+        />
+        <Tarjeta
+          titulo="Morosos"
+          valor={conteo.moroso}
+          href="/superadmin/gimnasios?estado=moroso"
+          nota="Vencida, hasta 1 mes"
+        />
+        <Tarjeta
+          titulo="Congelados"
+          valor={conteo.congelado}
+          href="/superadmin/gimnasios?estado=congelado"
+          nota="Sin acceso por mora"
+        />
+        <Tarjeta
+          titulo="Cancelados"
+          valor={conteo.cancelado}
+          href="/superadmin/gimnasios?estado=cancelado"
+        />
+      </div>
 
-      <div className="flex flex-col gap-3">
-        {admins.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            Aún no hay cuentas de Admin creadas.
-          </p>
-        ) : (
-          admins.map((a) => (
-            <AdminRow
-              key={a.perfil.id}
-              perfil={a.perfil}
-              gimnasio={a.gimnasio}
-              email={a.email}
-            />
-          ))
-        )}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardContent className="pt-6">
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Estado de pago
+            </h3>
+            <dl className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <dd className="font-display text-3xl">{porValidar}</dd>
+                <dt className="text-xs text-muted-foreground">Por validar</dt>
+              </div>
+              <div>
+                <dd className="font-display text-3xl">{validados}</dd>
+                <dt className="text-xs text-muted-foreground">Validados del mes</dt>
+              </div>
+              <div>
+                <dd className="font-display text-3xl">{rechazados}</dd>
+                <dt className="text-xs text-muted-foreground">Rechazados del mes</dt>
+              </div>
+            </dl>
+            <Button asChild variant="outline" className="mt-5">
+              <Link href="/superadmin/suscripciones">Suscripciones por validar</Link>
+            </Button>
+            {conteo.sin_plan > 0 && (
+              <p className="mt-4 text-xs text-muted-foreground">
+                <Link href="/superadmin/gimnasios?estado=sin_plan" className="underline">
+                  {conteo.sin_plan} gimnasio{conteo.sin_plan === 1 ? "" : "s"} sin plan
+                </Link>{" "}
+                (en prueba, no cuentan como morosos).
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Gimnasios por plan
+            </h3>
+            {distribucion.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aún no hay gimnasios con plan.</p>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {distribucion.map((p) => (
+                  <li key={p.nombre} className="grid grid-cols-[110px_1fr_auto] items-center gap-3 text-sm">
+                    <span>{p.nombre}</span>
+                    <div className="h-2.5 rounded-full bg-secondary">
+                      <div
+                        className="h-2.5 rounded-full bg-primary"
+                        style={{ width: `${(p.n / maximo) * 100}%` }}
+                      />
+                    </div>
+                    <span className="tabular-nums">{p.n}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
