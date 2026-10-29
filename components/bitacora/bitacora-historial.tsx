@@ -1,3 +1,10 @@
+"use client";
+
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { PaginadorLocal } from "@/components/ui/paginador-local";
 import {
   Table,
   TableBody,
@@ -7,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatFecha } from "@/lib/format";
+import { cortarPagina } from "@/lib/paginacion";
 import type { RegistroRutina } from "@/lib/types";
 
 function formatPlanificado(r: RegistroRutina): string {
@@ -22,6 +30,10 @@ function formatRealizado(r: RegistroRutina): string {
 }
 
 export function BitacoraHistorial({ registros }: { registros: RegistroRutina[] }) {
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
+  const [pagina, setPagina] = useState(1);
+
   if (registros.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-muted-foreground">
@@ -30,30 +42,79 @@ export function BitacoraHistorial({ registros }: { registros: RegistroRutina[] }
     );
   }
 
+  const visibles = registros.filter(
+    (r) => (!desde || r.fecha >= desde) && (!hasta || r.fecha <= hasta),
+  );
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Fecha</TableHead>
-          <TableHead>Ejercicio</TableHead>
-          <TableHead>Planificado</TableHead>
-          <TableHead>Realizado</TableHead>
-          <TableHead>Notas</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {registros.map((r) => (
-          <TableRow key={r.id}>
-            <TableCell>{formatFecha(r.fecha)}</TableCell>
-            <TableCell className="font-medium text-foreground">{r.ejercicio}</TableCell>
-            <TableCell className="text-muted-foreground">{formatPlanificado(r)}</TableCell>
-            <TableCell>{formatRealizado(r)}</TableCell>
-            <TableCell className="max-w-[220px] truncate text-muted-foreground">
-              {r.notas || "—"}
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <Input
+          type="date"
+          aria-label="Desde"
+          className="w-auto"
+          value={desde}
+          onChange={(e) => {
+            setDesde(e.target.value);
+            setPagina(1);
+          }}
+        />
+        <Input
+          type="date"
+          aria-label="Hasta"
+          className="w-auto"
+          value={hasta}
+          onChange={(e) => {
+            setHasta(e.target.value);
+            setPagina(1);
+          }}
+        />
+        {(desde || hasta) && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setDesde("");
+              setHasta("");
+              setPagina(1);
+            }}
+          >
+            Limpiar
+          </Button>
+        )}
+      </div>
+
+      {visibles.length === 0 ? (
+        <p className="py-4 text-center text-sm text-muted-foreground">
+          No hay registros en ese rango de fechas.
+        </p>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Fecha</TableHead>
+              <TableHead>Ejercicio</TableHead>
+              <TableHead>Planificado</TableHead>
+              <TableHead>Realizado</TableHead>
+              <TableHead>Notas</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {cortarPagina(visibles, pagina).map((r) => (
+              <TableRow key={r.id}>
+                <TableCell>{formatFecha(r.fecha)}</TableCell>
+                <TableCell className="font-medium text-foreground">{r.ejercicio}</TableCell>
+                <TableCell className="text-muted-foreground">{formatPlanificado(r)}</TableCell>
+                <TableCell>{formatRealizado(r)}</TableCell>
+                <TableCell className="max-w-[220px] truncate text-muted-foreground">
+                  {r.notas || "—"}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+
+      <PaginadorLocal pagina={pagina} total={visibles.length} onCambiar={setPagina} />
+    </div>
   );
 }

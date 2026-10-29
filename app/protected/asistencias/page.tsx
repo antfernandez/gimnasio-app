@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Paginador } from "@/components/ui/paginador";
 import { Select } from "@/components/ui/select";
 import {
   Table,
@@ -14,12 +15,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatFecha } from "@/lib/format";
+import { leerPagina, rangoPagina } from "@/lib/paginacion";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import { formatHora, hoyIso, sumarMinutos } from "@/lib/turnos";
 import type { Asistencia } from "@/lib/types";
-
-const POR_PAGINA = 15;
 
 const ESTADOS: { value: Asistencia; label: string; variant: "success" | "destructive" | "secondary" }[] = [
   { value: "presente", label: "Presente", variant: "success" },
@@ -58,7 +58,7 @@ export default async function AsistenciasPage({
   const hasta = FECHA_RE.test(params.hasta ?? "") ? params.hasta! : mes.hasta;
   const estado = ESTADOS.find((e) => e.value === params.estado)?.value;
   const q = (params.q ?? "").trim();
-  const pagina = Math.max(1, Number.parseInt(params.pagina ?? "1", 10) || 1);
+  const pagina = leerPagina(params.pagina);
 
   const perfilData = await getPerfilActual();
   if (!perfilData) return null; // el layout ya redirige a /auth/login
@@ -88,7 +88,7 @@ export default async function AsistenciasPage({
     .not("asistencia", "is", null)
     .order("fecha", { ascending: false })
     .order("hora_inicio", { ascending: false })
-    .range((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA - 1);
+    .range(...rangoPagina(pagina));
   if (estado) lista = lista.eq("asistencia", estado);
 
   const [{ data, count }, ...conteos] = await Promise.all([
@@ -98,13 +98,7 @@ export default async function AsistenciasPage({
 
   const filas = (data ?? []) as unknown as Fila[];
   const total = count ?? 0;
-  const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
   const totales = Object.fromEntries(ESTADOS.map((e, i) => [e.value, conteos[i].count ?? 0]));
-
-  const hrefPagina = (p: number) => ({
-    pathname: "/protected/asistencias",
-    query: { desde, hasta, ...(estado ? { estado } : {}), ...(q ? { q } : {}), pagina: p },
-  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -149,6 +143,9 @@ export default async function AsistenciasPage({
             />
             <Button type="submit" variant="outline">
               Filtrar
+            </Button>
+            <Button asChild variant="ghost">
+              <Link href="/protected/asistencias">Limpiar</Link>
             </Button>
           </form>
 
@@ -195,34 +192,12 @@ export default async function AsistenciasPage({
             </Table>
           )}
 
-          {total > 0 && (
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
-              <span>
-                Página {Math.min(pagina, totalPaginas)} de {totalPaginas} · {total} registro
-                {total === 1 ? "" : "s"}
-              </span>
-              <div className="flex gap-2">
-                {pagina > 1 ? (
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={hrefPagina(pagina - 1)}>Anterior</Link>
-                  </Button>
-                ) : (
-                  <Button variant="outline" size="sm" disabled>
-                    Anterior
-                  </Button>
-                )}
-                {pagina < totalPaginas ? (
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={hrefPagina(pagina + 1)}>Siguiente</Link>
-                  </Button>
-                ) : (
-                  <Button variant="outline" size="sm" disabled>
-                    Siguiente
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
+          <Paginador
+            pathname="/protected/asistencias"
+            query={{ desde, hasta, estado, q }}
+            pagina={pagina}
+            total={total}
+          />
         </CardContent>
       </Card>
     </div>

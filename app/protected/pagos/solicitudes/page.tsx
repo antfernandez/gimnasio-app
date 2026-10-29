@@ -7,6 +7,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Paginador } from "@/components/ui/paginador";
 import {
   Table,
   TableBody,
@@ -16,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatFecha, formatMonto } from "@/lib/format";
+import { cortarPagina, leerPagina } from "@/lib/paginacion";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import type { SolicitudPago } from "@/lib/types";
@@ -28,10 +30,11 @@ type Fila = SolicitudPago & {
 export default async function SolicitudesPagoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; pagina?: string }>;
 }) {
   const params = await searchParams;
   const q = (params.q ?? "").trim().toLowerCase();
+  const pagina = leerPagina(params.pagina);
   const perfilData = await getPerfilActual();
   if (!perfilData) return null;
 
@@ -44,9 +47,10 @@ export default async function SolicitudesPagoPage({
     .eq("estado", "pendiente")
     .order("created_at", { ascending: true });
 
-  const pendientes = ((data ?? []) as Fila[]).filter(
+  const coincidentes = ((data ?? []) as Fila[]).filter(
     (s) => !q || `${s.alumnos?.nombres ?? ""} ${s.alumnos?.apellidos ?? ""}`.toLowerCase().includes(q),
   );
+  const pendientes = cortarPagina(coincidentes, pagina);
   const filas: Fila[] = await Promise.all(
     pendientes.map(async (s) => {
       const { data: firmada } = s.comprobante_path
@@ -140,6 +144,13 @@ export default async function SolicitudesPagoPage({
           </TableBody>
         </Table>
       )}
+
+      <Paginador
+        pathname="/protected/pagos/solicitudes"
+        query={{ q }}
+        pagina={pagina}
+        total={coincidentes.length}
+      />
     </div>
   );
 }

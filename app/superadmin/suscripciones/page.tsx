@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Paginador } from "@/components/ui/paginador";
 import {
   Table,
   TableBody,
@@ -17,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatFecha, formatMonto } from "@/lib/format";
+import { cortarPagina, leerPagina } from "@/lib/paginacion";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSuperadminActual } from "@/lib/superadmin";
 import type { SolicitudPago } from "@/lib/types";
@@ -31,7 +33,14 @@ type Fila = SolicitudPago & {
 
 // Usa `service_role` solo sobre `solicitudes_pago` con `flujo = 'suscripcion'` (lo que
 // los gimnasios te pagan a ti); nunca los pagos de alumnos.
-export default async function SuscripcionesPage() {
+export default async function SuscripcionesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; pagina?: string }>;
+}) {
+  const params = await searchParams;
+  const q = (params.q ?? "").trim();
+  const pagina = leerPagina(params.pagina);
   const superadmin = await getSuperadminActual();
   if (!superadmin) redirect("/auth/login/superadmin");
 
@@ -44,8 +53,11 @@ export default async function SuscripcionesPage() {
     .eq("estado", "pendiente")
     .order("created_at", { ascending: true });
 
+  const coincidentes = ((data ?? []) as Fila[]).filter(
+    (s) => !q || (s.gimnasios?.nombre ?? "").toLowerCase().includes(q.toLowerCase()),
+  );
   const filas: Fila[] = await Promise.all(
-    ((data ?? []) as Fila[]).map(async (s) => {
+    cortarPagina(coincidentes, pagina).map(async (s) => {
       const { data: firmada } = s.comprobante_path
         ? await admin.storage.from("comprobantes-pago").createSignedUrl(s.comprobante_path, 600)
         : { data: null };
@@ -65,10 +77,28 @@ export default async function SuscripcionesPage() {
         </p>
       </div>
 
+      <form className="flex flex-wrap items-center gap-3" action="/superadmin/suscripciones">
+        <Input
+          type="search"
+          name="q"
+          placeholder="Buscar por gimnasio…"
+          defaultValue={q}
+          className="min-w-[220px] max-w-xs flex-1"
+        />
+        <Button type="submit" variant="outline">
+          Filtrar
+        </Button>
+        {q && (
+          <Button asChild variant="ghost">
+            <Link href="/superadmin/suscripciones">Limpiar</Link>
+          </Button>
+        )}
+      </form>
+
       {filas.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            No hay transferencias pendientes.
+            {q ? "No hay transferencias que coincidan." : "No hay transferencias pendientes."}
           </CardContent>
         </Card>
       ) : (
@@ -124,6 +154,13 @@ export default async function SuscripcionesPage() {
           </TableBody>
         </Table>
       )}
+
+      <Paginador
+        pathname="/superadmin/suscripciones"
+        query={{ q }}
+        pagina={pagina}
+        total={coincidentes.length}
+      />
     </div>
   );
 }

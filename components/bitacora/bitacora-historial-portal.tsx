@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 
 import { Acordeon } from "@/components/ui/acordeon";
 import { Input } from "@/components/ui/input";
+import { PaginadorLocal } from "@/components/ui/paginador-local";
 import { formatFecha } from "@/lib/format";
+import { cortarPagina } from "@/lib/paginacion";
 import type { RegistroRutina } from "@/lib/types";
 
 type Props = {
@@ -33,6 +35,7 @@ export function BitacoraHistorialPortal({ registros, rutinas }: Props) {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [rutinaId, setRutinaId] = useState("");
+  const [pagina, setPagina] = useState(1);
 
   const sesiones = useMemo(() => {
     const mapa = new Map<string, Sesion>();
@@ -82,7 +85,10 @@ export function BitacoraHistorialPortal({ registros, rutinas }: Props) {
             type="date"
             className="h-11 w-full"
             value={desde}
-            onChange={(e) => setDesde(e.target.value)}
+            onChange={(e) => {
+              setDesde(e.target.value);
+              setPagina(1);
+            }}
           />
         </label>
         <label className="grid gap-1 text-xs text-muted-foreground">
@@ -91,14 +97,20 @@ export function BitacoraHistorialPortal({ registros, rutinas }: Props) {
             type="date"
             className="h-11 w-full"
             value={hasta}
-            onChange={(e) => setHasta(e.target.value)}
+            onChange={(e) => {
+              setHasta(e.target.value);
+              setPagina(1);
+            }}
           />
         </label>
         <label className="grid gap-1 text-xs text-muted-foreground">
           Rutina
           <select
             value={rutinaId}
-            onChange={(e) => setRutinaId(e.target.value)}
+            onChange={(e) => {
+              setRutinaId(e.target.value);
+              setPagina(1);
+            }}
             className="h-11 w-full rounded-[9px] border border-border bg-white px-3 text-sm text-foreground"
           >
             <option value="">Todas</option>
@@ -117,7 +129,7 @@ export function BitacoraHistorialPortal({ registros, rutinas }: Props) {
         </p>
       ) : (
         <div className="flex flex-col gap-2">
-          {visibles.map((s) => (
+          {cortarPagina(visibles, pagina).map((s) => (
             <div key={s.clave} className="rounded-[9px] border border-border px-3.5 py-1">
               <Acordeon
                 titulo={
@@ -141,6 +153,8 @@ export function BitacoraHistorialPortal({ registros, rutinas }: Props) {
           ))}
         </div>
       )}
+
+      <PaginadorLocal pagina={pagina} total={visibles.length} onCambiar={setPagina} />
     </div>
   );
 }

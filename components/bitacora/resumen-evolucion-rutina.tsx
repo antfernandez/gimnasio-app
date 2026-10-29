@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { PaginadorLocal } from "@/components/ui/paginador-local";
 import {
   Table,
   TableBody,
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { formatFecha } from "@/lib/format";
 import { inicioDeSemana, sumarDias } from "@/lib/turnos";
+import { cortarPagina } from "@/lib/paginacion";
 import type { RegistroRutina, Rutina } from "@/lib/types";
 
 type Periodo = "dia" | "semana" | "mes" | "año";
@@ -58,6 +60,7 @@ export function ResumenEvolucionRutina({
   rutinas: Rutina[];
 }) {
   const [periodo, setPeriodo] = useState<Periodo>("semana");
+  const [pagina, setPagina] = useState(1);
 
   const nombrePorRutina = useMemo(() => {
     const m = new Map<string, string>();
@@ -107,7 +110,10 @@ export function ResumenEvolucionRutina({
         <Select
           id="periodo"
           value={periodo}
-          onChange={(e) => setPeriodo(e.target.value as Periodo)}
+          onChange={(e) => {
+            setPeriodo(e.target.value as Periodo);
+            setPagina(1);
+          }}
         >
           {OPCIONES.map((o) => (
             <option key={o.value} value={o.value}>
@@ -134,7 +140,7 @@ export function ResumenEvolucionRutina({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filas.map((f) => (
+            {cortarPagina(filas, pagina).map((f) => (
               <TableRow key={f.clave}>
                 <TableCell className="font-medium text-foreground">{f.rango}</TableCell>
                 <TableCell className="text-muted-foreground">{f.rutinas}</TableCell>
@@ -147,6 +153,8 @@ export function ResumenEvolucionRutina({
           </TableBody>
         </Table>
       )}
+
+      <PaginadorLocal pagina={pagina} total={filas.length} onCambiar={setPagina} />
     </div>
   );
 }

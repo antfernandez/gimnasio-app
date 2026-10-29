@@ -3,19 +3,11 @@ import Link from "next/link";
 import { LineChart } from "@/components/charts/line-chart";
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
 import { ContactoForm } from "@/components/portal/contacto-form";
+import { TablaAvances } from "@/components/portal/tabla-avances";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { getAlumnoActual } from "@/lib/alumno-portal";
 import { formatFecha } from "@/lib/format";
-import { formatMedidas } from "@/lib/medidas";
 import { formatRut } from "@/lib/rut";
 import { createClient } from "@/lib/supabase/server";
 import { hoyIso, inicioDeSemana, sumarDias } from "@/lib/turnos";
@@ -309,30 +301,7 @@ export default async function PortalPage() {
                   unidad=" kg"
                 />
               </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Peso</TableHead>
-                    <TableHead>Medidas</TableHead>
-                    <TableHead>Notas</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {historialAvances.map((avance) => (
-                    <TableRow key={avance.id}>
-                      <TableCell>{formatFecha(avance.fecha)}</TableCell>
-                      <TableCell className="font-medium text-foreground">
-                        {avance.peso_kg ? `${avance.peso_kg} kg` : "—"}
-                      </TableCell>
-                      <TableCell>{formatMedidas(avance.medidas)}</TableCell>
-                      <TableCell className="max-w-[220px] truncate text-muted-foreground">
-                        {avance.notas || "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <TablaAvances avances={historialAvances} />
             </details>
           )}
         </CardContent>

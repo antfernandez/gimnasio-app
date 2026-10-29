@@ -6,6 +6,7 @@ import { PlanAcciones } from "@/components/planes/plan-acciones";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Paginador } from "@/components/ui/paginador";
 import { Select } from "@/components/ui/select";
 import {
   Table,
@@ -16,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatFecha, formatMonto } from "@/lib/format";
+import { cortarPagina, leerPagina } from "@/lib/paginacion";
 import { ESTADO_PLAN_LABEL, estadoPlan } from "@/lib/planes";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
@@ -30,7 +32,7 @@ const NIVEL_LABEL: Record<string, string> = {
 export default async function PlanesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ creado?: string; actualizado?: string; q?: string; estado?: string }>;
+  searchParams: Promise<{ creado?: string; actualizado?: string; q?: string; estado?: string; pagina?: string }>;
 }) {
   const params = await searchParams;
 
@@ -53,11 +55,13 @@ export default async function PlanesPage({
   const hoy = new Date().toISOString().slice(0, 10);
   const q = (params.q ?? "").trim();
   const estado = params.estado ?? "";
-  const lista = ((planes ?? []) as Plan[]).filter(
+  const pagina = leerPagina(params.pagina);
+  const filtrados = ((planes ?? []) as Plan[]).filter(
     (p) =>
       (!q || p.nombre.toLowerCase().includes(q.toLowerCase())) &&
       (!estado || estadoPlan(p, hoy) === estado),
   );
+  const lista = cortarPagina(filtrados, pagina);
 
   // Columna "Alumnos" cuenta solo activos; la regla de baja usa el total.
   const alumnosPorPlan = new Map<string, number>();
@@ -126,7 +130,7 @@ export default async function PlanesPage({
             )}
           </form>
 
-          {lista.length === 0 ? (
+          {filtrados.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
               {q || estado
                 ? "No hay planes que coincidan con los filtros."
@@ -196,6 +200,13 @@ export default async function PlanesPage({
               </TableBody>
             </Table>
           )}
+
+          <Paginador
+            pathname="/protected/planes"
+            query={{ q, estado }}
+            pagina={pagina}
+            total={filtrados.length}
+          />
         </CardContent>
       </Card>
     </div>

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { IconAction } from "@/components/ui/icon-action";
 import { Input } from "@/components/ui/input";
+import { Paginador } from "@/components/ui/paginador";
 import { Select } from "@/components/ui/select";
 import {
   Table,
@@ -27,6 +28,7 @@ import {
   labelCategoria,
   type Alimento,
 } from "@/lib/nutricion";
+import { leerPagina, rangoPagina } from "@/lib/paginacion";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 
@@ -39,6 +41,7 @@ export default async function AlimentosPage({
     editar?: string;
     nuevo?: string;
     guardado?: string;
+    pagina?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -48,23 +51,32 @@ export default async function AlimentosPage({
   const categoria = CATEGORIAS_ALIMENTO.find(
     (c) => c.value === params.categoria,
   )?.value;
-  const q = (params.q ?? "").trim().toLowerCase();
+  const q = (params.q ?? "").trim();
+  const pagina = leerPagina(params.pagina);
 
   const supabase = await createClient();
   // RLS devuelve los globales (gimnasio_id null) y los del propio gimnasio.
-  const { data } = await supabase
+  let consulta = supabase
     .from("alimentos")
-    .select("*")
-    .order("nombre", { ascending: true });
-  const todos = (data ?? []) as Alimento[];
+    .select("*", { count: "exact" })
+    .order("nombre", { ascending: true })
+    .range(...rangoPagina(pagina));
+  if (categoria) consulta = consulta.eq("categoria", categoria);
+  if (q) consulta = consulta.ilike("nombre", `%${q.replace(/[,%()]/g, "")}%`);
+  const { data, count } = await consulta;
+  const visibles = (data ?? []) as Alimento[];
+  const total = count ?? 0;
 
-  const enEdicion = params.editar
-    ? todos.find(
-        (a) =>
-          a.id === params.editar &&
-          a.gimnasio_id === perfilData.perfil.gimnasio_id,
-      )
-    : undefined;
+  let enEdicion: Alimento | undefined;
+  if (params.editar) {
+    const { data: fila } = await supabase
+      .from("alimentos")
+      .select("*")
+      .eq("id", params.editar)
+      .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
+      .maybeSingle();
+    enEdicion = (fila ?? undefined) as Alimento | undefined;
+  }
 
   // Recetas distintas que usan cada alimento (RLS limita a las del gimnasio).
   const { data: usos } = await supabase
@@ -78,12 +90,6 @@ export default async function AlimentosPage({
     set.add(u.receta_id as string);
     recetasPorAlimento.set(u.alimento_id as string, set);
   }
-
-  const visibles = todos.filter(
-    (a) =>
-      (!categoria || a.categoria === categoria) &&
-      (!q || a.nombre.toLowerCase().includes(q)),
-  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -122,7 +128,7 @@ export default async function AlimentosPage({
               <Input
                 name="q"
                 placeholder="Buscar por nombre"
-                defaultValue={params.q ?? ""}
+                defaultValue={q}
                 className="w-56"
               />
               <Select
@@ -140,6 +146,11 @@ export default async function AlimentosPage({
               <Button type="submit" variant="outline">
                 Filtrar
               </Button>
+              {(q || categoria) && (
+                <Button asChild variant="ghost">
+                  <Link href="/protected/nutricion/alimentos">Limpiar</Link>
+                </Button>
+              )}
             </form>
             <Button asChild>
               <Link href="/protected/nutricion/alimentos?nuevo=1">
@@ -224,6 +235,13 @@ export default async function AlimentosPage({
               </TableBody>
             </Table>
           )}
+
+          <Paginador
+            pathname="/protected/nutricion/alimentos"
+            query={{ q, categoria }}
+            pagina={pagina}
+            total={total}
+          />
         </CardContent>
       </Card>
     </div>

@@ -3,6 +3,9 @@ import { iniciarPago } from "@/app/portal/pagar-plan/actions";
 import { PlanesGimnasioCards } from "@/components/portal/planes-gimnasio-cards";
 import { PagoSuscripcionForm } from "@/components/suscripcion/pago-suscripcion-form";
 import { Badge } from "@/components/ui/badge";
+import { FiltrosFecha, leerFecha } from "@/components/ui/filtros-fecha";
+import { Paginador } from "@/components/ui/paginador";
+import { Select } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -14,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { getAlumnoActual } from "@/lib/alumno-portal";
 import { formatFecha, formatMonto } from "@/lib/format";
+import { leerPagina, rangoPagina } from "@/lib/paginacion";
 import { ESTADO_SOLICITUD_LABEL } from "@/lib/pagar-plan";
 import { tokenValinor } from "@/lib/mercadopago";
 import { createClient } from "@/lib/supabase/server";
@@ -34,14 +38,18 @@ const VARIANTE = {
 export default async function PagarPlanPage({
   searchParams,
 }: {
-  searchParams: Promise<{ enviado?: string }>;
+  searchParams: Promise<{ enviado?: string; desde?: string; hasta?: string; estado?: string; pagina?: string }>;
 }) {
-  const { enviado } = await searchParams;
+  const { enviado, ...filtros } = await searchParams;
+  const desde = leerFecha(filtros.desde);
+  const hasta = leerFecha(filtros.hasta);
+  const estadoFiltro = filtros.estado && filtros.estado in VARIANTE ? filtros.estado : "";
+  const pagina = leerPagina(filtros.pagina);
   const alumno = await getAlumnoActual();
   if (!alumno) return null; // el layout ya redirige a /auth/login
 
   const supabase = await createClient();
-  const [{ data: plan }, { data: estado }, { data: gimnasio }, { data: cuenta }, { data: solicitudes }, { data: planesGimnasio }] =
+  const [{ data: plan }, { data: estado }, { data: gimnasio }, { data: cuenta }, { data: solicitudes, count: totalSolicitudes }, { data: planesGimnasio }] =
     await Promise.all([
       alumno.plan_id
         ? supabase.from("planes").select("*").eq("id", alumno.plan_id).maybeSingle()
@@ -63,9 +71,13 @@ export default async function PagarPlanPage({
         .maybeSingle(),
       supabase
         .from("solicitudes_pago")
-        .select("*")
+        .select("*", { count: "exact" })
         .eq("alumno_id", alumno.id)
-        .order("created_at", { ascending: false }),
+        .gte("created_at", desde ?? "1900-01-01")
+        .lte("created_at", hasta ? `${hasta}T23:59:59.999Z` : "9999-12-31")
+        .in("estado", estadoFiltro ? [estadoFiltro] : Object.keys(VARIANTE))
+        .order("created_at", { ascending: false })
+        .range(...rangoPagina(pagina)),
       supabase
         .from("planes")
         .select("*")
@@ -143,6 +155,16 @@ export default async function PagarPlanPage({
 
       <div>
         <h3 className="mb-3 text-lg">Historial de pagos</h3>
+        <FiltrosFecha pathname="/portal/pagar-plan" desde={desde} hasta={hasta} hayFiltros={!!estadoFiltro}>
+          <Select name="estado" defaultValue={estadoFiltro} aria-label="Filtrar por estado" className="w-auto">
+            <option value="">Todos los estados</option>
+            {Object.entries(ESTADO_SOLICITUD_LABEL).map(([valor, etiqueta]) => (
+              <option key={valor} value={valor}>
+                {etiqueta}
+              </option>
+            ))}
+          </Select>
+        </FiltrosFecha>
         {historial.length === 0 ? (
           <p className="text-sm text-muted-foreground">Aún no hay solicitudes de pago.</p>
         ) : (
@@ -174,6 +196,12 @@ export default async function PagarPlanPage({
             </TableBody>
           </Table>
         )}
+        <Paginador
+          pathname="/portal/pagar-plan"
+          query={{ desde, hasta, estado: estadoFiltro }}
+          pagina={pagina}
+          total={totalSolicitudes ?? 0}
+        />
       </div>
     </div>
   );

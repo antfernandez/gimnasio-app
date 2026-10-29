@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { IconAction } from "@/components/ui/icon-action";
 import { Input } from "@/components/ui/input";
+import { Paginador } from "@/components/ui/paginador";
 import { Select } from "@/components/ui/select";
 import {
   Table,
@@ -19,11 +20,10 @@ import {
 } from "@/components/ui/table";
 import { ESTADOS_PAGO } from "@/lib/estados-pago";
 import { formatFecha } from "@/lib/format";
+import { leerPagina, rangoPagina } from "@/lib/paginacion";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import type { EstadoCobranzaAlumno, EstadoPago } from "@/lib/types";
-
-const POR_PAGINA = 15;
 
 const FILTRO_ESTADO: { value: EstadoPago; label: string }[] = [
   { value: "al_dia", label: "Al día" },
@@ -49,7 +49,7 @@ export default async function PagosPage({
   const estado = ESTADOS_PAGO.includes(params.estado as EstadoPago)
     ? (params.estado as EstadoPago)
     : undefined;
-  const pagina = Math.max(1, Number.parseInt(params.pagina ?? "1", 10) || 1);
+  const pagina = leerPagina(params.pagina);
 
   const perfilData = await getPerfilActual();
   if (!perfilData) return null; // el layout ya redirige a /auth/login
@@ -62,7 +62,7 @@ export default async function PagosPage({
     .eq("activo", true)
     .order("nombres", { ascending: true })
     .order("apellidos", { ascending: true })
-    .range((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA - 1);
+    .range(...rangoPagina(pagina));
 
   if (estado) query = query.eq("estado_pago", estado);
   if (q) {
@@ -73,12 +73,6 @@ export default async function PagosPage({
   const { data, count } = await query;
   const lista = (data ?? []) as EstadoCobranzaAlumno[];
   const total = count ?? 0;
-  const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
-
-  const hrefPagina = (p: number) => ({
-    pathname: "/protected/pagos",
-    query: { ...(q ? { q } : {}), ...(estado ? { estado } : {}), pagina: p },
-  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -127,6 +121,11 @@ export default async function PagosPage({
             <Button type="submit" variant="outline">
               Filtrar
             </Button>
+            {(q || estado) && (
+              <Button asChild variant="ghost">
+                <Link href="/protected/pagos">Limpiar</Link>
+              </Button>
+            )}
           </form>
 
           {lista.length === 0 ? (
@@ -193,34 +192,12 @@ export default async function PagosPage({
             </Table>
           )}
 
-          {total > 0 && (
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
-              <span>
-                Página {Math.min(pagina, totalPaginas)} de {totalPaginas} · {total} alumno
-                {total === 1 ? "" : "s"}
-              </span>
-              <div className="flex gap-2">
-                {pagina > 1 ? (
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={hrefPagina(pagina - 1)}>Anterior</Link>
-                  </Button>
-                ) : (
-                  <Button variant="outline" size="sm" disabled>
-                    Anterior
-                  </Button>
-                )}
-                {pagina < totalPaginas ? (
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={hrefPagina(pagina + 1)}>Siguiente</Link>
-                  </Button>
-                ) : (
-                  <Button variant="outline" size="sm" disabled>
-                    Siguiente
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
+          <Paginador
+            pathname="/protected/pagos"
+            query={{ q, estado }}
+            pagina={pagina}
+            total={total}
+          />
         </CardContent>
       </Card>
     </div>

@@ -6,6 +6,8 @@ import { createPago } from "@/app/protected/pagos/actions";
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
 import { PagoForm } from "@/components/pagos/pago-form";
 import { Card, CardContent } from "@/components/ui/card";
+import { FiltrosFecha, leerFecha } from "@/components/ui/filtros-fecha";
+import { Paginador } from "@/components/ui/paginador";
 import {
   Table,
   TableBody,
@@ -15,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatFecha, formatMonto } from "@/lib/format";
+import { leerPagina, rangoPagina } from "@/lib/paginacion";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -38,10 +41,13 @@ export default async function PagosAlumnoPage({
   searchParams,
 }: {
   params: Promise<{ alumnoId: string }>;
-  searchParams: Promise<{ registrado?: string }>;
+  searchParams: Promise<{ registrado?: string; desde?: string; hasta?: string; pagina?: string }>;
 }) {
   const { alumnoId } = await params;
-  const { registrado } = await searchParams;
+  const { registrado, ...filtros } = await searchParams;
+  const desde = leerFecha(filtros.desde);
+  const hasta = leerFecha(filtros.hasta);
+  const pagina = leerPagina(filtros.pagina);
 
   const perfilData = await getPerfilActual();
   if (!perfilData) return null; // el layout ya redirige a /auth/login
@@ -56,13 +62,18 @@ export default async function PagosAlumnoPage({
   if (!alumno) notFound();
   const a = alumno as Alumno;
 
-  const [{ data: pagos }, { data: estadoRow }, { data: estadoPaqueteRow }] =
+  let consultaPagos = supabase
+    .from("pagos")
+    .select("*, plan:planes(nombre)", { count: "exact" })
+    .eq("alumno_id", alumnoId)
+    .order("fecha_pago", { ascending: false })
+    .range(...rangoPagina(pagina));
+  if (desde) consultaPagos = consultaPagos.gte("fecha_pago", desde);
+  if (hasta) consultaPagos = consultaPagos.lte("fecha_pago", hasta);
+
+  const [{ data: pagos, count: totalPagos }, { data: estadoRow }, { data: estadoPaqueteRow }] =
     await Promise.all([
-      supabase
-        .from("pagos")
-        .select("*, plan:planes(nombre)")
-        .eq("alumno_id", alumnoId)
-        .order("fecha_pago", { ascending: false }),
+      consultaPagos,
       supabase
         .from("v_estado_cobranza_alumnos")
         .select("*")
@@ -132,9 +143,12 @@ export default async function PagosAlumnoPage({
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Historial de pagos
           </h3>
+          <FiltrosFecha pathname={`/protected/pagos/${alumnoId}`} desde={desde} hasta={hasta} />
           {historial.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              Aún no hay pagos registrados para este alumno.
+              {desde || hasta
+                ? "No hay pagos en ese rango de fechas."
+                : "Aún no hay pagos registrados para este alumno."}
             </p>
           ) : (
             <Table>
@@ -160,6 +174,13 @@ export default async function PagosAlumnoPage({
               </TableBody>
             </Table>
           )}
+
+          <Paginador
+            pathname={`/protected/pagos/${alumnoId}`}
+            query={{ desde, hasta }}
+            pagina={pagina}
+            total={totalPagos ?? 0}
+          />
         </CardContent>
       </Card>
     </div>

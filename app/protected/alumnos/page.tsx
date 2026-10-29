@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { IconAction } from "@/components/ui/icon-action";
 import { Input } from "@/components/ui/input";
+import { Paginador } from "@/components/ui/paginador";
 import {
   Table,
   TableBody,
@@ -17,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatFecha } from "@/lib/format";
+import { leerPagina, rangoPagina } from "@/lib/paginacion";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import type { Alumno, EstadoCobranzaAlumno } from "@/lib/types";
@@ -38,6 +40,7 @@ export default async function AlumnosPage({
     estado?: string;
     creado?: string;
     actualizado?: string;
+    pagina?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -46,6 +49,7 @@ export default async function AlumnosPage({
     params.estado === "inactivos" || params.estado === "todos"
       ? params.estado
       : "activos";
+  const pagina = leerPagina(params.pagina);
 
   const perfilData = await getPerfilActual();
   if (!perfilData) return null; // el layout ya redirige a /auth/login
@@ -53,10 +57,11 @@ export default async function AlumnosPage({
   const supabase = await createClient();
   let query = supabase
     .from("alumnos")
-    .select("*, plan:planes(nombre)")
+    .select("*, plan:planes(nombre)", { count: "exact" })
     .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
     .order("nombres", { ascending: true })
-    .order("apellidos", { ascending: true });
+    .order("apellidos", { ascending: true })
+    .range(...rangoPagina(pagina));
 
   if (estado === "activos") query = query.eq("activo", true);
   if (estado === "inactivos") query = query.eq("activo", false);
@@ -65,7 +70,8 @@ export default async function AlumnosPage({
     query = query.or(`nombres.ilike.%${qSafe}%,apellidos.ilike.%${qSafe}%`);
   }
 
-  const { data: alumnos } = await query;
+  const { data: alumnos, count } = await query;
+  const total = count ?? 0;
   const lista = (alumnos ?? []) as AlumnoConPlan[];
 
   const { data: cobranza } = await supabase
@@ -169,6 +175,17 @@ export default async function AlumnosPage({
                   {f.label}
                 </Link>
               ))}
+              {q && (
+                <Link
+                  href={{
+                    pathname: "/protected/alumnos",
+                    query: estado !== "activos" ? { estado } : {},
+                  }}
+                  className="rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Limpiar
+                </Link>
+              )}
             </div>
           </div>
 
@@ -234,6 +251,13 @@ export default async function AlumnosPage({
               </TableBody>
             </Table>
           )}
+
+          <Paginador
+            pathname="/protected/alumnos"
+            query={{ q, estado: estado !== "activos" ? estado : undefined }}
+            pagina={pagina}
+            total={total}
+          />
         </CardContent>
       </Card>
     </div>

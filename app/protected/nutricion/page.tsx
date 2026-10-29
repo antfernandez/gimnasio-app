@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Paginador } from "@/components/ui/paginador";
 import { Select } from "@/components/ui/select";
 import {
   Table,
@@ -22,6 +23,7 @@ import {
   type Asignacion,
   type EstadoAsignacion,
 } from "@/lib/nutricion";
+import { cortarPagina, leerPagina } from "@/lib/paginacion";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
@@ -45,7 +47,7 @@ const VARIANTE_ESTADO: Record<EstadoAsignacion, "success" | "default" | "seconda
 export default async function NutricionPanelPage({
   searchParams,
 }: {
-  searchParams: Promise<{ estado?: string; q?: string; asignado?: string }>;
+  searchParams: Promise<{ estado?: string; q?: string; asignado?: string; pagina?: string }>;
 }) {
   const params = await searchParams;
   const perfilData = await getPerfilActual();
@@ -57,6 +59,7 @@ export default async function NutricionPanelPage({
     ? undefined
     : (ESTADOS_ASIGNACION.find((e) => e.value === params.estado)?.value ?? "activo");
   const q = (params.q ?? "").trim().toLowerCase();
+  const pagina = leerPagina(params.pagina);
 
   const supabase = await createClient();
   const gimnasioId = perfilData.perfil.gimnasio_id;
@@ -92,6 +95,7 @@ export default async function NutricionPanelPage({
       return !q || nombreDe(a).toLowerCase().includes(q);
     })
     .sort((a, b) => nombreDe(a).localeCompare(nombreDe(b), "es"));
+  const pagVisibles = cortarPagina(visibles, pagina);
 
   return (
     <div className="flex flex-col gap-6">
@@ -173,6 +177,11 @@ export default async function NutricionPanelPage({
               <Button type="submit" variant="outline">
                 Buscar
               </Button>
+              {(params.q || params.estado) && (
+                <Button asChild variant="ghost">
+                  <Link href="/protected/nutricion">Limpiar</Link>
+                </Button>
+              )}
             </form>
           </div>
 
@@ -203,7 +212,7 @@ export default async function NutricionPanelPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visibles.map((a) => {
+                {pagVisibles.map((a) => {
                   const al = alumnoPorId.get(a.alumno_id);
                   return (
                     <TableRow key={a.id}>
@@ -227,6 +236,13 @@ export default async function NutricionPanelPage({
               </TableBody>
             </Table>
           )}
+
+          <Paginador
+            pathname="/protected/nutricion"
+            query={{ q: params.q?.trim(), estado: params.estado }}
+            pagina={pagina}
+            total={visibles.length}
+          />
         </CardContent>
       </Card>
     </div>

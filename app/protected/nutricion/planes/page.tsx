@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Paginador } from "@/components/ui/paginador";
 import { Select } from "@/components/ui/select";
 import { IconAction } from "@/components/ui/icon-action";
 import {
@@ -18,13 +19,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { labelEstadoPlan, labelObjetivo, type PlanNutricional } from "@/lib/nutricion";
+import { cortarPagina, leerPagina } from "@/lib/paginacion";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function PlanesNutricionalesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ guardado?: string; q?: string; estado?: string }>;
+  searchParams: Promise<{ guardado?: string; q?: string; estado?: string; pagina?: string }>;
 }) {
   const params = await searchParams;
   const perfilData = await getPerfilActual();
@@ -48,10 +50,12 @@ export default async function PlanesNutricionalesPage({
 
   const q = (params.q ?? "").trim();
   const estado = params.estado ?? "";
-  const lista = ((planes ?? []) as PlanNutricional[]).filter(
+  const pagina = leerPagina(params.pagina);
+  const filtrados = ((planes ?? []) as PlanNutricional[]).filter(
     (p) =>
       (!q || p.nombre.toLowerCase().includes(q.toLowerCase())) && (!estado || p.estado === estado),
   );
+  const lista = cortarPagina(filtrados, pagina);
 
   return (
     <div className="flex flex-col gap-6">
@@ -97,7 +101,7 @@ export default async function PlanesNutricionalesPage({
             )}
           </form>
 
-          {lista.length === 0 ? (
+          {filtrados.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
               {q || estado ? "No hay planes que coincidan con los filtros." : "Aún no hay planes nutricionales."}
             </p>
@@ -148,6 +152,13 @@ export default async function PlanesNutricionalesPage({
               </TableBody>
             </Table>
           )}
+
+          <Paginador
+            pathname="/protected/nutricion/planes"
+            query={{ q, estado }}
+            pagina={pagina}
+            total={filtrados.length}
+          />
         </CardContent>
       </Card>
     </div>

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Paginador } from "@/components/ui/paginador";
 import { Select } from "@/components/ui/select";
 import {
   Table,
@@ -16,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cortarPagina, leerPagina } from "@/lib/paginacion";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import type { RutinaPlantilla } from "@/lib/types";
@@ -29,7 +31,7 @@ const CATEGORIA_LABEL: Record<string, string> = {
 export default async function RutinasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ creada?: string; actualizada?: string; q?: string; categoria?: string; estado?: string }>;
+  searchParams: Promise<{ creada?: string; actualizada?: string; q?: string; categoria?: string; estado?: string; pagina?: string }>;
 }) {
   const params = await searchParams;
 
@@ -47,12 +49,14 @@ export default async function RutinasPage({
   const q = (params.q ?? "").trim();
   const categoria = params.categoria ?? "";
   const estado = params.estado ?? "";
-  const lista = todas.filter(
+  const pagina = leerPagina(params.pagina);
+  const filtradas = todas.filter(
     (r) =>
       (!q || r.nombre.toLowerCase().includes(q.toLowerCase())) &&
       (!categoria || r.categoria === categoria) &&
       (!estado || (estado === "baja") === (r.activa === false)),
   );
+  const lista = cortarPagina(filtradas, pagina);
 
   // Alumnos con cada rutina vigente: bloquea editar y dar de baja.
   const { data: asignaciones } = await supabase
@@ -132,7 +136,7 @@ export default async function RutinasPage({
               </p>
               <AplicarPresetRutinasButton />
             </div>
-          ) : lista.length === 0 ? (
+          ) : filtradas.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
               No hay rutinas que coincidan con los filtros.
             </p>
@@ -183,6 +187,13 @@ export default async function RutinasPage({
               </TableBody>
             </Table>
           )}
+
+          <Paginador
+            pathname="/protected/rutinas"
+            query={{ q, categoria, estado }}
+            pagina={pagina}
+            total={filtradas.length}
+          />
         </CardContent>
       </Card>
     </div>

@@ -23,7 +23,9 @@ import { RutinaCard } from "@/components/rutinas/rutina-card";
 import { Acordeon } from "@/components/ui/acordeon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { FiltrosFecha, leerFecha } from "@/components/ui/filtros-fecha";
 import { IconAction } from "@/components/ui/icon-action";
+import { Paginador } from "@/components/ui/paginador";
 import {
   Table,
   TableBody,
@@ -34,6 +36,7 @@ import {
 } from "@/components/ui/table";
 import { fetchEjercicios, fetchZonas } from "@/lib/ejercicios";
 import { formatFecha, formatMonto } from "@/lib/format";
+import { leerPagina, rangoPagina } from "@/lib/paginacion";
 import { getPerfilActual } from "@/lib/perfil";
 import { estadoPlan } from "@/lib/planes";
 import { agruparSesiones, detalleSesion } from "@/lib/progreso";
@@ -91,10 +94,10 @@ export default async function FichaAlumnoPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ vista?: string; ok?: string; ajuste?: string; avance?: string }>;
+  searchParams: Promise<{ vista?: string; ok?: string; ajuste?: string; avance?: string; desde?: string; hasta?: string; pagina?: string }>;
 }) {
   const { id } = await params;
-  const { vista: vistaParam, ok, ajuste, avance: avanceOk } = await searchParams;
+  const { vista: vistaParam, ok, ajuste, avance: avanceOk, ...filtrosPagos } = await searchParams;
   const vista: Vista = VISTAS.some((v) => v.value === vistaParam)
     ? (vistaParam as Vista)
     : "datos";
@@ -195,6 +198,9 @@ export default async function FichaAlumnoPage({
           rutinaActiva={rutinaActiva}
           ok={ok === "1"}
           ajuste={ajuste === "1"}
+          desde={leerFecha(filtrosPagos.desde)}
+          hasta={leerFecha(filtrosPagos.hasta)}
+          pagina={leerPagina(filtrosPagos.pagina)}
         />
       )}
 
@@ -219,6 +225,9 @@ async function MembresiaVista({
   rutinaActiva,
   ok,
   ajuste,
+  desde,
+  hasta,
+  pagina,
 }: {
   alumno: Alumno;
   hoy: string;
@@ -228,19 +237,27 @@ async function MembresiaVista({
   rutinaActiva: Rutina | undefined;
   ok: boolean;
   ajuste: boolean;
+  desde?: string;
+  hasta?: string;
+  pagina: number;
 }) {
   const supabase = await createClient();
-  const [{ data: catalogo }, { data: pagos }, zonas, ejercicios, { count: asignacionesNutricion }] = await Promise.all([
+  let consultaPagos = supabase
+    .from("pagos")
+    .select("*, plan:planes(nombre)", { count: "exact" })
+    .eq("alumno_id", a.id)
+    .order("fecha_pago", { ascending: false })
+    .range(...rangoPagina(pagina));
+  if (desde) consultaPagos = consultaPagos.gte("fecha_pago", desde);
+  if (hasta) consultaPagos = consultaPagos.lte("fecha_pago", hasta);
+
+  const [{ data: catalogo }, { data: pagos, count: totalPagos }, zonas, ejercicios, { count: asignacionesNutricion }] = await Promise.all([
     supabase
       .from("rutina_plantillas")
       .select("*")
       .eq("gimnasio_id", gimnasioId)
       .order("nombre", { ascending: true }),
-    supabase
-      .from("pagos")
-      .select("*, plan:planes(nombre)")
-      .eq("alumno_id", a.id)
-      .order("fecha_pago", { ascending: false }),
+    consultaPagos,
     fetchZonas(),
     fetchEjercicios({ soloActivos: true }),
     supabase
@@ -338,9 +355,17 @@ async function MembresiaVista({
             href={`/protected/pagos/${a.id}#registrar-pago`}
           />
         </div>
+        <FiltrosFecha
+          pathname={`/protected/alumnos/${a.id}`}
+          desde={desde}
+          hasta={hasta}
+          fijos={{ vista: "membresia" }}
+        />
         {listaPagos.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
-            Este alumno aún no tiene pagos registrados.
+            {desde || hasta
+              ? "No hay pagos en ese rango de fechas."
+              : "Este alumno aún no tiene pagos registrados."}
           </p>
         ) : (
           <Table>
@@ -370,6 +395,12 @@ async function MembresiaVista({
             </TableBody>
           </Table>
         )}
+        <Paginador
+          pathname={`/protected/alumnos/${a.id}`}
+          query={{ vista: "membresia", desde, hasta }}
+          pagina={pagina}
+          total={totalPagos ?? 0}
+        />
       </Seccion>
     </>
   );

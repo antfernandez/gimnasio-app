@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { IconAction } from "@/components/ui/icon-action";
+import { Input } from "@/components/ui/input";
+import { Paginador } from "@/components/ui/paginador";
 import { Select } from "@/components/ui/select";
 import {
   Table,
@@ -27,18 +29,22 @@ import {
   type Ingrediente,
   type Receta,
 } from "@/lib/nutricion";
+import { cortarPagina, leerPagina } from "@/lib/paginacion";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function RecetasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tipo?: string; guardado?: string }>;
+  searchParams: Promise<{ tipo?: string; q?: string; estado?: string; guardado?: string; pagina?: string }>;
 }) {
   const params = await searchParams;
   const perfilData = await getPerfilActual();
   if (!perfilData) return null;
 
+  const q = (params.q ?? "").trim();
+  const estado = params.estado === "activo" || params.estado === "borrador" ? params.estado : "";
+  const pagina = leerPagina(params.pagina);
   const tipo = TIPOS_RECETA.find((t) => t.value === params.tipo)?.value;
 
   const supabase = await createClient();
@@ -55,12 +61,25 @@ export default async function RecetasPage({
     ingPorReceta.set(i.receta_id, [...(ingPorReceta.get(i.receta_id) ?? []), i]);
   }
 
-  const lista = ((recetas ?? []) as Receta[]).filter((r) => !tipo || r.tipo === tipo);
+  const filtradas = ((recetas ?? []) as Receta[]).filter(
+    (r) =>
+      (!tipo || r.tipo === tipo) &&
+      (!estado || r.estado === estado) &&
+      (!q || r.nombre.toLowerCase().includes(q.toLowerCase())),
+  );
+  const lista = cortarPagina(filtradas, pagina);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <form action="/protected/nutricion/recetas" className="flex gap-2">
+        <form action="/protected/nutricion/recetas" className="flex flex-wrap items-center gap-2">
+          <Input
+            type="search"
+            name="q"
+            placeholder="Buscar por nombre…"
+            defaultValue={q}
+            className="w-56"
+          />
           <Select name="tipo" defaultValue={tipo ?? ""} className="w-48">
             <option value="">Todos los tipos</option>
             {TIPOS_RECETA.map((t) => (
@@ -69,9 +88,19 @@ export default async function RecetasPage({
               </option>
             ))}
           </Select>
+          <Select name="estado" defaultValue={estado} aria-label="Filtrar por estado" className="w-36">
+            <option value="">Todos</option>
+            <option value="activo">Activo</option>
+            <option value="borrador">Borrador</option>
+          </Select>
           <Button type="submit" variant="outline">
             Filtrar
           </Button>
+          {(q || tipo || estado) && (
+            <Button asChild variant="ghost">
+              <Link href="/protected/nutricion/recetas">Limpiar</Link>
+            </Button>
+          )}
         </form>
         <Button asChild size="lg">
           <Link href="/protected/nutricion/recetas/nueva">
@@ -89,7 +118,7 @@ export default async function RecetasPage({
 
       <Card>
         <CardContent className="pt-6">
-          {lista.length === 0 ? (
+          {filtradas.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
               No hay recetas{tipo ? " de ese tipo" : " todavía"}.
             </p>
@@ -142,6 +171,13 @@ export default async function RecetasPage({
               </TableBody>
             </Table>
           )}
+
+          <Paginador
+            pathname="/protected/nutricion/recetas"
+            query={{ q, tipo, estado }}
+            pagina={pagina}
+            total={filtradas.length}
+          />
         </CardContent>
       </Card>
     </div>

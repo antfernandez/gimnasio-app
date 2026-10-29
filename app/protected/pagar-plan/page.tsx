@@ -2,6 +2,9 @@ import { iniciarPagoSuscripcion } from "@/app/protected/pagar-plan/actions";
 import { PagoSuscripcionForm } from "@/components/suscripcion/pago-suscripcion-form";
 import { PlanesSistemaCards } from "@/components/suscripcion/planes-sistema-cards";
 import { Badge } from "@/components/ui/badge";
+import { FiltrosFecha, leerFecha } from "@/components/ui/filtros-fecha";
+import { Paginador } from "@/components/ui/paginador";
+import { Select } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -12,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatFecha, formatMonto } from "@/lib/format";
+import { leerPagina, rangoPagina } from "@/lib/paginacion";
 import { tokenAntonio } from "@/lib/mercadopago";
 import { ESTADO_SOLICITUD_LABEL } from "@/lib/pagar-plan";
 import { planSistemaPorNombre } from "@/lib/planes-sistema";
@@ -37,9 +41,13 @@ type Uso = {
 export default async function SuscripcionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ enviado?: string }>;
+  searchParams: Promise<{ enviado?: string; desde?: string; hasta?: string; estado?: string; pagina?: string }>;
 }) {
-  const { enviado } = await searchParams;
+  const { enviado, ...filtros } = await searchParams;
+  const desde = leerFecha(filtros.desde);
+  const hasta = leerFecha(filtros.hasta);
+  const estadoFiltro = filtros.estado && filtros.estado in VARIANTE ? filtros.estado : "";
+  const pagina = leerPagina(filtros.pagina);
   const perfilData = await getPerfilActual();
   if (!perfilData) return null;
 
@@ -55,7 +63,7 @@ export default async function SuscripcionPage({
 
   const gimnasioId = perfilData.perfil.gimnasio_id;
   const supabase = await createClient();
-  const [{ data: gimnasio }, { data: uso }, { data: cuenta }, { data: solicitudes }] =
+  const [{ data: gimnasio }, { data: uso }, { data: cuenta }, { data: solicitudes, count: totalSolicitudes }] =
     await Promise.all([
       supabase
         .from("gimnasios")
@@ -66,10 +74,14 @@ export default async function SuscripcionPage({
       supabase.from("cuentas_transferencia").select("*").is("gimnasio_id", null).maybeSingle(),
       supabase
         .from("solicitudes_pago")
-        .select("*")
+        .select("*", { count: "exact" })
         .eq("flujo", "suscripcion")
         .eq("gimnasio_id", gimnasioId)
-        .order("created_at", { ascending: false }),
+        .gte("created_at", desde ?? "1900-01-01")
+        .lte("created_at", hasta ? `${hasta}T23:59:59.999Z` : "9999-12-31")
+        .in("estado", estadoFiltro ? [estadoFiltro] : Object.keys(VARIANTE))
+        .order("created_at", { ascending: false })
+        .range(...rangoPagina(pagina)),
     ]);
 
   let planId: string | null = gimnasio?.plan_sistema_id ?? null;
@@ -148,6 +160,16 @@ export default async function SuscripcionPage({
 
       <div>
         <h3 className="mb-3 text-lg">Historial de pagos</h3>
+        <FiltrosFecha pathname="/protected/pagar-plan" desde={desde} hasta={hasta} hayFiltros={!!estadoFiltro}>
+          <Select name="estado" defaultValue={estadoFiltro} aria-label="Filtrar por estado" className="w-auto">
+            <option value="">Todos los estados</option>
+            {Object.entries(ESTADO_SOLICITUD_LABEL).map(([valor, etiqueta]) => (
+              <option key={valor} value={valor}>
+                {etiqueta}
+              </option>
+            ))}
+          </Select>
+        </FiltrosFecha>
         {historial.length === 0 ? (
           <p className="text-sm text-muted-foreground">Aún no hay pagos de suscripción.</p>
         ) : (
@@ -179,6 +201,12 @@ export default async function SuscripcionPage({
             </TableBody>
           </Table>
         )}
+        <Paginador
+          pathname="/protected/pagar-plan"
+          query={{ desde, hasta, estado: estadoFiltro }}
+          pagina={pagina}
+          total={totalSolicitudes ?? 0}
+        />
       </div>
     </div>
   );

@@ -1,8 +1,12 @@
+import Link from "next/link";
+
 import { PermisosTabla, type FilaPermisos } from "@/components/permisos/permisos-tabla";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Paginador } from "@/components/ui/paginador";
 import { Select } from "@/components/ui/select";
+import { leerPagina, rangoPagina } from "@/lib/paginacion";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import type { Alumno } from "@/lib/types";
@@ -10,11 +14,13 @@ import type { Alumno } from "@/lib/types";
 export default async function PermisosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; estado?: string }>;
+  searchParams: Promise<{ q?: string; estado?: string; pagina?: string }>;
 }) {
   const params = await searchParams;
   const q = (params.q ?? "").trim();
   const estado = params.estado === "inactivos" || params.estado === "todos" ? params.estado : "activos";
+
+  const pagina = leerPagina(params.pagina);
 
   const perfilData = await getPerfilActual();
   if (!perfilData) return null; // el layout ya redirige a /auth/login
@@ -22,10 +28,11 @@ export default async function PermisosPage({
   const supabase = await createClient();
   let query = supabase
     .from("alumnos")
-    .select("id, rut, dig_ver, nombres, apellidos, activo, puede_registrar_avances, puede_registrar_bitacora")
+    .select("id, rut, dig_ver, nombres, apellidos, activo, puede_registrar_avances, puede_registrar_bitacora", { count: "exact" })
     .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
     .order("nombres", { ascending: true })
-    .order("apellidos", { ascending: true });
+    .order("apellidos", { ascending: true })
+    .range(...rangoPagina(pagina));
 
   if (estado !== "todos") query = query.eq("activo", estado === "activos");
   if (q) {
@@ -36,7 +43,7 @@ export default async function PermisosPage({
     );
   }
 
-  const { data } = await query;
+  const { data, count } = await query;
   const filas: FilaPermisos[] = (
     (data ?? []) as Pick<
       Alumno,
@@ -78,8 +85,19 @@ export default async function PermisosPage({
             <Button type="submit" variant="outline">
               Filtrar
             </Button>
+            {(q || estado !== "activos") && (
+              <Button asChild variant="ghost">
+                <Link href="/protected/permisos">Limpiar</Link>
+              </Button>
+            )}
           </form>
-          <PermisosTabla key={`${q}|${estado}`} filas={filas} puedeEditar={perfilData.perfil.rol === "dueño"} />
+          <PermisosTabla key={`${q}|${estado}|${pagina}`} filas={filas} puedeEditar={perfilData.perfil.rol === "dueño"} />
+          <Paginador
+            pathname="/protected/permisos"
+            query={{ q, estado: estado !== "activos" ? estado : undefined }}
+            pagina={pagina}
+            total={count ?? 0}
+          />
         </CardContent>
       </Card>
     </div>
