@@ -8,11 +8,11 @@ import { redirect } from "next/navigation";
 import type { PagarPlanState } from "@/app/portal/pagar-plan/actions";
 import { crearPreferencia, tokenAntonio } from "@/lib/mercadopago";
 import {
-  calcularMonto,
   COMPROBANTE_MAX_BYTES,
   COMPROBANTE_MIME,
   esMesesValido,
 } from "@/lib/pagar-plan";
+import { calcularMontoSuscripcion, planSistemaPorNombre } from "@/lib/planes-sistema";
 import { getPerfilActual } from "@/lib/perfil";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -60,8 +60,10 @@ export async function iniciarPagoSuscripcion(
     : { data: null };
   if (!planId || !plan) return { error: "No hay un plan del sistema disponible." };
 
-  // El monto lo calcula el servidor.
-  const monto = calcularMonto(Number(plan.precio_mensual), meses);
+  // El monto (con IVA) lo calcula el servidor desde la definición de planes.
+  const def = planSistemaPorNombre(plan.nombre);
+  if (!def) return { error: "No hay un plan del sistema disponible." };
+  const monto = calcularMontoSuscripcion(def.precioNeto, meses);
 
   const admin = createAdminClient();
   const base = {

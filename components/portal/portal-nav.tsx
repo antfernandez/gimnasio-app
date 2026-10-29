@@ -10,8 +10,8 @@ const items = [
   { href: "/portal", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/portal/turnos", label: "Mis turnos", icon: CalendarDays },
   { href: "/portal/bitacora", label: "Bitácora", icon: Dumbbell },
-  { href: "/portal/nutricion", label: "Mi plan nutricional", icon: Salad },
-  { href: "/portal/pagar-plan", label: "Pagar plan", icon: CreditCard },
+  { href: "/portal/nutricion", label: "Nutrición", icon: Salad },
+  { href: "/portal/pagar-plan", label: "Plan", icon: CreditCard },
 ];
 
 export function PortalNav({ nutricion }: { nutricion: boolean }) {

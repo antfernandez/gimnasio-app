@@ -1,4 +1,4 @@
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, Upload } from "lucide-react";
 import Link from "next/link";
 
 import { ToggleActivoButton } from "@/components/alumnos/toggle-activo-button";
@@ -110,6 +110,14 @@ export default async function AlumnosPage({
             </Link>
           )}
           <ExportMenu resource="alumnos" />
+          {perfilData.perfil.rol === "dueño" && (
+            <Button asChild variant="outline" size="lg">
+              <Link href="/protected/alumnos/carga-masiva">
+                <Upload className="h-4 w-4" />
+                Carga masiva
+              </Link>
+            </Button>
+          )}
           <Button asChild size="lg">
             <Link href="/protected/alumnos/nuevo">
               <Plus className="h-4 w-4" />

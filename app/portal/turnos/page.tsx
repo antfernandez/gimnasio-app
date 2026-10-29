@@ -66,6 +66,27 @@ export default async function PortalTurnosPage({
         .lte("fecha", rango[rango.length - 1]),
     ]);
 
+  // Cupo contratado (spec 32): días/semana del plan del alumno.
+  let diasPlan: number | null = null;
+  if (alumno.plan_id) {
+    const { data: plan } = await supabase
+      .from("planes")
+      .select("dias_por_semana")
+      .eq("id", alumno.plan_id)
+      .maybeSingle();
+    diasPlan = plan?.dias_por_semana ?? null;
+  }
+  // Las reservas visibles pueden no cubrir toda la semana (vista mes/día): se piden aparte.
+  const semana = diasDeLaSemana(fecha);
+  const { data: reservasSemana } = await supabase
+    .from("reservas")
+    .select("fecha, estado")
+    .eq("alumno_id", alumno.id)
+    .in("estado", ["reservada", "realizada"])
+    .gte("fecha", semana[0])
+    .lte("fecha", semana[6]);
+  const agendadasSemana = (reservasSemana ?? []).length;
+
   const listaHorarios = (horarios ?? []) as HorarioDisponible[];
   const dispPorSlot = new Map<string, DisponibilidadTurno>();
   for (const d of (disponibilidad ?? []) as DisponibilidadTurno[]) {
@@ -112,6 +133,8 @@ export default async function PortalTurnosPage({
             fecha={fecha}
             slots={slots}
             alumnoActualId={alumno.id}
+            diasPlan={diasPlan}
+            agendadasSemana={agendadasSemana}
             crearReserva={crearReservaAlumno}
             cancelarReserva={cancelarReservaAlumno}
             reprogramarReserva={reprogramarReservaAlumno}

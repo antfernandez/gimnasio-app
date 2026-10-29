@@ -1,6 +1,7 @@
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
 import { iniciarPago } from "@/app/portal/pagar-plan/actions";
-import { PagarPlanForm } from "@/components/portal/pagar-plan-form";
+import { PlanesGimnasioCards } from "@/components/portal/planes-gimnasio-cards";
+import { PagoSuscripcionForm } from "@/components/suscripcion/pago-suscripcion-form";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -40,7 +41,7 @@ export default async function PagarPlanPage({
   if (!alumno) return null; // el layout ya redirige a /auth/login
 
   const supabase = await createClient();
-  const [{ data: plan }, { data: estado }, { data: gimnasio }, { data: cuenta }, { data: solicitudes }] =
+  const [{ data: plan }, { data: estado }, { data: gimnasio }, { data: cuenta }, { data: solicitudes }, { data: planesGimnasio }] =
     await Promise.all([
       alumno.plan_id
         ? supabase.from("planes").select("*").eq("id", alumno.plan_id).maybeSingle()
@@ -65,6 +66,12 @@ export default async function PagarPlanPage({
         .select("*")
         .eq("alumno_id", alumno.id)
         .order("created_at", { ascending: false }),
+      supabase
+        .from("planes")
+        .select("*")
+        .eq("gimnasio_id", alumno.gimnasio_id)
+        .is("fecha_vigencia_hasta", null)
+        .order("precio", { ascending: true }),
     ]);
 
   const planActual = plan as Plan | null;
@@ -80,7 +87,7 @@ export default async function PagarPlanPage({
         <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
           Portal del alumno
         </div>
-        <h2 className="text-2xl">Pagar plan</h2>
+        <h2 className="text-2xl">Plan</h2>
       </div>
 
       {enviado && (
@@ -90,6 +97,11 @@ export default async function PagarPlanPage({
           </CardContent>
         </Card>
       )}
+
+      <PlanesGimnasioCards
+        planes={(planesGimnasio ?? []) as Plan[]}
+        planActualId={alumno.plan_id}
+      />
 
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-4 py-5">
@@ -112,9 +124,10 @@ export default async function PagarPlanPage({
       </Card>
 
       {puedePagar ? (
-        <PagarPlanForm
+        <PagoSuscripcionForm
           accion={iniciarPago}
-          precioMensual={Number(planActual!.precio)}
+          precioNeto={Number(planActual!.precio)}
+          conIva={false}
           mercadoPagoDisponible={mpDisponible}
           cuenta={(cuenta as CuentaTransferencia | null) ?? null}
           hoy={hoyIso()}

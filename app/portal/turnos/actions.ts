@@ -40,6 +40,9 @@ export async function crearReservaAlumno(
     if (error.message?.includes("cupos")) {
       return { error: "No quedan cupos disponibles para ese turno." };
     }
+    if (error.message?.includes("limite_clases_semana")) {
+      return { error: "Ya agendaste todas las clases de tu plan para esa semana." };
+    }
     if (error.message?.includes("clases")) {
       return { error: "Ya usaste todas las clases de tu paquete de este mes." };
     }
@@ -94,6 +97,9 @@ export async function reprogramarReservaAlumno(
   if (error) {
     if (error.message?.includes("cupos")) {
       return { error: "No quedan cupos disponibles en el nuevo horario elegido." };
+    }
+    if (error.message?.includes("limite_clases_semana")) {
+      return { error: "Ya agendaste todas las clases de tu plan para esa semana." };
     }
     return { error: "No se pudo reprogramar tu reserva. Intenta de nuevo." };
   }

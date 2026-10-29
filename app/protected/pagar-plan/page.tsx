@@ -1,5 +1,6 @@
 import { iniciarPagoSuscripcion } from "@/app/protected/pagar-plan/actions";
-import { PagarPlanForm } from "@/components/portal/pagar-plan-form";
+import { PagoSuscripcionForm } from "@/components/suscripcion/pago-suscripcion-form";
+import { PlanesSistemaCards } from "@/components/suscripcion/planes-sistema-cards";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -13,6 +14,7 @@ import {
 import { formatFecha, formatMonto } from "@/lib/format";
 import { tokenAntonio } from "@/lib/mercadopago";
 import { ESTADO_SOLICITUD_LABEL } from "@/lib/pagar-plan";
+import { planSistemaPorNombre } from "@/lib/planes-sistema";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import { hoyIso } from "@/lib/turnos";
@@ -79,6 +81,7 @@ export default async function SuscripcionPage({
     ? await supabase.from("planes_sistema").select("nombre, precio_mensual").eq("id", planId).maybeSingle()
     : { data: null };
 
+  const def = planSistemaPorNombre(plan?.nombre);
   const uso_ = uso as Uso | null;
   const historial = (solicitudes ?? []) as SolicitudPago[];
   const vence = gimnasio?.suscripcion_hasta as string | null | undefined;
@@ -113,38 +116,24 @@ export default async function SuscripcionPage({
         </Card>
       )}
 
-      <Card>
-        <CardContent className="flex flex-wrap items-center justify-between gap-4 py-5">
-          <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Plan del sistema</div>
-            <div className="text-lg font-semibold">{plan?.nombre ?? "Sin plan"}</div>
-            {plan && (
-              <div className="text-sm text-muted-foreground">
-                {formatMonto(Number(plan.precio_mensual))} por mes
-              </div>
-            )}
-            {uso_ && (
-              <div className="text-xs text-muted-foreground">
-                {uso_.alumnos_activos} alumnos activos
-                {uso_.max_alumnos ? ` de ${uso_.max_alumnos}` : ""}
-              </div>
-            )}
-          </div>
-          <div className="text-right">
-            <Badge variant={!vence ? "secondary" : vencida ? "destructive" : "success"}>
-              {!vence ? "Sin suscripción" : vencida ? "Vencida" : "Al día"}
-            </Badge>
-            {vence && (
-              <div className="mt-1 text-xs text-muted-foreground">Vence el {formatFecha(vence)}</div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Badge variant={!vence ? "secondary" : vencida ? "destructive" : "success"}>
+          {!vence ? "Sin suscripción" : vencida ? "Vencida" : "Al día"}
+        </Badge>
+        {vence && (
+          <div className="text-xs text-muted-foreground">Vence el {formatFecha(vence)}</div>
+        )}
+      </div>
 
-      {plan ? (
-        <PagarPlanForm
+      <PlanesSistemaCards
+        planActual={plan?.nombre ?? null}
+        alumnosActivos={uso_?.alumnos_activos ?? null}
+      />
+
+      {plan && def ? (
+        <PagoSuscripcionForm
           accion={iniciarPagoSuscripcion}
-          precioMensual={Number(plan.precio_mensual)}
+          precioNeto={def.precioNeto}
           mercadoPagoDisponible={!!tokenAntonio()}
           cuenta={(cuenta as CuentaTransferencia | null) ?? null}
           hoy={hoyIso()}

@@ -33,7 +33,7 @@ export default async function PortalLayout({
 
   return (
     <div className="grid min-h-svh grid-cols-1 md:grid-cols-[260px_1fr]">
-      <aside className="flex flex-col justify-between border-b border-border bg-secondary/40 px-5 py-7 md:border-b-0 md:border-r">
+      <aside className="flex flex-col border-b border-border bg-secondary/40 px-5 py-7 md:border-b-0 md:border-r">
         <div>
           <BrandMark fijo className="mb-8 px-1" />
           <div className="mb-6 border-b border-border pb-6 text-center">
@@ -46,13 +46,12 @@ export default async function PortalLayout({
             <span className="text-xs text-muted-foreground">
               {(gimnasio as Gimnasio | null)?.nombre ?? "Tu gimnasio"}
             </span>
-            <div className="mx-auto mt-3 inline-block rounded-full border border-border bg-primary/10 px-3 py-1 text-[0.66rem] uppercase tracking-wide text-secondary-foreground">
-              Portal del alumno
+            <div className="mt-3 flex justify-center">
+              <LogoutButton />
             </div>
           </div>
           <PortalNav nutricion={alumno.plan_nutricional_habilitado} />
         </div>
-        <LogoutButton />
       </aside>
 
       <main className="px-6 py-8 md:px-10 md:py-10">

@@ -136,6 +136,9 @@ export async function guardarRegistroEjercicio(
       });
 
   if (error) {
+    if (error.message.includes("limite_sesiones_semana")) {
+      return { ok: false, error: "El alumno ya completó las sesiones por semana de su plan." };
+    }
     return { ok: false, error: "No se pudo guardar el ejercicio. Intenta de nuevo." };
   }
 

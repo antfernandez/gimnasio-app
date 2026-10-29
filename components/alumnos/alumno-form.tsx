@@ -120,6 +120,63 @@ export function AlumnoForm({ action, alumno, submitLabel, acciones }: Props) {
       <div className="grid gap-5 border-t border-border pt-5 sm:grid-cols-2 xl:grid-cols-3">
         <div className="sm:col-span-2 xl:col-span-3">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Contacto y otros datos
+          </h3>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="sexo">Sexo</Label>
+          <select
+            id="sexo"
+            name="sexo"
+            defaultValue={alumno?.sexo ?? ""}
+            className="h-11 w-full rounded-[9px] border border-border bg-white px-3 text-sm text-foreground"
+          >
+            <option value="">Sin indicar</option>
+            <option value="femenino">Femenino</option>
+            <option value="masculino">Masculino</option>
+            <option value="otro">Otro</option>
+            <option value="no_indica">Prefiere no decir</option>
+          </select>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="direccion">Dirección</Label>
+          <Input id="direccion" name="direccion" defaultValue={alumno?.direccion ?? ""} />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="comuna">Comuna</Label>
+          <Input id="comuna" name="comuna" defaultValue={alumno?.comuna ?? ""} />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="contacto_emergencia_nombre">Contacto de emergencia</Label>
+          <Input
+            id="contacto_emergencia_nombre"
+            name="contacto_emergencia_nombre"
+            placeholder="Nombre"
+            defaultValue={alumno?.contacto_emergencia_nombre ?? ""}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="contacto_emergencia_telefono">Teléfono de emergencia</Label>
+          <Input
+            id="contacto_emergencia_telefono"
+            name="contacto_emergencia_telefono"
+            type="tel"
+            defaultValue={alumno?.contacto_emergencia_telefono ?? ""}
+          />
+        </div>
+        <div className="grid gap-2 sm:col-span-2 xl:col-span-3">
+          <Label htmlFor="observaciones">Observaciones</Label>
+          <Textarea
+            id="observaciones"
+            name="observaciones"
+            defaultValue={alumno?.observaciones ?? ""}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-5 border-t border-border pt-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="sm:col-span-2 xl:col-span-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Ficha de salud
           </h3>
           <p className="mt-1 text-xs text-muted-foreground">

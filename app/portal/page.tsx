@@ -1,7 +1,5 @@
 import Link from "next/link";
 
-import { createAvancePropio } from "@/app/portal/actions";
-import { AvanceForm } from "@/components/avances/avance-form";
 import { LineChart } from "@/components/charts/line-chart";
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
 import { ContactoForm } from "@/components/portal/contacto-form";
@@ -20,20 +18,13 @@ import { formatFecha } from "@/lib/format";
 import { formatMedidas } from "@/lib/medidas";
 import { formatRut } from "@/lib/rut";
 import { createClient } from "@/lib/supabase/server";
-import {
-  diaSemanaDeFecha,
-  diasDelMes,
-  formatHora,
-  hoyIso,
-  NOMBRES_DIA_CORTO,
-} from "@/lib/turnos";
+import { hoyIso, inicioDeSemana, sumarDias } from "@/lib/turnos";
 import type {
   Avance,
   EstadoPagoAlumno,
   EstadoPaqueteAlumno,
   Plan,
   RegistroRutina,
-  Reserva,
   Rutina,
 } from "@/lib/types";
 
@@ -80,9 +71,7 @@ export default async function PortalPage() {
     );
   }
 
-  const mesDias = diasDelMes(hoyIso());
-  const inicioMes = mesDias[0];
-  const finMes = mesDias[mesDias.length - 1];
+  const inicioSemana = inicioDeSemana(hoyIso());
 
   const supabase = await createClient();
   const [
@@ -91,7 +80,7 @@ export default async function PortalPage() {
     { data: avances },
     { data: planRow },
     { data: rutinaRow },
-    { data: registrosMes },
+    { data: registrosSemana },
   ] = await Promise.all([
     supabase
       .from("v_estado_pago_alumnos")
@@ -123,50 +112,24 @@ export default async function PortalPage() {
       .from("registros_rutina")
       .select("fecha")
       .eq("alumno_id", alumno.id)
-      .gte("fecha", inicioMes)
-      .lte("fecha", finMes),
+      .gte("fecha", inicioSemana)
+      .lte("fecha", sumarDias(inicioSemana, 6)),
   ]);
 
   const estado = estadoRow as EstadoPagoAlumno | null;
   const plan = planRow as Plan | null;
   const paquete = paqueteRow as EstadoPaqueteAlumno | null;
   const rutinaActiva = rutinaRow as Rutina | null;
-  const sesionesBitacoraMes = new Set(
-    ((registrosMes ?? []) as Pick<RegistroRutina, "fecha">[]).map((r) => r.fecha),
-  ).size;
 
-  let ultimaSesionBitacora: string | null = null;
-  if (rutinaActiva) {
-    const { data: ultimoRegistro } = await supabase
-      .from("registros_rutina")
-      .select("fecha")
-      .eq("alumno_id", alumno.id)
-      .order("fecha", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    ultimaSesionBitacora = (ultimoRegistro as Pick<RegistroRutina, "fecha"> | null)?.fecha ?? null;
-  }
-
-  // Sprint 13, Parte E: acotado al período del paquete vigente (evita que la lista
-  // crezca sin límite si el alumno tiene muchos períodos con muchos turnos). Sin
-  // paquete vigente, se mantiene el límite de 5 como fallback razonable.
-  let proximasReservasQuery = supabase
-    .from("reservas")
-    .select("*")
-    .eq("alumno_id", alumno.id)
-    .eq("estado", "reservada")
-    .gte("fecha", hoyIso())
-    .order("fecha", { ascending: true })
-    .order("hora_inicio", { ascending: true });
   const tienePaqueteVigente =
     paquete?.estado_paquete === "vigente" || paquete?.estado_paquete === "por_vencer";
-  proximasReservasQuery =
-    tienePaqueteVigente && paquete?.vencimiento_actual
-      ? proximasReservasQuery.lte("fecha", paquete.vencimiento_actual)
-      : proximasReservasQuery.limit(5);
-  const { data: proximasReservas } = await proximasReservasQuery;
+  const lunes = inicioDeSemana(hoyIso());
+  const sesionesSemana = new Set(
+    ((registrosSemana ?? []) as Pick<RegistroRutina, "fecha">[])
+      .map((r) => r.fecha)
+      .filter((f) => f >= lunes && f <= sumarDias(lunes, 6)),
+  ).size;
 
-  const listaProximasReservas = (proximasReservas ?? []) as Reserva[];
   const historialAvances = (avances ?? []) as Avance[];
 
   return (
@@ -185,36 +148,28 @@ export default async function PortalPage() {
           <CardContent className="pt-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Mis próximos turnos
+                Estado de pago
               </h3>
               <Link
-                href="/portal/turnos"
+                href="/portal/pagar-plan"
                 className="text-xs text-muted-foreground hover:text-primary hover:underline"
               >
-                Ver / reservar
+                Ver plan
               </Link>
             </div>
-            {listaProximasReservas.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No tienes turnos reservados próximamente.
-              </p>
+            {estado ? (
+              <div className="flex flex-col gap-2 text-sm">
+                <div>
+                  <EstadoPagoBadge estado={estado.estado_pago} />
+                </div>
+                {estado.vencimiento_actual && (
+                  <span className="text-muted-foreground">
+                    Vence el {formatFecha(estado.vencimiento_actual)}
+                  </span>
+                )}
+              </div>
             ) : (
-              <ul className="flex flex-col gap-2">
-                {listaProximasReservas.map((reserva) => (
-                  <li
-                    key={reserva.id}
-                    className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-3 py-2 text-sm"
-                  >
-                    <span className="font-medium text-foreground">
-                      {NOMBRES_DIA_CORTO[diaSemanaDeFecha(reserva.fecha)]}{" "}
-                      {formatFecha(reserva.fecha)}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {formatHora(reserva.hora_inicio)} h
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <p className="text-sm text-muted-foreground">Sin pagos registrados.</p>
             )}
           </CardContent>
         </Card>
@@ -223,52 +178,41 @@ export default async function PortalPage() {
           <CardContent className="pt-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Mi Plan
+                Mi suscripción
               </h3>
-              <div className="flex items-center gap-2">
-                {paquete && (
-                  <Badge variant={tienePaqueteVigente ? "success" : "secondary"}>
-                    {tienePaqueteVigente ? "Vigente" : "No vigente"}
-                  </Badge>
-                )}
-                {estado && (
-                  <Badge variant={estado.estado_pago === "al_dia" ? "success" : "destructive"}>
-                    {estado.estado_pago === "al_dia" ? "Pagado" : "No pagado"}
-                  </Badge>
-                )}
-              </div>
+              {paquete && (
+                <Badge variant={tienePaqueteVigente ? "success" : "secondary"}>
+                  {tienePaqueteVigente ? "Vigente" : "No vigente"}
+                </Badge>
+              )}
             </div>
             <p className="mb-2 text-sm font-medium text-foreground">
               {plan ? plan.nombre : "Sin plan asignado"}
             </p>
-            {!tienePaqueteVigente ? (
-              <p className="text-sm text-muted-foreground">
-                No tienes un paquete de clases vigente. Contacta a tu estudio para
-                renovarlo.
-              </p>
-            ) : (
-              <div className="flex flex-col gap-1 text-sm">
+            <div className="flex flex-col gap-1 text-sm">
+              {plan && (
                 <span className="text-foreground">
-                  {paquete.clases_restantes} de {paquete.clases_incluidas} clases
-                  disponibles
+                  {plan.dias_por_semana} {plan.dias_por_semana === 1 ? "clase" : "clases"} por semana
                 </span>
+              )}
+              {tienePaqueteVigente && paquete.vencimiento_actual ? (
                 <span className="text-muted-foreground">
-                  Vence el {formatFecha(paquete.vencimiento_actual!)}
+                  Vigente hasta el {formatFecha(paquete.vencimiento_actual)}
                 </span>
-              </div>
-            )}
+              ) : (
+                <span className="text-muted-foreground">
+                  No tienes un paquete vigente. Contacta a tu estudio para renovarlo.
+                </span>
+              )}
+            </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Sprint 15, Parte G: nuevos resúmenes de rutina y progreso, sin entrar en el
-          detalle que ya vive en Bitácora. */}
-      <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardContent className="pt-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Mi rutina
+                Avance en rutinas
               </h3>
               <Link
                 href="/portal/bitacora"
@@ -281,9 +225,9 @@ export default async function PortalPage() {
               <div className="flex flex-col gap-1 text-sm">
                 <span className="font-medium text-foreground">{rutinaActiva.nombre}</span>
                 <span className="text-muted-foreground">
-                  {ultimaSesionBitacora
-                    ? `Última sesión: ${formatFecha(ultimaSesionBitacora)}`
-                    : "Todavía no registras sesiones."}
+                  {sesionesSemana}
+                  {plan ? ` de ${plan.dias_por_semana}` : ""}{" "}
+                  {sesionesSemana === 1 ? "sesión registrada" : "sesiones registradas"} esta semana
                 </span>
               </div>
             ) : (
@@ -294,42 +238,35 @@ export default async function PortalPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Mi progreso
-              </h3>
-              <Link
-                href="/portal/bitacora"
-                className="text-xs text-muted-foreground hover:text-primary hover:underline"
-              >
-                Ver detalle
-              </Link>
-            </div>
-            <div className="flex flex-col gap-1 text-sm">
-              {!alumno.medicion_corporal_habilitada ? null : historialAvances.length === 0 ? (
-                <span className="text-muted-foreground">Sin avances corporales registrados.</span>
-              ) : (
-                <span className="text-foreground">
-                  Último avance: {formatFecha(historialAvances[0].fecha)}
-                  {historialAvances[0].peso_kg != null && ` · ${historialAvances[0].peso_kg} kg`}
-                  {historialAvances[0].peso_kg != null &&
-                    historialAvances[1]?.peso_kg != null &&
-                    ` (${
-                      historialAvances[0].peso_kg - historialAvances[1].peso_kg >= 0 ? "+" : ""
-                    }${(historialAvances[0].peso_kg - historialAvances[1].peso_kg).toFixed(1)} kg)`}
-                </span>
-              )}
-              <span className="text-muted-foreground">
-                {sesionesBitacoraMes} {sesionesBitacoraMes === 1 ? "sesión" : "sesiones"} de
-                bitácora este mes
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+        {alumno.medicion_corporal_habilitada && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Progreso corporal
+                </h3>
+              </div>
+              <div className="flex flex-col gap-1 text-sm">
+                {historialAvances.length === 0 ? (
+                  <span className="text-muted-foreground">Sin avances corporales registrados.</span>
+                ) : (
+                  <span className="text-foreground">
+                    Último avance: {formatFecha(historialAvances[0].fecha)}
+                    {historialAvances[0].peso_kg != null && ` · ${historialAvances[0].peso_kg} kg`}
+                    {historialAvances[0].peso_kg != null &&
+                      historialAvances[1]?.peso_kg != null &&
+                      ` (${
+                        historialAvances[0].peso_kg - historialAvances[1].peso_kg >= 0 ? "+" : ""
+                      }${(historialAvances[0].peso_kg - historialAvances[1].peso_kg).toFixed(1)} kg)`}
+                  </span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
+      <div className="grid items-start gap-4 sm:grid-cols-2">
       <Card>
         <CardContent className="pt-6">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
@@ -346,17 +283,6 @@ export default async function PortalPage() {
           <ContactoForm alumno={alumno} />
         </CardContent>
       </Card>
-
-      {alumno.medicion_corporal_habilitada && alumno.puede_registrar_avances && (
-        <Card>
-          <CardContent className="pt-6">
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Registrar un avance
-            </h3>
-            <AvanceForm action={createAvancePropio} />
-          </CardContent>
-        </Card>
-      )}
 
       {alumno.medicion_corporal_habilitada && (
       <Card>
@@ -412,6 +338,7 @@ export default async function PortalPage() {
         </CardContent>
       </Card>
       )}
+      </div>
     </div>
   );
 }

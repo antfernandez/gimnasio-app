@@ -40,7 +40,7 @@ export default async function PortalNutricionPage() {
   const cabecera = (
     <div>
       <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">Portal del alumno</div>
-      <h2 className="text-2xl">Mi plan nutricional</h2>
+      <h2 className="text-2xl">Nutrición</h2>
     </div>
   );
 

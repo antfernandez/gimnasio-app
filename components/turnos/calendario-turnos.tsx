@@ -41,6 +41,10 @@ type Props = {
   fecha: string;
   slots: SlotOcupado[];
   alumnoActualId?: string;
+  /** Días/semana del plan del alumno (cupo contratado); solo rol alumno. */
+  diasPlan?: number | null;
+  /** Clases vigentes (no canceladas) del alumno en la semana de `fecha`. */
+  agendadasSemana?: number;
   alumnos?: AlumnoOpcion[];
   crearReserva: (
     state: ReservaFormState,
@@ -83,17 +87,37 @@ export function CalendarioTurnos(props: Props) {
       ? (slots.find((s) => claveSlot(s.fecha, s.horaInicio) === claveSeleccionada) ?? null)
       : null;
 
+  const diasPropios = new Set<string>();
+  if (props.rol === "alumno") {
+    for (const s of slots) {
+      if (
+        s.reservas.some((r) => r.alumno_id === props.alumnoActualId && r.estado !== "cancelada")
+      ) {
+        diasPropios.add(s.fecha);
+      }
+    }
+  }
+  const limiteAlcanzado =
+    props.rol === "alumno" &&
+    props.diasPlan != null &&
+    (props.agendadasSemana ?? 0) >= props.diasPlan;
+
   return (
     <div className="flex flex-col gap-5">
       <NavegacionCalendario vista={vista} fecha={fecha} />
 
-      {vista === "mes" && <VistaMes fecha={fecha} slots={slots} />}
+      {props.rol === "alumno" && props.diasPlan != null && vista !== "mes" && (
+        <CupoContratado diasPlan={props.diasPlan} agendadas={props.agendadasSemana ?? 0} />
+      )}
+
+      {vista === "mes" && <VistaMes fecha={fecha} slots={slots} diasPropios={diasPropios} />}
       {vista === "semana" && (
         <VistaSemana
           fecha={fecha}
           slots={slots}
           rol={props.rol}
           alumnoActualId={props.alumnoActualId}
+          diasPropios={diasPropios}
           claveSeleccionada={claveSeleccionada}
           onSeleccionar={(s) => setClaveSeleccionada(claveSlot(s.fecha, s.horaInicio))}
         />
@@ -114,6 +138,7 @@ export function CalendarioTurnos(props: Props) {
           slot={slotSeleccionado}
           rol={props.rol}
           alumnoActualId={props.alumnoActualId}
+          limiteAlcanzado={limiteAlcanzado}
           alumnos={props.alumnos}
           crearReserva={props.crearReserva}
           cancelarReserva={props.cancelarReserva}
@@ -124,6 +149,22 @@ export function CalendarioTurnos(props: Props) {
         />
       )}
     </div>
+  );
+}
+
+function CupoContratado({ diasPlan, agendadas }: { diasPlan: number; agendadas: number }) {
+  if (agendadas < diasPlan) {
+    return (
+      <p className="rounded-[7px] border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        Tienes {agendadas} de {diasPlan} clases agendadas esta semana. Te faltan{" "}
+        {diasPlan - agendadas}.
+      </p>
+    );
+  }
+  return (
+    <p className="rounded-[7px] border border-border bg-secondary/30 px-3 py-2 text-sm text-muted-foreground">
+      Tienes {agendadas} de {diasPlan} clases agendadas esta semana: cupo completo.
+    </p>
   );
 }
 
@@ -181,7 +222,15 @@ function formatFechaLarga(fechaIso: string): string {
   return `${NOMBRES_DIA[dia]} ${d} de ${NOMBRES_MES[m - 1]} ${y}`;
 }
 
-function VistaMes({ fecha, slots }: { fecha: string; slots: SlotOcupado[] }) {
+function VistaMes({
+  fecha,
+  slots,
+  diasPropios,
+}: {
+  fecha: string;
+  slots: SlotOcupado[];
+  diasPropios: Set<string>;
+}) {
   const dias = grillaMes(fecha);
   const porFecha = new Map<string, SlotOcupado[]>();
   for (const s of slots) {
@@ -207,16 +256,26 @@ function VistaMes({ fecha, slots }: { fecha: string; slots: SlotOcupado[] }) {
           const ocupados = slotsDelDia.reduce((acc, s) => acc + s.cuposOcupados, 0);
           const pct = cupos > 0 ? ocupados / cupos : 0;
           const [, , dNum] = dia.split("-");
+          const conClase = diasPropios.has(dia);
 
           return (
             <Link
               key={dia}
               href={hrefVista("dia", dia)}
-              className={`flex flex-col gap-1 rounded-[9px] border border-border p-2 transition-colors hover:border-primary ${
-                esMismoMes(dia, fecha) ? "" : "opacity-40"
-              } ${ocupacionColor(pct)}`}
+              className={`flex flex-col gap-1 rounded-[9px] border p-2 transition-colors hover:border-primary ${
+                conClase ? "border-2 border-primary ring-1 ring-primary" : "border-border"
+              } ${esMismoMes(dia, fecha) ? "" : "opacity-40"} ${ocupacionColor(pct)}`}
             >
-              <span className="font-medium text-foreground">{Number(dNum)}</span>
+              <span className="flex items-center gap-1 font-medium text-foreground">
+                {Number(dNum)}
+                {conClase && (
+                  <span
+                    className="size-1.5 rounded-full bg-primary"
+                    role="img"
+                    aria-label="Tienes clase este día"
+                  />
+                )}
+              </span>
               {slotsDelDia.length > 0 && (
                 <span className="text-[0.65rem] text-muted-foreground">
                   {ocupados}/{cupos} cupos
@@ -229,6 +288,7 @@ function VistaMes({ fecha, slots }: { fecha: string; slots: SlotOcupado[] }) {
       <p className="mt-3 text-xs text-muted-foreground">
         El color de cada día muestra qué tan lleno está: más intenso = más ocupado.
         Haz clic en un día para ver el detalle.
+        {diasPropios.size > 0 && " Los días con borde y punto de acento son tus clases."}
       </p>
     </div>
   );
@@ -242,6 +302,7 @@ export function VistaSemana({
   slots,
   rol,
   alumnoActualId,
+  diasPropios,
   claveSeleccionada,
   onSeleccionar,
 }: {
@@ -249,6 +310,7 @@ export function VistaSemana({
   slots: SlotOcupado[];
   rol: "dueño" | "alumno";
   alumnoActualId?: string;
+  diasPropios?: Set<string>;
   claveSeleccionada: string | null;
   onSeleccionar: (s: SlotOcupado) => void;
 }) {
@@ -273,7 +335,14 @@ export function VistaSemana({
       >
         <div />
         {dias.map((d) => (
-          <div key={d} className="px-1 pb-1 text-center font-semibold text-foreground">
+          <div
+            key={d}
+            className={`px-1 pb-1 text-center font-semibold ${
+              diasPropios?.has(d)
+                ? "rounded-[7px] bg-primary/15 text-primary"
+                : "text-foreground"
+            }`}
+          >
             {NOMBRES_DIA_CORTO[diaSemanaDeFecha(d)]}{" "}
             <span className="text-muted-foreground">{d.slice(8, 10)}</span>
           </div>
@@ -298,7 +367,11 @@ export function VistaSemana({
                   type="button"
                   onClick={() => onSeleccionar(slot)}
                   className={`rounded-[7px] border p-1.5 text-center outline-none transition-colors focus-visible:ring-1 focus-visible:ring-ring ${
-                    seleccionado ? "border-primary" : "border-border hover:border-primary"
+                    esPropio
+                      ? "border-2 border-primary ring-1 ring-primary"
+                      : seleccionado
+                        ? "border-primary"
+                        : "border-border hover:border-primary"
                   } ${ocupacionColor(slot.cupos > 0 ? slot.cuposOcupados / slot.cupos : 0)}`}
                 >
                   <div className="font-medium text-foreground">
@@ -396,6 +469,7 @@ function PanelDetalle({
   slot,
   rol,
   alumnoActualId,
+  limiteAlcanzado,
   alumnos,
   crearReserva,
   cancelarReserva,
@@ -407,6 +481,7 @@ function PanelDetalle({
   slot: SlotOcupado;
   rol: "dueño" | "alumno";
   alumnoActualId?: string;
+  limiteAlcanzado?: boolean;
   alumnos?: AlumnoOpcion[];
   crearReserva: Props["crearReserva"];
   cancelarReserva: Props["cancelarReserva"];
@@ -538,6 +613,11 @@ function PanelDetalle({
                 </div>
               )}
             </div>
+          ) : limiteAlcanzado ? (
+            <p className="text-sm text-destructive">
+              Ya agendaste todas las clases que incluye tu plan esta semana. Cancela o
+              reprograma una para reservar otra.
+            </p>
           ) : hayCupo ? (
             <ReservarAlumnoForm slot={slot} crearReserva={crearReserva} />
           ) : (

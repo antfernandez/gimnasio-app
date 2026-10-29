@@ -65,9 +65,18 @@ export interface Alumno {
   enfermedades: string | null;
   lesiones: string | null;
   objetivos_salud: string | null;
+  /** Spec 34: datos de contacto y notas (carga masiva y ficha). */
+  sexo: SexoAlumno | null;
+  direccion: string | null;
+  comuna: string | null;
+  contacto_emergencia_nombre: string | null;
+  contacto_emergencia_telefono: string | null;
+  observaciones: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export type SexoAlumno = "femenino" | "masculino" | "otro" | "no_indica";
 
 /** Sprint 13: catálogo de planes por gimnasio (Básico/Intermedio/Avanzado), separado
  * de la Rutina — define cuántos días a la semana entrena el alumno, no el contenido
@@ -280,6 +289,8 @@ export interface Rutina {
 }
 
 export interface MedidasAvance {
+  /** Spec 34: estatura inicial de la carga masiva. */
+  estatura_cm?: number;
   cintura_cm?: number;
   cadera_cm?: number;
   pecho_cm?: number;

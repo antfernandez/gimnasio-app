@@ -26,7 +26,15 @@ type AlumnoInput = {
   enfermedades: string | null;
   lesiones: string | null;
   objetivos_salud: string | null;
+  sexo: string | null;
+  direccion: string | null;
+  comuna: string | null;
+  contacto_emergencia_nombre: string | null;
+  contacto_emergencia_telefono: string | null;
+  observaciones: string | null;
 };
+
+const SEXOS_VALIDOS = ["femenino", "masculino", "otro", "no_indica"];
 
 function readAlumnoForm(formData: FormData): AlumnoInput {
   const trim = (key: string) => String(formData.get(key) ?? "").trim();
@@ -42,6 +50,12 @@ function readAlumnoForm(formData: FormData): AlumnoInput {
     enfermedades: trim("enfermedades") || null,
     lesiones: trim("lesiones") || null,
     objetivos_salud: trim("objetivos_salud") || null,
+    sexo: SEXOS_VALIDOS.includes(trim("sexo")) ? trim("sexo") : null,
+    direccion: trim("direccion") || null,
+    comuna: trim("comuna") || null,
+    contacto_emergencia_nombre: trim("contacto_emergencia_nombre") || null,
+    contacto_emergencia_telefono: trim("contacto_emergencia_telefono") || null,
+    observaciones: trim("observaciones") || null,
   };
 }
 
@@ -108,6 +122,12 @@ export async function updateAlumno(
       enfermedades: data.enfermedades,
       lesiones: data.lesiones,
       objetivos_salud: data.objetivos_salud,
+      sexo: data.sexo,
+      direccion: data.direccion,
+      comuna: data.comuna,
+      contacto_emergencia_nombre: data.contacto_emergencia_nombre,
+      contacto_emergencia_telefono: data.contacto_emergencia_telefono,
+      observaciones: data.observaciones,
     })
     .eq("id", id);
 
