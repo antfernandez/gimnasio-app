@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -14,13 +15,18 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function GET(request: NextRequest) {
   const slug = request.nextUrl.searchParams.get("slug");
-  const secret = request.nextUrl.searchParams.get("secret");
+  // Spec 57: el secreto va en el header `x-revalidate-secret`, no en la URL (las URLs
+  // quedan en logs e historiales), y se compara en tiempo constante.
+  const secret = request.headers.get("x-revalidate-secret") ?? "";
+  const esperado = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 
+  const a = Buffer.from(secret);
+  const b = Buffer.from(esperado);
+  if (!esperado || a.length !== b.length || !timingSafeEqual(a, b)) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
   if (!slug) {
     return NextResponse.json({ error: "Falta el parámetro slug" }, { status: 400 });
-  }
-  if (secret !== process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
   revalidateTag(`sitio:${slug}`, { expire: 0 });
