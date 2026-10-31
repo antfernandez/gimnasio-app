@@ -4,6 +4,7 @@ import Link from "next/link";
 import { archivarPlanNutricional } from "@/app/protected/nutricion/actions";
 import { ArchivarPlanButton } from "@/components/nutricion/archivar-plan-button";
 import { Badge } from "@/components/ui/badge";
+import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -94,11 +95,7 @@ export default async function PlanesNutricionalesPage({
             <Button type="submit" variant="outline">
               Filtrar
             </Button>
-            {(q || estado) && (
-              <Button asChild variant="ghost">
-                <Link href="/protected/nutricion/planes">Limpiar</Link>
-              </Button>
-            )}
+            <BotonLimpiar href="/protected/nutricion/planes" activo={Boolean(q || estado)} />
           </form>
 
           {filtrados.length === 0 ? (

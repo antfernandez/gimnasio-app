@@ -5,6 +5,7 @@ import {
   rechazarSuscripcion,
   validarSuscripcion,
 } from "@/app/superadmin/suscripciones/actions";
+import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -88,11 +89,7 @@ export default async function SuscripcionesPage({
         <Button type="submit" variant="outline">
           Filtrar
         </Button>
-        {q && (
-          <Button asChild variant="ghost">
-            <Link href="/superadmin/suscripciones">Limpiar</Link>
-          </Button>
-        )}
+        <BotonLimpiar href="/superadmin/suscripciones" activo={Boolean(q)} />
       </form>
 
       {filas.length === 0 ? (

@@ -4,6 +4,7 @@ import { ChevronDown, Plus } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,11 @@ export function ListadoEjercicios({
   const [zona, setZona] = useState("");
   const [equipo, setEquipo] = useState("");
   const [estado, setEstado] = useState<"" | "activo" | "inactivo">("");
+
+  const [bBusqueda, setBBusqueda] = useState("");
+  const [bZona, setBZona] = useState("");
+  const [bEquipo, setBEquipo] = useState("");
+  const [bEstado, setBEstado] = useState<"" | "activo" | "inactivo">("");
 
   const filtrando = Boolean(busqueda || zona || equipo || estado);
 
@@ -65,13 +71,13 @@ export function ListadoEjercicios({
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Input
           placeholder="Buscar por nombre…"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
+          value={bBusqueda}
+          onChange={(e) => setBBusqueda(e.target.value)}
           aria-label="Buscar ejercicio por nombre"
         />
         <Select
-          value={zona}
-          onChange={(e) => setZona(e.target.value)}
+          value={bZona}
+          onChange={(e) => setBZona(e.target.value)}
           aria-label="Filtrar por zona"
         >
           <option value="">Todas las zonas</option>
@@ -83,19 +89,46 @@ export function ListadoEjercicios({
         </Select>
         <Input
           placeholder="Equipo (ej. barra)"
-          value={equipo}
-          onChange={(e) => setEquipo(e.target.value)}
+          value={bEquipo}
+          onChange={(e) => setBEquipo(e.target.value)}
           aria-label="Filtrar por equipo"
         />
         <Select
-          value={estado}
-          onChange={(e) => setEstado(e.target.value as typeof estado)}
+          value={bEstado}
+          onChange={(e) => setBEstado(e.target.value as typeof bEstado)}
           aria-label="Filtrar por estado"
         >
           <option value="">Activos e inactivos</option>
           <option value="activo">Solo activos</option>
           <option value="inactivo">Solo inactivos</option>
         </Select>
+        <div className="flex gap-3 sm:col-span-2 lg:col-span-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setBusqueda(bBusqueda);
+              setZona(bZona);
+              setEquipo(bEquipo);
+              setEstado(bEstado);
+            }}
+          >
+            Filtrar
+          </Button>
+          <BotonLimpiar
+            activo={filtrando}
+            onClick={() => {
+              setBBusqueda("");
+              setBZona("");
+              setBEquipo("");
+              setBEstado("");
+              setBusqueda("");
+              setZona("");
+              setEquipo("");
+              setEstado("");
+            }}
+          />
+        </div>
       </div>
 
       {zonasVisibles.length === 0 && (

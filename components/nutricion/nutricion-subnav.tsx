@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const items = [
-  { href: "/protected/nutricion", label: "Panel", exact: true },
   { href: "/protected/nutricion/alimentos", label: "Alimentos" },
   { href: "/protected/nutricion/recetas", label: "Recetas" },
   { href: "/protected/nutricion/planes", label: "Planes" },
@@ -19,7 +18,7 @@ export function NutricionSubnav() {
   return (
     <nav className="flex flex-wrap gap-2">
       {items.map((item) => {
-        const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+        const active = pathname.startsWith(item.href);
         return (
           <Link
             key={item.href}

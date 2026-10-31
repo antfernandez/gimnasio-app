@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { BotonFormulario } from "@/components/superadmin/boton-formulario";
 import { PagoManualForm } from "@/components/superadmin/pago-manual-form";
 import { Badge } from "@/components/ui/badge";
+import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -132,11 +133,7 @@ export default async function PagosPage({
         <Button type="submit" variant="outline">
           Filtrar
         </Button>
-        {hayFiltros && (
-          <Button asChild variant="ghost">
-            <Link href="/superadmin/pagos">Limpiar</Link>
-          </Button>
-        )}
+        <BotonLimpiar href="/superadmin/pagos" activo={Boolean(hayFiltros)} />
       </form>
 
       {filas.length === 0 ? (

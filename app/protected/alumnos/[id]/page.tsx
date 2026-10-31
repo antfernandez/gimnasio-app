@@ -1,4 +1,4 @@
-import { ArrowLeft, Banknote } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -12,19 +12,16 @@ import { AlumnoForm } from "@/components/alumnos/alumno-form";
 import { MembresiaForm } from "@/components/alumnos/membresia-form";
 import { ProgresoPdfSelector } from "@/components/alumnos/progreso-pdf-selector";
 import { ToggleActivoButton } from "@/components/alumnos/toggle-activo-button";
-import { AvanceForm } from "@/components/avances/avance-form";
+import { NuevoAvance } from "@/components/avances/nuevo-avance";
 import { MedidasDialog } from "@/components/avances/medidas-dialog";
 import { ProgresoRutina } from "@/components/bitacora/progreso-rutina";
 import { SesionDetalleDialog } from "@/components/bitacora/sesion-detalle-dialog";
 import { BarChart } from "@/components/charts/bar-chart";
-import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
 import { PersonalizarRutinaForm } from "@/components/rutinas/personalizar-rutina-form";
 import { RutinaCard } from "@/components/rutinas/rutina-card";
 import { Acordeon } from "@/components/ui/acordeon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { FiltrosFecha, leerFecha } from "@/components/ui/filtros-fecha";
-import { IconAction } from "@/components/ui/icon-action";
 import { Paginador } from "@/components/ui/paginador";
 import {
   Table,
@@ -35,8 +32,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { fetchEjercicios, fetchZonas } from "@/lib/ejercicios";
-import { formatFecha, formatMonto } from "@/lib/format";
-import { cortarPagina, leerPagina, rangoPagina } from "@/lib/paginacion";
+import { formatFecha } from "@/lib/format";
+import { cortarPagina, leerPagina } from "@/lib/paginacion";
 import { getPerfilActual } from "@/lib/perfil";
 import { estadoPlan } from "@/lib/planes";
 import { agruparSesiones, detalleSesion } from "@/lib/progreso";
@@ -46,7 +43,6 @@ import type {
   Alumno,
   Avance,
   EstadoCobranzaAlumno,
-  Pago,
   Plan,
   RegistroRutina,
   Rutina,
@@ -60,13 +56,6 @@ const VISTAS: { value: Vista; label: string }[] = [
   { value: "membresia", label: "Membresía" },
   { value: "progreso", label: "Progreso" },
 ];
-
-const METODO_LABEL: Record<string, string> = {
-  efectivo: "Efectivo",
-  transferencia: "Transferencia",
-  tarjeta: "Tarjeta",
-  otro: "Otro",
-};
 
 function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
@@ -171,18 +160,15 @@ export default async function FichaAlumnoPage({
         <>
           <Card>
             <CardContent className="pt-6">
-              <AlumnoForm
-                action={updateAlumnoConId}
-                alumno={a}
-                submitLabel="Guardar cambios"
-                acciones={
-                  <ToggleActivoButton
-                    id={a.id}
-                    activo={a.activo}
-                    nombreCompleto={`${a.nombres} ${a.apellidos}`}
-                  />
-                }
-              />
+              {/* Spec 52: Dar de baja arriba a la derecha del cuadro, con confirmación. */}
+              <div className="mb-4 flex justify-end">
+                <ToggleActivoButton
+                  id={a.id}
+                  activo={a.activo}
+                  nombreCompleto={`${a.nombres} ${a.apellidos}`}
+                />
+              </div>
+              <AlumnoForm action={updateAlumnoConId} alumno={a} submitLabel="Guardar cambios" />
             </CardContent>
           </Card>
         </>
@@ -198,9 +184,6 @@ export default async function FichaAlumnoPage({
           rutinaActiva={rutinaActiva}
           ok={ok === "1"}
           ajuste={ajuste === "1"}
-          desde={leerFecha(filtrosPagos.desde)}
-          hasta={leerFecha(filtrosPagos.hasta)}
-          pagina={leerPagina(filtrosPagos.pagina)}
         />
       )}
 
@@ -227,9 +210,6 @@ async function MembresiaVista({
   rutinaActiva,
   ok,
   ajuste,
-  desde,
-  hasta,
-  pagina,
 }: {
   alumno: Alumno;
   hoy: string;
@@ -239,27 +219,14 @@ async function MembresiaVista({
   rutinaActiva: Rutina | undefined;
   ok: boolean;
   ajuste: boolean;
-  desde?: string;
-  hasta?: string;
-  pagina: number;
 }) {
   const supabase = await createClient();
-  let consultaPagos = supabase
-    .from("pagos")
-    .select("*, plan:planes(nombre)", { count: "exact" })
-    .eq("alumno_id", a.id)
-    .order("fecha_pago", { ascending: false })
-    .range(...rangoPagina(pagina));
-  if (desde) consultaPagos = consultaPagos.gte("fecha_pago", desde);
-  if (hasta) consultaPagos = consultaPagos.lte("fecha_pago", hasta);
-
-  const [{ data: catalogo }, { data: pagos, count: totalPagos }, zonas, ejercicios, { count: asignacionesNutricion }] = await Promise.all([
+  const [{ data: catalogo }, zonas, ejercicios, { count: asignacionesNutricion }] = await Promise.all([
     supabase
       .from("rutina_plantillas")
       .select("*")
       .eq("gimnasio_id", gimnasioId)
       .order("nombre", { ascending: true }),
-    consultaPagos,
     fetchZonas(),
     fetchEjercicios({ soloActivos: true }),
     supabase
@@ -269,7 +236,6 @@ async function MembresiaVista({
       .eq("estado", "activo"),
   ]);
   const rutinasCatalogo = (catalogo ?? []) as RutinaPlantilla[];
-  const listaPagos = (pagos ?? []) as (Pago & { plan: { nombre: string } | null })[];
 
   const vencimiento = estadoCobranza?.vencimiento_actual ?? null;
   const cicloEnCurso = !!vencimiento && vencimiento >= hoy;
@@ -337,72 +303,6 @@ async function MembresiaVista({
             </Acordeon>
           </>
         )}
-      </Seccion>
-
-      <Seccion titulo="Pagos">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-            <span className="flex items-center gap-2">
-              <span className="text-muted-foreground">Estado:</span>
-              {estadoCobranza ? <EstadoPagoBadge estado={estadoCobranza.estado_pago} /> : "—"}
-            </span>
-            <span>
-              <span className="text-muted-foreground">Vencimiento: </span>
-              {vencimiento ? formatFecha(vencimiento) : "—"}
-            </span>
-          </div>
-          <IconAction
-            icon={Banknote}
-            label="Registrar pago"
-            href={`/protected/pagos/${a.id}#registrar-pago`}
-          />
-        </div>
-        <FiltrosFecha
-          pathname={`/protected/alumnos/${a.id}`}
-          desde={desde}
-          hasta={hasta}
-          fijos={{ vista: "membresia" }}
-        />
-        {listaPagos.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            {desde || hasta
-              ? "No hay pagos en ese rango de fechas."
-              : "Este alumno aún no tiene pagos registrados."}
-          </p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha de pago</TableHead>
-                <TableHead>Período</TableHead>
-                <TableHead>Forma de pago</TableHead>
-                <TableHead>Plan</TableHead>
-                <TableHead>Monto</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {listaPagos.map((pago) => (
-                <TableRow key={pago.id}>
-                  <TableCell>{formatFecha(pago.fecha_pago)}</TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {formatFecha(pago.periodo_desde)} – {formatFecha(pago.periodo_hasta)}
-                  </TableCell>
-                  <TableCell>{METODO_LABEL[pago.metodo] ?? pago.metodo}</TableCell>
-                  <TableCell>{pago.plan?.nombre ?? "—"}</TableCell>
-                  <TableCell className="font-medium text-foreground">
-                    {formatMonto(pago.monto)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-        <Paginador
-          pathname={`/protected/alumnos/${a.id}`}
-          query={{ vista: "membresia", desde, hasta }}
-          pagina={pagina}
-          total={totalPagos ?? 0}
-        />
       </Seccion>
     </>
   );
@@ -521,14 +421,13 @@ async function ProgresoVista({
       )}
 
       {tabActiva === "medidas" && (
-      <Seccion titulo="Avance corporal">
+      <Seccion titulo="Medidas corporales">
         {avanceOk && <Aviso>Avance registrado correctamente.</Aviso>}
-        <AvanceForm action={createAvance.bind(null, a.id)} />
+        <div className="mb-5">
+          <NuevoAvance action={createAvance.bind(null, a.id)} />
+        </div>
 
-        <div className="mt-6 border-t border-border pt-6">
-          <h4 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Historial de avances
-          </h4>
+        <div>
           <div className="mb-6">
             <BarChart
               data={historialAvances

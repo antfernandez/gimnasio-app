@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Building2, ClipboardList, CreditCard } from "lucide-react";
+import { ArrowRightLeft, BarChart3, Building2, ClipboardList, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -11,6 +11,7 @@ const items = [
   { href: "/superadmin/gimnasios", label: "Gimnasios", icon: Building2 },
   { href: "/superadmin/pagos", label: "Pagos", icon: CreditCard },
   { href: "/superadmin/planes", label: "Planes", icon: ClipboardList },
+  { href: "/superadmin/cambios-plan", label: "Cambios de plan", icon: ArrowRightLeft },
 ];
 
 export function SuperadminNav() {

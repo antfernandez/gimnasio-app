@@ -216,6 +216,13 @@ export async function guardarReceta(
   const ingredientes = leerIngredientes(formData);
   if ("error" in ingredientes) return ingredientes;
 
+  // Spec 51: la foto ya se subió desde el navegador; aquí solo se valida que la ruta sea
+  // de la carpeta del propio gimnasio (la RLS de Storage lo exige igual al subir).
+  const fotoPath = trim(formData, "foto_path") || null;
+  if (fotoPath && (!fotoPath.startsWith(`${gimnasioId}/`) || fotoPath.includes(".."))) {
+    return { error: "La foto no es válida. Súbela de nuevo." };
+  }
+
   const datos = {
     nombre,
     tipo: tipo as TipoReceta,
@@ -226,11 +233,20 @@ export async function guardarReceta(
     preparacion: trim(formData, "preparacion") || null,
     estado,
     url_video: urlVideo,
+    foto_path: fotoPath,
   };
 
   const supabase = await createClient();
   let recetaId = id;
+  let fotoAnterior: string | null = null;
   if (id) {
+    const { data: previa } = await supabase
+      .from("recetas")
+      .select("foto_path")
+      .eq("id", id)
+      .eq("gimnasio_id", gimnasioId)
+      .maybeSingle();
+    fotoAnterior = (previa?.foto_path as string | null) ?? null;
     const { error } = await supabase
       .from("recetas")
       .update(datos)
@@ -272,6 +288,11 @@ export async function guardarReceta(
     if (insError) return { error: "No se pudieron guardar los ingredientes. Intenta de nuevo." };
   }
 
+  // Foto reemplazada o quitada: se borra el objeto anterior.
+  if (fotoAnterior && fotoAnterior !== fotoPath) {
+    await supabase.storage.from("recetas-fotos").remove([fotoAnterior]);
+  }
+
   revalidatePath("/protected/nutricion/recetas");
   revalidatePath("/protected/nutricion/planes");
   redirect("/protected/nutricion/recetas?guardado=1");
@@ -282,6 +303,12 @@ export async function eliminarReceta(id: string): Promise<NutricionFormState> {
   if (!perfilData) redirect("/auth/login");
 
   const supabase = await createClient();
+  const { data: previa } = await supabase
+    .from("recetas")
+    .select("foto_path")
+    .eq("id", id)
+    .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
+    .maybeSingle();
   const { error } = await supabase
     .from("recetas")
     .delete()
@@ -293,6 +320,7 @@ export async function eliminarReceta(id: string): Promise<NutricionFormState> {
     }
     return { error: "No se pudo eliminar la receta. Intenta de nuevo." };
   }
+  if (previa?.foto_path) await supabase.storage.from("recetas-fotos").remove([previa.foto_path as string]);
 
   revalidatePath("/protected/nutricion/recetas");
   return {};
@@ -402,7 +430,7 @@ export async function guardarPlanNutricional(
   }
 
   revalidatePath("/protected/nutricion/planes");
-  revalidatePath("/protected/nutricion");
+  revalidatePath("/protected/nutricion/asignar");
   redirect("/protected/nutricion/planes?guardado=1");
 }
 
@@ -504,8 +532,8 @@ export async function crearAsignacion(
     return { error: "No se pudo guardar la asignación. Intenta de nuevo." };
   }
 
-  revalidatePath("/protected/nutricion");
-  redirect("/protected/nutricion?asignado=1");
+  revalidatePath("/protected/nutricion/asignar");
+  redirect("/protected/nutricion/asignar?asignado=1");
 }
 
 export async function cambiarEstadoAsignacion(
@@ -529,6 +557,6 @@ export async function cambiarEstadoAsignacion(
     return { error: "No se pudo cambiar el estado. Intenta de nuevo." };
   }
 
-  revalidatePath("/protected/nutricion");
+  revalidatePath("/protected/nutricion/asignar");
   return {};
 }

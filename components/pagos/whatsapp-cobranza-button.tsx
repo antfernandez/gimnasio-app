@@ -25,8 +25,9 @@ export function WhatsAppCobranzaButton({ alumno }: { alumno: EstadoCobranzaAlumn
         icon={MessageCircle}
         label="El alumno no tiene un teléfono válido registrado"
         disabled
+        tooltipDerecha
       />
     );
   }
-  return <IconAction icon={MessageCircle} label="Enviar WhatsApp" href={href} externo />;
+  return <IconAction icon={MessageCircle} label="Enviar WhatsApp" href={href} externo tooltipDerecha />;
 }

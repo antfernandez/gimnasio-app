@@ -26,6 +26,8 @@ type Props = {
    * desactivado o eliminado del catálogo desde que se guardó la plantilla). */
   etiquetaFallback?: string;
   invalid?: boolean;
+  /** Deshabilitado: fondo gris claro y sin abrir la lista (spec 50). */
+  disabled?: boolean;
 };
 
 function normalizar(s: string) {
@@ -41,6 +43,7 @@ export function EjercicioCombobox({
   onChange,
   etiquetaFallback,
   invalid,
+  disabled = false,
 }: Props) {
   const [abierto, setAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
@@ -87,10 +90,11 @@ export function EjercicioCombobox({
         type="button"
         role="combobox"
         aria-expanded={abierto}
+        disabled={disabled}
         aria-controls={listaId}
         onClick={() => setAbierto((a) => !a)}
         className={cn(
-          "flex h-11 w-full items-center justify-between gap-2 rounded-[9px] border bg-secondary/40 px-3.5 text-left text-sm transition-colors focus-visible:border-primary focus-visible:outline-none",
+          "flex h-11 w-full items-center justify-between gap-2 rounded-[9px] border bg-white px-3.5 text-left text-sm transition-colors focus-visible:border-primary focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted-foreground",
           invalid ? "border-destructive" : "border-input",
         )}
       >
@@ -107,10 +111,10 @@ export function EjercicioCombobox({
         <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
       </button>
 
-      {abierto && (
+      {abierto && !disabled && (
         <div
           id={listaId}
-          className="absolute left-0 right-0 z-30 mt-1 overflow-hidden rounded-[9px] border border-border bg-card shadow-lg"
+          className="absolute left-0 right-0 z-30 mt-1 overflow-hidden rounded-[9px] border border-border bg-white shadow-lg"
         >
           <div className="flex items-center gap-2 border-b border-border px-3">
             <Search className="h-4 w-4 text-muted-foreground" />

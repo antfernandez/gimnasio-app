@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PaginadorLocal } from "@/components/ui/paginador-local";
@@ -32,6 +33,8 @@ function formatRealizado(r: RegistroRutina): string {
 export function BitacoraHistorial({ registros }: { registros: RegistroRutina[] }) {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
+  const [bDesde, setBDesde] = useState("");
+  const [bHasta, setBHasta] = useState("");
   const [pagina, setPagina] = useState(1);
 
   if (registros.length === 0) {
@@ -49,38 +52,29 @@ export function BitacoraHistorial({ registros }: { registros: RegistroRutina[] }
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
-        <Input
-          type="date"
-          aria-label="Desde"
-          className="w-auto"
-          value={desde}
-          onChange={(e) => {
-            setDesde(e.target.value);
+        <Input type="date" aria-label="Desde" className="w-auto" value={bDesde} onChange={(e) => setBDesde(e.target.value)} />
+        <Input type="date" aria-label="Hasta" className="w-auto" value={bHasta} onChange={(e) => setBHasta(e.target.value)} />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setDesde(bDesde);
+            setHasta(bHasta);
+            setPagina(1);
+          }}
+        >
+          Filtrar
+        </Button>
+        <BotonLimpiar
+          activo={Boolean(desde || hasta)}
+          onClick={() => {
+            setBDesde("");
+            setBHasta("");
+            setDesde("");
+            setHasta("");
             setPagina(1);
           }}
         />
-        <Input
-          type="date"
-          aria-label="Hasta"
-          className="w-auto"
-          value={hasta}
-          onChange={(e) => {
-            setHasta(e.target.value);
-            setPagina(1);
-          }}
-        />
-        {(desde || hasta) && (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setDesde("");
-              setHasta("");
-              setPagina(1);
-            }}
-          >
-            Limpiar
-          </Button>
-        )}
       </div>
 
       {visibles.length === 0 ? (

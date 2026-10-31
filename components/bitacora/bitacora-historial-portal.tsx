@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react";
 
 import { SesionDetalleDialog } from "@/components/bitacora/sesion-detalle-dialog";
+import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { PaginadorLocal } from "@/components/ui/paginador-local";
 import {
@@ -30,6 +32,9 @@ export function BitacoraHistorialPortal({ registros, rutinas }: Props) {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [rutinaId, setRutinaId] = useState("");
+  const [bDesde, setBDesde] = useState("");
+  const [bHasta, setBHasta] = useState("");
+  const [bRutinaId, setBRutinaId] = useState("");
   const [pagina, setPagina] = useState(1);
 
   const sesiones = useMemo(() => agruparSesiones(registros, rutinas), [registros, rutinas]);
@@ -63,11 +68,8 @@ export function BitacoraHistorialPortal({ registros, rutinas }: Props) {
           <Input
             type="date"
             className="h-11 w-full"
-            value={desde}
-            onChange={(e) => {
-              setDesde(e.target.value);
-              setPagina(1);
-            }}
+            value={bDesde}
+            onChange={(e) => setBDesde(e.target.value)}
           />
         </label>
         <label className="grid gap-1 text-xs text-muted-foreground">
@@ -75,47 +77,48 @@ export function BitacoraHistorialPortal({ registros, rutinas }: Props) {
           <Input
             type="date"
             className="h-11 w-full"
-            value={hasta}
-            onChange={(e) => {
-              setHasta(e.target.value);
-              setPagina(1);
-            }}
+            value={bHasta}
+            onChange={(e) => setBHasta(e.target.value)}
           />
         </label>
         <label className="grid gap-1 text-xs text-muted-foreground">
           Rutina
-          <select
-            value={rutinaId}
-            onChange={(e) => {
-              setRutinaId(e.target.value);
-              setPagina(1);
-            }}
-            className="h-11 w-full rounded-[9px] border border-border bg-white px-3 text-sm text-foreground"
-          >
+          <Select value={bRutinaId} onChange={(e) => setBRutinaId(e.target.value)}>
             <option value="">Todas</option>
             {opcionesRutina.map((id) => (
               <option key={id} value={id}>
                 {rutinaPorId.get(id)?.nombre ?? "Rutina"}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       </div>
-      {hayFiltros && (
-        <div>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setDesde("");
-              setHasta("");
-              setRutinaId("");
-              setPagina(1);
-            }}
-          >
-            Limpiar
-          </Button>
-        </div>
-      )}
+      <div className="flex gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setDesde(bDesde);
+            setHasta(bHasta);
+            setRutinaId(bRutinaId);
+            setPagina(1);
+          }}
+        >
+          Filtrar
+        </Button>
+        <BotonLimpiar
+          activo={Boolean(hayFiltros)}
+          onClick={() => {
+            setBDesde("");
+            setBHasta("");
+            setBRutinaId("");
+            setDesde("");
+            setHasta("");
+            setRutinaId("");
+            setPagina(1);
+          }}
+        />
+      </div>
 
       {visibles.length === 0 ? (
         <p className="py-4 text-center text-sm text-muted-foreground">

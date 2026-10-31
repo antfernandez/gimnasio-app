@@ -34,3 +34,15 @@ export async function cargarRecetasConMacros(
       porPorcion: macrosPorPorcion(macrosReceta(ingPorReceta.get(r.id) ?? [], alimentoPorId), r.porciones),
     }));
 }
+
+/** URLs firmadas (1 h) de fotos de recetas del bucket privado `recetas-fotos` (spec 51),
+ * indexadas por `foto_path`. La RLS de Storage decide qué rutas puede ver quien llama. */
+export async function urlsFotosRecetas(paths: (string | null | undefined)[]): Promise<Map<string, string>> {
+  const rutas = [...new Set(paths.filter((p): p is string => !!p))];
+  const mapa = new Map<string, string>();
+  if (rutas.length === 0) return mapa;
+  const supabase = await createClient();
+  const { data } = await supabase.storage.from("recetas-fotos").createSignedUrls(rutas, 3600);
+  for (const f of data ?? []) if (f.path && f.signedUrl) mapa.set(f.path, f.signedUrl);
+  return mapa;
+}

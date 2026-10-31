@@ -324,6 +324,7 @@ export function EditorSitio({
               aspecto 4:5), pero puedes subir cualquier tamaño y luego arrastrarla para
               ajustar qué parte queda visible.
             </p>
+            <div className="w-full max-w-[260px]">
             <ImageUploader
               gimnasioId={gimnasioId}
               value={contenido.hero.imagen_url}
@@ -340,6 +341,7 @@ export function EditorSitio({
                 })
               }
             />
+            </div>
           </div>
           <div className="grid gap-2">
             <Label>Título</Label>

@@ -1,6 +1,6 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -43,13 +43,10 @@ export function FiltrosFecha({
       <Button type="submit" variant="outline">
         Filtrar
       </Button>
-      {(desde || hasta || hayFiltros) && (
-        <Button asChild variant="ghost">
-          <Link href={{ pathname, query: Object.fromEntries(Object.entries(fijos).filter(([, v]) => v)) as Record<string, string> }}>
-            Limpiar
-          </Link>
-        </Button>
-      )}
+      <BotonLimpiar
+        href={`${pathname}?${new URLSearchParams(Object.entries(fijos).filter(([, v]) => v) as [string, string][]).toString()}`}
+        activo={Boolean(desde || hasta || hayFiltros)}
+      />
     </form>
   );
 }

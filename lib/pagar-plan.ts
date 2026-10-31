@@ -18,3 +18,32 @@ export const ESTADO_SOLICITUD_LABEL = {
   confirmado: "Confirmado",
   rechazado: "Rechazado",
 } as const;
+
+function aIso(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/** Suma `meses` a una fecha ISO con el mismo criterio que Postgres (`+ make_interval(months)`:
+ * si el día no existe en el mes destino, queda el último día de ese mes). */
+export function sumarMeses(iso: string, meses: number): string {
+  const [a, m, d] = iso.split("-").map(Number);
+  const destino = new Date(Date.UTC(a, m - 1 + meses, 1));
+  const ultimo = new Date(Date.UTC(destino.getUTCFullYear(), destino.getUTCMonth() + 1, 0)).getUTCDate();
+  destino.setUTCDate(Math.min(d, ultimo));
+  return aIso(destino);
+}
+
+/** Primer día cubierto por el próximo pago de suscripción: el día siguiente al vencimiento
+ * si aún está vigente (misma regla que `aplicar_solicitud_pago`), o hoy. */
+export function inicioPeriodoSuscripcion(vencimiento: string | null | undefined, hoy: string): string {
+  if (vencimiento && vencimiento >= hoy) {
+    return aIso(new Date(Date.parse(`${vencimiento}T00:00:00Z`) + 86_400_000));
+  }
+  return hoy;
+}
+
+/** Rango `[desde, hasta]` (inclusive) que cubre pagar `meses` desde `inicio`. */
+export function rangoPeriodo(inicio: string, meses: number): { desde: string; hasta: string } {
+  const finExclusivo = sumarMeses(inicio, meses);
+  return { desde: inicio, hasta: aIso(new Date(Date.parse(`${finExclusivo}T00:00:00Z`) - 86_400_000)) };
+}

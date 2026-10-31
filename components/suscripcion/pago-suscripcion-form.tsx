@@ -10,9 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { formatMonto } from "@/lib/format";
-import { MESES_PAGO } from "@/lib/pagar-plan";
-import { calcularMontoSuscripcion, precioMensualConIva } from "@/lib/planes-sistema";
+import { formatFecha, formatMonto } from "@/lib/format";
+import { MESES_PAGO, rangoPeriodo } from "@/lib/pagar-plan";
+import { calcularMontoSuscripcion } from "@/lib/planes-sistema";
 import { cn } from "@/lib/utils";
 import type { CuentaTransferencia } from "@/lib/types";
 
@@ -29,6 +29,9 @@ export function PagoSuscripcionForm({
   cuenta,
   hoy,
   conIva = true,
+  inicioPeriodo,
+  mercadoPagoPrueba = false,
+  sinDescripcion = false,
 }: {
   accion: Accion;
   precioNeto: number;
@@ -39,13 +42,18 @@ export function PagoSuscripcionForm({
   hoy: string;
   /** false = el precio ya es final (pago de un alumno a su gimnasio, sin IVA adicional). */
   conIva?: boolean;
+  /** Primer día que cubre el próximo pago (spec 54): con él el selector pide el período a pagar. */
+  inicioPeriodo?: string;
+  /** Mercado Pago simulado (sin credenciales, solo entornos de prueba). */
+  mercadoPagoPrueba?: boolean;
+  /** Oculta el texto explicativo sobre los métodos de pago. */
+  sinDescripcion?: boolean;
 }) {
   const [state, action, pending] = useActionState(accion, initialState);
   const [metodo, setMetodo] = useState<Metodo>("transferencia");
   const [meses, setMeses] = useState(1);
   const [copiado, setCopiado] = useState(false);
 
-  const mensual = conIva ? precioMensualConIva(precioNeto, ivaPct) : precioNeto;
   const totalPara = (m: number) => (conIva ? calcularMontoSuscripcion(precioNeto, m, ivaPct) : precioNeto * m);
   const total = totalPara(meses);
 
@@ -55,8 +63,8 @@ export function PagoSuscripcionForm({
         ["RUT", cuenta.rut_titular],
         ["Banco", cuenta.banco],
         ["Tipo", cuenta.tipo_cuenta],
-        ["N° cuenta", cuenta.numero_cuenta],
-        ...(cuenta.email_contacto ? [["Email", cuenta.email_contacto]] : []),
+        ["Cuenta", cuenta.numero_cuenta],
+        ...(cuenta.email_contacto ? [["Correo", cuenta.email_contacto]] : []),
       ]
     : [];
 
@@ -68,18 +76,22 @@ export function PagoSuscripcionForm({
 
   const selectorMeses = (
     <div className="grid gap-2">
-      <Label htmlFor="meses">¿Cuántos meses pagas?</Label>
+      <Label htmlFor="meses">{inicioPeriodo ? "Período que estás pagando" : "¿Cuántos meses pagas?"}</Label>
       <Select
         id="meses"
         name="meses"
         value={meses}
         onChange={(e) => setMeses(Number(e.target.value))}
       >
-        {MESES_PAGO.map((m) => (
-          <option key={m} value={m}>
-            {m} {m === 1 ? "mes" : "meses"} — {formatMonto(totalPara(m))}
-          </option>
-        ))}
+        {MESES_PAGO.map((m) => {
+          const r = inicioPeriodo ? rangoPeriodo(inicioPeriodo, m) : null;
+          return (
+            <option key={m} value={m}>
+              {r ? `${formatFecha(r.desde)} – ${formatFecha(r.hasta)} · ` : ""}
+              {m} {m === 1 ? "mes" : "meses"} — {formatMonto(totalPara(m))}
+            </option>
+          );
+        })}
       </Select>
     </div>
   );
@@ -109,16 +121,22 @@ export function PagoSuscripcionForm({
         {pestana("transferencia", "Transferencia", <Banknote className="size-4" />)}
         {pestana(
           "mercado_pago",
-          mercadoPagoDisponible ? "Mercado Pago" : "Mercado Pago (no disponible)",
+          mercadoPagoPrueba
+            ? "Mercado Pago (modo de prueba)"
+            : mercadoPagoDisponible
+              ? "Mercado Pago"
+              : "Mercado Pago (no disponible)",
           <CreditCard className="size-4" />,
-          !mercadoPagoDisponible,
+          !mercadoPagoDisponible && !mercadoPagoPrueba,
         )}
       </div>
 
-      <p className="text-sm font-medium">
-        Pago automático e inmediato con Mercado Pago, o por transferencia bancaria subiendo
-        comprobante.
-      </p>
+      {!sinDescripcion && (
+        <p className="text-sm font-medium">
+          Pago automático e inmediato con Mercado Pago, o por transferencia bancaria subiendo
+          comprobante.
+        </p>
+      )}
 
       {metodo === "transferencia" ? (
         <div className="grid gap-5 lg:grid-cols-2">
@@ -149,12 +167,6 @@ export function PagoSuscripcionForm({
                   Aún no hay datos bancarios configurados. Contacta al proveedor.
                 </p>
               )}
-              <div className="rounded-[9px] bg-primary/10 p-3 text-sm">
-                <strong>Monto:</strong> {formatMonto(mensual)} por cada mes{conIva ? " (IVA incluido)" : ""}.{" "}
-                {[3, 6]
-                  .map((m) => `${m} meses = ${formatMonto(mensual * m)}`)
-                  .join(" · ")}
-              </div>
             </CardContent>
           </Card>
 
@@ -192,7 +204,7 @@ export function PagoSuscripcionForm({
               <p className="text-xs text-muted-foreground">JPG, PNG, WebP o PDF. Máx 5MB.</p>
               <div className="grid gap-2">
                 <Label htmlFor="nota">Nota (opcional)</Label>
-                <Textarea id="nota" name="nota" rows={2} placeholder="Ej: Transferencia a nombre de..." />
+                <Textarea id="nota" name="nota" rows={1} className="min-h-[44px]" placeholder="Ej: Transferencia a nombre de..." />
               </div>
               <Button type="submit" disabled={pending || !cuenta}>
                 {pending ? "Procesando…" : "Enviar comprobante"}
@@ -207,7 +219,7 @@ export function PagoSuscripcionForm({
           </div>
           <p className="text-sm">
             Paga con tarjeta de débito, crédito o saldo de Mercado Pago. El pago se confirma al
-            instante.
+            instante.{mercadoPagoPrueba && " Modo de prueba: no se realiza ningún cobro real."}
           </p>
           <div className="text-left">{selectorMeses}</div>
           <div className="rounded-[9px] bg-secondary py-5">

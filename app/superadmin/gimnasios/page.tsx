@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AccionesGimnasio } from "@/components/superadmin/acciones-gimnasio";
 import { CrearAdminForm } from "@/components/superadmin/crear-admin-form";
 import { BotonFormulario } from "@/components/superadmin/boton-formulario";
 import { Badge } from "@/components/ui/badge";
+import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -132,11 +132,7 @@ export default async function GimnasiosPage({
         <Button type="submit" variant="outline">
           Filtrar
         </Button>
-        {hayFiltros && (
-          <Button asChild variant="ghost">
-            <Link href="/superadmin/gimnasios">Limpiar</Link>
-          </Button>
-        )}
+        <BotonLimpiar href="/superadmin/gimnasios" activo={Boolean(hayFiltros)} />
       </form>
 
       {visibles.length === 0 ? (

@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useActionState, useMemo, useState } from "react";
 
 import type { NutricionFormState } from "@/app/protected/nutricion/actions";
+import { RecetaFotoInput } from "@/components/nutricion/receta-foto-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,11 +34,14 @@ type Props = {
   action: (state: NutricionFormState, formData: FormData) => Promise<NutricionFormState>;
   alimentos: Alimento[];
   receta?: Receta;
+  /** URL firmada de la foto actual (spec 51). */
+  fotoUrl?: string | null;
+  gimnasioId: string;
   ingredientes?: Ingrediente[];
   submitLabel: string;
 };
 
-export function RecetaForm({ action, alimentos, receta, ingredientes = [], submitLabel }: Props) {
+export function RecetaForm({ action, alimentos, receta, fotoUrl = null, gimnasioId, ingredientes = [], submitLabel }: Props) {
   const [state, formAction, isPending] = useActionState(action, {});
   const [porciones, setPorciones] = useState(String(receta?.porciones ?? 1));
   const [filas, setFilas] = useState<Fila[]>(
@@ -141,6 +145,8 @@ export function RecetaForm({ action, alimentos, receta, ingredientes = [], submi
           />
         </div>
       </div>
+
+      <RecetaFotoInput gimnasioId={gimnasioId} fotoPath={receta?.foto_path ?? null} fotoUrl={fotoUrl} />
 
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="grid gap-2">

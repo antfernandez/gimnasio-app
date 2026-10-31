@@ -1,4 +1,5 @@
 import { iniciarPagoSuscripcion } from "@/app/protected/pagar-plan/actions";
+import { CambioPlanSistema } from "@/components/suscripcion/cambio-plan-sistema";
 import { PagoSuscripcionForm } from "@/components/suscripcion/pago-suscripcion-form";
 import { PlanesSistemaCards } from "@/components/suscripcion/planes-sistema-cards";
 import { Badge } from "@/components/ui/badge";
@@ -16,8 +17,8 @@ import {
 } from "@/components/ui/table";
 import { formatFecha, formatMonto } from "@/lib/format";
 import { leerPagina, rangoPagina } from "@/lib/paginacion";
-import { tokenAntonio } from "@/lib/mercadopago";
-import { ESTADO_SOLICITUD_LABEL } from "@/lib/pagar-plan";
+import { mpModoPrueba, tokenAntonio } from "@/lib/mercadopago";
+import { ESTADO_SOLICITUD_LABEL, inicioPeriodoSuscripcion } from "@/lib/pagar-plan";
 import { planSistemaPorId, planesSistemaVigentes } from "@/lib/planes-sistema";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
@@ -41,9 +42,9 @@ type Uso = {
 export default async function SuscripcionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ enviado?: string; desde?: string; hasta?: string; estado?: string; pagina?: string }>;
+  searchParams: Promise<{ enviado?: string; cambio?: string; desde?: string; hasta?: string; estado?: string; pagina?: string }>;
 }) {
-  const { enviado, ...filtros } = await searchParams;
+  const { enviado, cambio, ...filtros } = await searchParams;
   const desde = leerFecha(filtros.desde);
   const hasta = leerFecha(filtros.hasta);
   const estadoFiltro = filtros.estado && filtros.estado in VARIANTE ? filtros.estado : "";
@@ -89,10 +90,22 @@ export default async function SuscripcionPage({
     const { data } = await supabase.rpc("plan_sistema_requerido", { p_gimnasio_id: gimnasioId });
     planId = (data as string | null) ?? null;
   }
-  const [plan, planes] = await Promise.all([
+  const [plan, planes, { data: cambioPendiente }] = await Promise.all([
     planId ? planSistemaPorId(supabase, planId) : Promise.resolve(null),
     planesSistemaVigentes(supabase, hoyIso()),
+    supabase
+      .from("solicitudes_cambio_plan_sistema")
+      .select("id, plan_nuevo_id")
+      .eq("gimnasio_id", gimnasioId)
+      .eq("estado", "pendiente")
+      .maybeSingle(),
   ]);
+  const pendiente = cambioPendiente
+    ? {
+        id: cambioPendiente.id as string,
+        planNuevo: planes.find((p) => p.id === cambioPendiente.plan_nuevo_id)?.nombre ?? "otro plan",
+      }
+    : null;
 
   const uso_ = uso as Uso | null;
   const historial = (solicitudes ?? []) as SolicitudPago[];
@@ -112,6 +125,14 @@ export default async function SuscripcionPage({
         <Card>
           <CardContent className="py-4 text-sm">
             Recibimos tu comprobante. Queda pendiente hasta que sea validado.
+          </CardContent>
+        </Card>
+      )}
+
+      {cambio && (
+        <Card>
+          <CardContent className="py-4 text-sm">
+            Enviamos tu solicitud de cambio de plan. Rige cuando el Superadmin la apruebe.
           </CardContent>
         </Card>
       )}
@@ -143,6 +164,11 @@ export default async function SuscripcionPage({
         alumnosActivos={uso_?.alumnos_activos ?? null}
       />
 
+      <CambioPlanSistema
+        opciones={planes.filter((p) => p.id !== plan?.id)}
+        pendiente={pendiente}
+      />
+
       {plan ? (
         <PagoSuscripcionForm
           accion={iniciarPagoSuscripcion}
@@ -151,6 +177,9 @@ export default async function SuscripcionPage({
           mercadoPagoDisponible={!!tokenAntonio()}
           cuenta={(cuenta as CuentaTransferencia | null) ?? null}
           hoy={hoyIso()}
+          inicioPeriodo={inicioPeriodoSuscripcion(vence, hoyIso())}
+          mercadoPagoPrueba={mpModoPrueba()}
+          sinDescripcion
         />
       ) : (
         <Card>

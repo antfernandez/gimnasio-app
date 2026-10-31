@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import type { AlumnoFormState } from "@/app/protected/alumnos/actions";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -125,18 +126,13 @@ export function AlumnoForm({ action, alumno, submitLabel, acciones }: Props) {
         </div>
         <div className="grid gap-2">
           <Label htmlFor="sexo">Sexo</Label>
-          <select
-            id="sexo"
-            name="sexo"
-            defaultValue={alumno?.sexo ?? ""}
-            className="h-11 w-full rounded-[9px] border border-border bg-white px-3 text-sm text-foreground"
-          >
+          <Select id="sexo" name="sexo" defaultValue={alumno?.sexo ?? ""}>
             <option value="">Sin indicar</option>
             <option value="femenino">Femenino</option>
             <option value="masculino">Masculino</option>
             <option value="otro">Otro</option>
             <option value="no_indica">Prefiere no decir</option>
-          </select>
+          </Select>
         </div>
         <div className="grid gap-2">
           <Label htmlFor="direccion">Dirección</Label>

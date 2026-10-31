@@ -25,10 +25,6 @@ export default async function EjerciciosPage({
             Panel del dueño
           </div>
           <h2 className="text-2xl">Ejercicios</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Catálogo de ejercicios por zona del cuerpo. Las rutinas eligen sus
-            ejercicios de aquí.
-          </p>
         </div>
         <div className="flex flex-wrap gap-3">
           <Button asChild variant="outline" size="lg">

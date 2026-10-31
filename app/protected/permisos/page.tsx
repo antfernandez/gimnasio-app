@@ -1,6 +1,6 @@
-import Link from "next/link";
 
 import { PermisosTabla, type FilaPermisos } from "@/components/permisos/permisos-tabla";
+import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -85,11 +85,7 @@ export default async function PermisosPage({
             <Button type="submit" variant="outline">
               Filtrar
             </Button>
-            {(q || estado !== "activos") && (
-              <Button asChild variant="ghost">
-                <Link href="/protected/permisos">Limpiar</Link>
-              </Button>
-            )}
+            <BotonLimpiar href="/protected/permisos" activo={Boolean(q || estado !== "activos")} />
           </form>
           <PermisosTabla key={`${q}|${estado}|${pagina}`} filas={filas} puedeEditar={perfilData.perfil.rol === "dueño"} />
           <Paginador

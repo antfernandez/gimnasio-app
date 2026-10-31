@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { PlanAcciones } from "@/components/planes/plan-acciones";
+import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -123,11 +124,7 @@ export default async function PlanesPage({
             <Button type="submit" variant="outline">
               Filtrar
             </Button>
-            {(q || estado) && (
-              <Button asChild variant="ghost">
-                <Link href="/protected/planes">Limpiar</Link>
-              </Button>
-            )}
+            <BotonLimpiar href="/protected/planes" activo={Boolean(q || estado)} />
           </form>
 
           {filtrados.length === 0 ? (

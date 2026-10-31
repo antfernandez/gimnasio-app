@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ToggleActivoButton } from "@/components/alumnos/toggle-activo-button";
 import { ExportMenu } from "@/components/export/export-menu";
 import { Badge } from "@/components/ui/badge";
+import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { IconAction } from "@/components/ui/icon-action";
@@ -163,7 +164,7 @@ export default async function AlumnosPage({
       <Card>
         <CardContent className="pt-6">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-            <form className="min-w-[220px] max-w-xs flex-1" action="/protected/alumnos">
+            <form className="flex min-w-[220px] flex-1 items-center gap-3" action="/protected/alumnos">
               {estado !== "activos" && (
                 <input type="hidden" name="estado" value={estado} />
               )}
@@ -172,6 +173,14 @@ export default async function AlumnosPage({
                 name="q"
                 placeholder="Buscar por nombre…"
                 defaultValue={q}
+                className="max-w-xs"
+              />
+              <Button type="submit" variant="outline">
+                Filtrar
+              </Button>
+              <BotonLimpiar
+                href={estado !== "activos" ? `/protected/alumnos?estado=${estado}` : "/protected/alumnos"}
+                activo={Boolean(q)}
               />
             </form>
             <div className="flex gap-2">
@@ -191,17 +200,6 @@ export default async function AlumnosPage({
                   {f.label}
                 </Link>
               ))}
-              {q && (
-                <Link
-                  href={{
-                    pathname: "/protected/alumnos",
-                    query: estado !== "activos" ? { estado } : {},
-                  }}
-                  className="rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Limpiar
-                </Link>
-              )}
             </div>
           </div>
 

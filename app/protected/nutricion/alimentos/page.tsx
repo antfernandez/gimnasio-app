@@ -8,6 +8,7 @@ import {
 import { AlimentoForm } from "@/components/nutricion/alimento-form";
 import { EliminarButton } from "@/components/nutricion/eliminar-button";
 import { Badge } from "@/components/ui/badge";
+import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { IconAction } from "@/components/ui/icon-action";
@@ -146,11 +147,7 @@ export default async function AlimentosPage({
               <Button type="submit" variant="outline">
                 Filtrar
               </Button>
-              {(q || categoria) && (
-                <Button asChild variant="ghost">
-                  <Link href="/protected/nutricion/alimentos">Limpiar</Link>
-                </Button>
-              )}
+              <BotonLimpiar href="/protected/nutricion/alimentos" activo={Boolean(q || categoria)} />
             </form>
             <Button asChild>
               <Link href="/protected/nutricion/alimentos?nuevo=1">

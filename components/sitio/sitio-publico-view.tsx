@@ -732,7 +732,8 @@ export function SitioPublicoView({
               </div>
             </Reveal>
             {c.hero.imagen_url && (
-              <Reveal className="relative">
+              // Spec 53: portada más pequeña (antes ocupaba toda la columna).
+              <Reveal className="relative mx-auto w-full max-w-[340px]">
                 <Destello className="absolute -right-[22px] top-[6%] z-[4] w-[30px] animate-pulse text-[var(--sitio-accent)] motion-reduce:animate-none" />
                 <Destello className="absolute -left-[26px] bottom-[14%] z-[4] hidden w-[22px] animate-pulse text-[var(--sitio-accent)] motion-reduce:animate-none min-[641px]:block" />
                 <div

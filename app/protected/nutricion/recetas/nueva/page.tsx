@@ -5,9 +5,12 @@ import { guardarReceta } from "@/app/protected/nutricion/actions";
 import { RecetaForm } from "@/components/nutricion/receta-form";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Alimento } from "@/lib/nutricion";
+import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function NuevaRecetaPage() {
+  const perfilData = await getPerfilActual();
+  if (!perfilData) return null;
   const supabase = await createClient();
   const { data } = await supabase.from("alimentos").select("*").order("nombre");
 
@@ -26,6 +29,7 @@ export default async function NuevaRecetaPage() {
           <RecetaForm
             action={guardarReceta.bind(null, null)}
             alimentos={(data ?? []) as Alimento[]}
+            gimnasioId={perfilData.perfil.gimnasio_id}
             submitLabel="Crear receta"
           />
         </CardContent>

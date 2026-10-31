@@ -108,3 +108,11 @@ export function firmaValida(opts: {
   const b = Buffer.from(v1);
   return a.length === b.length && timingSafeEqual(a, b);
 }
+
+/** Mercado Pago simulado (spec 54): sin credenciales reales, la opción se habilita con un
+ * checkout falso y datos ficticios. Solo fuera de producción, o con `MP_MODO_PRUEBA=1`
+ * explícito; en producción sin esa variable la opción sigue desactivada. */
+export function mpModoPrueba(): boolean {
+  if (tokenAntonio()) return false;
+  return process.env.NODE_ENV !== "production" || process.env.MP_MODO_PRUEBA === "1";
+}

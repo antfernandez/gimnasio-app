@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AplicarPresetRutinasButton } from "@/components/rutinas/aplicar-preset-rutinas-button";
 import { RutinaAcciones } from "@/components/rutinas/rutina-acciones";
 import { Badge } from "@/components/ui/badge";
+import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -122,11 +123,7 @@ export default async function RutinasPage({
               <Button type="submit" variant="outline">
                 Filtrar
               </Button>
-              {(q || (categoria || estado)) && (
-                <Button asChild variant="ghost">
-                  <Link href="/protected/rutinas">Limpiar</Link>
-                </Button>
-              )}
+              <BotonLimpiar href="/protected/rutinas" activo={Boolean(q || (categoria || estado))} />
             </form>
           )}
           {todas.length === 0 ? (

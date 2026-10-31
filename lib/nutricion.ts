@@ -37,6 +37,7 @@ export interface Receta {
   preparacion: string | null;
   estado: EstadoReceta;
   url_video: string | null;
+  foto_path: string | null;
 }
 
 export interface Ingrediente {

@@ -1,6 +1,6 @@
-import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -144,9 +144,7 @@ export default async function AsistenciasPage({
             <Button type="submit" variant="outline">
               Filtrar
             </Button>
-            <Button asChild variant="ghost">
-              <Link href="/protected/asistencias">Limpiar</Link>
-            </Button>
+            <BotonLimpiar href="/protected/asistencias" activo={Boolean(desde || hasta || estado || q)} />
           </form>
 
           {filas.length === 0 ? (

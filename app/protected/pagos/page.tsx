@@ -1,9 +1,10 @@
-import { Banknote, Eye } from "lucide-react";
+import { Banknote } from "lucide-react";
 import Link from "next/link";
 
 import { ExportMenu } from "@/components/export/export-menu";
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
 import { WhatsAppCobranzaButton } from "@/components/pagos/whatsapp-cobranza-button";
+import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { IconAction } from "@/components/ui/icon-action";
@@ -121,11 +122,7 @@ export default async function PagosPage({
             <Button type="submit" variant="outline">
               Filtrar
             </Button>
-            {(q || estado) && (
-              <Button asChild variant="ghost">
-                <Link href="/protected/pagos">Limpiar</Link>
-              </Button>
-            )}
+            <BotonLimpiar href="/protected/pagos" activo={Boolean(q || estado)} />
           </form>
 
           {lista.length === 0 ? (
@@ -175,14 +172,10 @@ export default async function PagosPage({
                           <WhatsAppCobranzaButton alumno={row} />
                         )}
                         <IconAction
-                          icon={Eye}
-                          label="Ver historial"
-                          href={`/protected/pagos/${row.alumno_id}`}
-                        />
-                        <IconAction
                           icon={Banknote}
                           label="Registrar pago"
                           href={`/protected/pagos/${row.alumno_id}#registrar-pago`}
+                          tooltipDerecha
                         />
                       </div>
                     </TableCell>

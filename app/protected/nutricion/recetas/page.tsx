@@ -4,6 +4,7 @@ import Link from "next/link";
 import { eliminarReceta } from "@/app/protected/nutricion/actions";
 import { EliminarButton } from "@/components/nutricion/eliminar-button";
 import { Badge } from "@/components/ui/badge";
+import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { IconAction } from "@/components/ui/icon-action";
@@ -31,6 +32,7 @@ import {
 } from "@/lib/nutricion";
 import { cortarPagina, leerPagina } from "@/lib/paginacion";
 import { getPerfilActual } from "@/lib/perfil";
+import { urlsFotosRecetas } from "@/lib/nutricion-server";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function RecetasPage({
@@ -68,40 +70,11 @@ export default async function RecetasPage({
       (!q || r.nombre.toLowerCase().includes(q.toLowerCase())),
   );
   const lista = cortarPagina(filtradas, pagina);
+  const fotos = await urlsFotosRecetas(lista.map((r) => r.foto_path));
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <form action="/protected/nutricion/recetas" className="flex flex-wrap items-center gap-2">
-          <Input
-            type="search"
-            name="q"
-            placeholder="Buscar por nombre…"
-            defaultValue={q}
-            className="w-56"
-          />
-          <Select name="tipo" defaultValue={tipo ?? ""} className="w-48">
-            <option value="">Todos los tipos</option>
-            {TIPOS_RECETA.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </Select>
-          <Select name="estado" defaultValue={estado} aria-label="Filtrar por estado" className="w-36">
-            <option value="">Todos</option>
-            <option value="activo">Activo</option>
-            <option value="borrador">Borrador</option>
-          </Select>
-          <Button type="submit" variant="outline">
-            Filtrar
-          </Button>
-          {(q || tipo || estado) && (
-            <Button asChild variant="ghost">
-              <Link href="/protected/nutricion/recetas">Limpiar</Link>
-            </Button>
-          )}
-        </form>
+      <div className="flex justify-end">
         <Button asChild size="lg">
           <Link href="/protected/nutricion/recetas/nueva">
             <Plus className="h-4 w-4" />
@@ -118,6 +91,32 @@ export default async function RecetasPage({
 
       <Card>
         <CardContent className="pt-6">
+          <form action="/protected/nutricion/recetas" className="mb-5 flex flex-wrap items-center gap-3">
+            <Input
+              type="search"
+              name="q"
+              placeholder="Buscar por nombre…"
+              defaultValue={q}
+              className="w-56"
+            />
+            <Select name="tipo" defaultValue={tipo ?? ""} className="w-48">
+              <option value="">Todos los tipos</option>
+              {TIPOS_RECETA.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </Select>
+            <Select name="estado" defaultValue={estado} aria-label="Filtrar por estado" className="w-36">
+              <option value="">Todos</option>
+              <option value="activo">Activo</option>
+              <option value="borrador">Borrador</option>
+            </Select>
+            <Button type="submit" variant="outline">
+              Filtrar
+            </Button>
+            <BotonLimpiar href="/protected/nutricion/recetas" activo={Boolean(q || tipo || estado)} />
+          </form>
           {filtradas.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
               No hay recetas{tipo ? " de ese tipo" : " todavía"}.
@@ -126,6 +125,7 @@ export default async function RecetasPage({
             <Table className="text-[13px]">
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-14" />
                   <TableHead>Nombre</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Dificultad</TableHead>
@@ -144,6 +144,14 @@ export default async function RecetasPage({
                   );
                   return (
                     <TableRow key={r.id}>
+                      <TableCell>
+                        {r.foto_path && fotos.get(r.foto_path) ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- miniatura firmada y ya comprimida
+                          <img src={fotos.get(r.foto_path)} alt="" className="h-10 w-10 rounded-md object-cover" />
+                        ) : (
+                          <div className="h-10 w-10 rounded-md bg-secondary" />
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium text-foreground">
                         <Link href={`/protected/nutricion/recetas/${r.id}`} className="hover:text-primary hover:underline">
                           {r.nombre}

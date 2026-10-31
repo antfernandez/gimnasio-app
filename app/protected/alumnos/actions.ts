@@ -290,7 +290,7 @@ export async function actualizarMembresia(
 
   revalidatePath(`/protected/alumnos/${alumnoId}`);
   revalidatePath("/protected/alumnos");
-  revalidatePath("/protected/nutricion");
+  revalidatePath("/protected/nutricion/asignar");
   revalidatePath("/protected");
   revalidatePath("/portal", "layout");
   redirect(`/protected/alumnos/${alumnoId}?vista=membresia&ok=1`);

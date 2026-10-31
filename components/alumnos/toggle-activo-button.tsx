@@ -47,6 +47,7 @@ export function ToggleActivoButton({
       type="button"
       variant={activo ? "outline" : "secondary"}
       size="sm"
+      className={activo ? "border-red-200 bg-red-100 text-red-700 hover:border-red-300 hover:bg-red-200 hover:text-red-800" : undefined}
       disabled={isPending}
       onClick={handleClick}
     >

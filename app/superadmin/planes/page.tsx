@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { NuevoPlanForm } from "@/components/superadmin/plan-forms";
 import { BotonFormulario } from "@/components/superadmin/boton-formulario";
 import { Badge } from "@/components/ui/badge";
+import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -121,11 +122,7 @@ export default async function PlanesPage({
         <Button type="submit" variant="outline">
           Filtrar
         </Button>
-        {hayFiltros && (
-          <Button asChild variant="ghost">
-            <Link href="/superadmin/planes">Limpiar</Link>
-          </Button>
-        )}
+        <BotonLimpiar href="/superadmin/planes" activo={Boolean(hayFiltros)} />
       </form>
 
       {visibles.length === 0 ? (
