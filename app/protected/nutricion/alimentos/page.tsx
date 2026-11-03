@@ -33,6 +33,9 @@ import { leerPagina, rangoPagina } from "@/lib/paginacion";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 export default async function AlimentosPage({
   searchParams,
 }: {

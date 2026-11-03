@@ -1,4 +1,4 @@
--- Spec 57 (auditoría de seguridad): cierra la escalada de privilegios vía `perfiles`.
+-- Spec 64 (auditoría de seguridad): cierra la escalada de privilegios vía `perfiles`.
 --
 -- Hallazgo: la política "perfiles: acceso propio" (0001) era `for all` con
 -- `id = auth.uid()`, sin restringir columnas. Cualquier usuario autenticado podía

@@ -9,7 +9,10 @@ import { listarMedidas } from "@/lib/medidas";
 import { createClient } from "@/lib/supabase/server";
 import type { Avance } from "@/lib/types";
 
-/** Spec 56: detalle de una medición corporal en página propia (antes un modal). Solo
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
+/** Spec 56 (movida a Progreso en la spec 59): detalle de una medición corporal en página propia (antes un modal). Solo
  * lectura; filtra por `alumno_id` y la RLS refuerza que sea una medición propia. */
 export default async function PortalMedicionDetallePage({
   params,
@@ -36,11 +39,11 @@ export default async function PortalMedicionDetallePage({
     <div className="flex flex-col gap-6">
       <div>
         <Link
-          href="/portal/medicion-corporal"
+          href="/portal/progreso?tab=medicion"
           className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Volver a medición corporal
+          Volver a progreso
         </Link>
         <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
           Portal del alumno

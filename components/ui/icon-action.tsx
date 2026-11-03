@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { TooltipFijo } from "@/components/ui/tooltip-fijo";
 
 /** Color representativo por icono (spec 50); WhatsApp usa el verde de marca. */
 const COLOR_POR_ICONO = new Map<LucideIcon, string>([
@@ -46,7 +47,7 @@ export function IconAction({ icon: Icon, label, href, externo, onClick, disabled
   const color = COLOR_POR_ICONO.get(Icon) ?? "";
 
   return (
-    <span className="group relative inline-flex">
+    <TooltipFijo label={label} derecha={tooltipDerecha}>
       {href ? (
         <Button asChild variant="ghost" size="icon" className={color}>
           {externo ? (
@@ -72,14 +73,6 @@ export function IconAction({ icon: Icon, label, href, externo, onClick, disabled
           {contenido}
         </Button>
       )}
-      <span
-        role="tooltip"
-        className={`pointer-events-none absolute bottom-full mb-1 z-10 hidden w-max max-w-[11rem] whitespace-normal rounded-md bg-foreground px-2 py-1 text-center text-xs text-background group-focus-within:block group-hover:block ${
-          tooltipDerecha ? "right-0" : "left-1/2 -translate-x-1/2"
-        }`}
-      >
-        {label}
-      </span>
-    </span>
+    </TooltipFijo>
   );
 }

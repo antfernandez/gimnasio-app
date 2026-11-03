@@ -15,7 +15,7 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function GET(request: NextRequest) {
   const slug = request.nextUrl.searchParams.get("slug");
-  // Spec 57: el secreto va en el header `x-revalidate-secret`, no en la URL (las URLs
+  // Spec 64: el secreto va en el header `x-revalidate-secret`, no en la URL (las URLs
   // quedan en logs e historiales), y se compara en tiempo constante.
   const secret = request.headers.get("x-revalidate-secret") ?? "";
   const esperado = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";

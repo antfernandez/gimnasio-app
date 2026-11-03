@@ -21,6 +21,9 @@ import { createClient } from "@/lib/supabase/server";
 import { formatHora, hoyIso, sumarMinutos } from "@/lib/turnos";
 import type { Asistencia } from "@/lib/types";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 const ESTADOS: { value: Asistencia; label: string; variant: "success" | "destructive" | "secondary" }[] = [
   { value: "presente", label: "Presente", variant: "success" },
   { value: "ausente", label: "Ausente", variant: "destructive" },

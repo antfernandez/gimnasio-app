@@ -5,6 +5,13 @@ export function formatFecha(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
+/** Etiqueta "YYYY-MM" -> "Mar 26". */
+export function etiquetaMes(clave: string): string {
+  const [y, m] = clave.split("-");
+  const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  return `${meses[Number(m) - 1]} ${y.slice(2)}`;
+}
+
 const CLP = new Intl.NumberFormat("es-CL", {
   style: "currency",
   currency: "CLP",

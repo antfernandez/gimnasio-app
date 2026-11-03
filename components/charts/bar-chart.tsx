@@ -7,20 +7,24 @@ type Props = {
   /** Etiqueta corta del valor (ej. " kg"). */
   unidad?: string;
   height?: number;
+  /** Qué mide el gráfico (accesibilidad y estado vacío); por defecto "peso". */
+  medida?: string;
+  /** Formato de la etiqueta del eje X; por defecto la clave es una fecha ISO. */
+  formatoX?: (x: string) => string;
 };
 
 const WIDTH = 640;
 
 /** Gráfico de barras en SVG inline, una barra por registro ordenada por fecha
  * y con el valor como etiqueta. Mismo criterio que `LineChart`: sin dependencia externa. */
-export function BarChart({ data, unidad = "", height = 200 }: Props) {
+export function BarChart({ data, unidad = "", height = 200, medida = "peso", formatoX = formatFecha }: Props) {
   if (data.length === 0) {
     return (
       <div
         className="flex items-center justify-center rounded-[9px] border border-dashed border-border text-sm text-muted-foreground"
         style={{ height }}
       >
-        Todavía no hay registros de peso para graficar.
+        Todavía no hay registros de {medida} para graficar.
       </div>
     );
   }
@@ -44,7 +48,7 @@ export function BarChart({ data, unidad = "", height = 200 }: Props) {
       className="w-full"
       style={{ height }}
       role="img"
-      aria-label={`Gráfico de barras de peso${unidad ? ` en ${unidad.trim()}` : ""}`}
+      aria-label={`Gráfico de barras de ${medida}${unidad ? ` en ${unidad.trim()}` : ""}`}
     >
       <line
         x1={padX}
@@ -66,10 +70,7 @@ export function BarChart({ data, unidad = "", height = 200 }: Props) {
               rx={3}
               fill="hsl(var(--primary))"
             >
-              <title>
-                {formatFecha(p.x)}: {p.y}
-                {unidad}
-              </title>
+              <title>{`${formatoX(p.x)}: ${p.y}${unidad}`}</title>
             </rect>
             <text
               x={cx}
@@ -88,7 +89,7 @@ export function BarChart({ data, unidad = "", height = 200 }: Props) {
                 className="text-[10px] text-muted-foreground"
                 fill="currentColor"
               >
-                {formatFecha(p.x)}
+                {formatoX(p.x)}
               </text>
             )}
           </g>

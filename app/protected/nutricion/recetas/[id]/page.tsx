@@ -10,6 +10,9 @@ import { urlsFotosRecetas } from "@/lib/nutricion-server";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 export default async function EditarRecetaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const perfilData = await getPerfilActual();

@@ -25,6 +25,10 @@ import { createClient } from "@/lib/supabase/server";
 import { hoyIso } from "@/lib/turnos";
 import type { CuentaTransferencia, SolicitudPago } from "@/lib/types";
 
+// Contenido 100% dinámico por usuario (sesión y datos del gimnasio); mismo criterio que
+// /protected/layout.tsx y las páginas de /superadmin.
+export const instant = false;
+
 const VARIANTE = {
   pendiente: "secondary",
   confirmado: "success",

@@ -22,8 +22,20 @@ import {
 import { urlsFotosRecetas } from "@/lib/nutricion-server";
 import { createClient } from "@/lib/supabase/server";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 /** Spec 24, §8: "Mi plan nutricional", solo lectura. RLS limita la lectura a la
  * asignación activa del propio alumno y a lo que esa asignación contiene. */
+/** Spec 60: label pastel por comida del día. */
+const COLOR_COMIDA: Record<string, string> = {
+  desayuno: "bg-amber-100 text-amber-800",
+  colacion: "bg-lime-100 text-lime-800",
+  almuerzo: "bg-orange-100 text-orange-800",
+  cena: "bg-indigo-100 text-indigo-800",
+  snack: "bg-pink-100 text-pink-800",
+};
+
 export default async function PortalNutricionPage() {
   const alumno = await getAlumnoActual();
   if (!alumno) return null; // el layout ya redirige a /auth/login
@@ -61,7 +73,7 @@ export default async function PortalNutricionPage() {
   const [{ data: planData }, { data: vinculos }, { data: ingredientes }, { data: alimentos }] =
     await Promise.all([
       supabase.from("planes_nutricionales").select("*").eq("id", asignacion.plan_id).maybeSingle(),
-      supabase.from("plan_nutricional_recetas").select("receta_id").eq("plan_id", asignacion.plan_id),
+      supabase.from("plan_nutricional_recetas").select("receta_id, orden").eq("plan_id", asignacion.plan_id).order("orden"),
       supabase.from("receta_ingredientes").select("*").order("orden"),
       supabase.from("alimentos").select("*"),
     ]);
@@ -70,7 +82,13 @@ export default async function PortalNutricionPage() {
   const { data: recetasData } = recetaIds.length
     ? await supabase.from("recetas").select("*").in("id", recetaIds).order("nombre")
     : { data: [] };
-  const recetas = (recetasData ?? []) as Receta[];
+  // Spec 60/63: las recetas siguen el orden que el dueño definió en el plan.
+  const ordenPorReceta = new Map((vinculos ?? []).map((v) => [v.receta_id as string, Number(v.orden ?? 0)]));
+  const recetas = ((recetasData ?? []) as Receta[]).sort(
+    (a, b) =>
+      (ordenPorReceta.get(a.id) ?? 0) - (ordenPorReceta.get(b.id) ?? 0) ||
+      a.nombre.localeCompare(b.nombre, "es"),
+  );
   const fotos = await urlsFotosRecetas(recetas.map((r) => r.foto_path));
 
   const alimentoPorId = new Map(((alimentos ?? []) as Alimento[]).map((a) => [a.id, a]));
@@ -157,21 +175,19 @@ export default async function PortalNutricionPage() {
           const porcion = macrosPorPorcion(total, r.porciones);
           return (
             <Card key={r.id}>
-              <CardContent className="flex flex-col gap-3 pt-6">
-                {r.foto_path && fotos.get(r.foto_path) && (
-                  // eslint-disable-next-line @next/next/no-img-element -- foto firmada de Storage, ya comprimida
-                  <img
-                    src={fotos.get(r.foto_path)}
-                    alt={`Foto de ${r.nombre}`}
-                    loading="lazy"
-                    className="aspect-[4/3] w-full max-w-md rounded-[9px] border border-border object-cover"
-                  />
-                )}
+              <CardContent className="grid gap-4 pt-6 md:grid-cols-[1fr_minmax(0,18rem)] lg:grid-cols-[1fr_minmax(0,22rem)]">
+               {/* Spec 60: texto a la izquierda, foto a la derecha (en móvil la foto va primero). */}
+               <div className="order-2 flex min-w-0 flex-col gap-3 md:order-1">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
+                    <span
+                      className={`mb-1.5 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${COLOR_COMIDA[r.tipo] ?? "bg-secondary text-secondary-foreground"}`}
+                    >
+                      {labelTipoReceta(r.tipo)}
+                    </span>
                     <h3 className="text-lg">{r.nombre}</h3>
                     <p className="text-[13px] text-muted-foreground">
-                      {labelTipoReceta(r.tipo)} · {labelDificultad(r.dificultad)} · {r.porciones}{" "}
+                      {labelDificultad(r.dificultad)} · {r.porciones}{" "}
                       {r.porciones === 1 ? "porción" : "porciones"}
                       {r.tiempo_min ? ` · ${r.tiempo_min} min` : ""}
                     </p>
@@ -218,6 +234,18 @@ export default async function PortalNutricionPage() {
                     <p className="whitespace-pre-line text-[15px] text-muted-foreground">{r.preparacion}</p>
                   </div>
                 )}
+               </div>
+               {r.foto_path && fotos.get(r.foto_path) && (
+                 <div className="order-1 md:order-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- foto firmada de Storage, ya comprimida */}
+                  <img
+                    src={fotos.get(r.foto_path)}
+                    alt={`Foto de ${r.nombre}`}
+                    loading="lazy"
+                    className="aspect-[4/3] w-full rounded-[9px] border border-border object-cover"
+                  />
+                 </div>
+               )}
               </CardContent>
             </Card>
           );

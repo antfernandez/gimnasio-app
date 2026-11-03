@@ -29,6 +29,9 @@ import type {
   ReservaConAlumno,
 } from "@/lib/types";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 function Bloque({
   titulo,
   fecha,

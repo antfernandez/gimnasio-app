@@ -27,6 +27,9 @@ import type {
   Pago,
 } from "@/lib/types";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 const METODO_LABEL: Record<string, string> = {
   efectivo: "Efectivo",
   transferencia: "Transferencia",

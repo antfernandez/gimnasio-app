@@ -4,11 +4,22 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import type { NutricionFormState } from "@/app/protected/nutricion/actions";
+import { Trash2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
+import { IconAction } from "@/components/ui/icon-action";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   ESTADOS_PLAN,
   OBJETIVOS,
@@ -39,7 +50,11 @@ const METAS = [
 
 export function PlanNutricionalForm({ action, recetas, plan, seleccion = [], submitLabel }: Props) {
   const [state, formAction, isPending] = useActionState(action, {});
-  const [elegidas, setElegidas] = useState<Set<string>>(new Set(seleccion));
+  // Recetas del plan en el orden en que se mostrarán (spec 63); `seleccion` ya viene ordenada.
+  const [orden, setOrden] = useState<string[]>(seleccion);
+  const [busqueda, setBusqueda] = useState("");
+  const [porAgregar, setPorAgregar] = useState("");
+  const elegidas = new Set(orden);
   const [metas, setMetas] = useState<Record<string, string>>({
     meta_calorias: String(plan?.meta_calorias ?? ""),
     meta_proteina: String(plan?.meta_proteina ?? ""),
@@ -50,12 +65,23 @@ export function PlanNutricionalForm({ action, recetas, plan, seleccion = [], sub
   // Aporte de las recetas elegidas (una porción de cada una).
   const aporte = sumarMacros(recetas.filter((r) => elegidas.has(r.id)).map((r) => r.porPorcion));
 
-  const alternar = (id: string) =>
-    setElegidas((s) => {
-      const n = new Set(s);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
+  const recetaPorId = new Map(recetas.map((r) => [r.id, r]));
+  const disponibles = recetas.filter(
+    (r) =>
+      !elegidas.has(r.id) &&
+      r.nombre.toLocaleLowerCase("es").includes(busqueda.trim().toLocaleLowerCase("es")),
+  );
+  const agregar = () => {
+    if (!porAgregar || elegidas.has(porAgregar)) return;
+    setOrden((o) => [...o, porAgregar]);
+    setPorAgregar("");
+  };
+  const quitar = (id: string) => setOrden((o) => o.filter((x) => x !== id));
+  const mover = (id: string, posicion: number) =>
+    setOrden((o) => {
+      const sin = o.filter((x) => x !== id);
+      sin.splice(posicion, 0, id);
+      return sin;
     });
 
   return (
@@ -150,29 +176,95 @@ export function PlanNutricionalForm({ action, recetas, plan, seleccion = [], sub
             .
           </p>
         ) : (
-          <div className="grid gap-2 sm:grid-cols-2">
-            {recetas.map((r) => (
-              <label
-                key={r.id}
-                className="flex cursor-pointer items-start gap-3 rounded-[9px] border border-border p-3 text-sm hover:border-primary"
-              >
-                <input
-                  type="checkbox"
-                  name="receta_id"
-                  value={r.id}
-                  checked={elegidas.has(r.id)}
-                  onChange={() => alternar(r.id)}
-                  className="mt-0.5 h-4 w-4 accent-[hsl(var(--primary))]"
+          <>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="grid min-w-[12rem] flex-1 gap-1.5 sm:max-w-xs">
+                <Label htmlFor="busqueda_receta">Buscar receta</Label>
+                <Input
+                  id="busqueda_receta"
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  placeholder="Escribe para filtrar…"
                 />
-                <span>
-                  <span className="font-medium text-foreground">{r.nombre}</span>
-                  <span className="block text-xs text-muted-foreground">
-                    {labelTipoReceta(r.tipo)} · {fmt1(r.porPorcion.calorias)} kcal por porción
-                  </span>
-                </span>
-              </label>
-            ))}
-          </div>
+              </div>
+              <div className="grid min-w-[14rem] flex-1 gap-1.5 sm:max-w-sm">
+                <Label htmlFor="receta_por_agregar">Receta</Label>
+                <Select
+                  id="receta_por_agregar"
+                  value={porAgregar}
+                  onChange={(e) => setPorAgregar(e.target.value)}
+                >
+                  <option value="">
+                    {disponibles.length === 0 ? "Sin recetas disponibles" : "Selecciona una receta"}
+                  </option>
+                  {disponibles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.nombre} · {labelTipoReceta(r.tipo)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <Button type="button" variant="outline" onClick={agregar} disabled={!porAgregar}>
+                Agregar
+              </Button>
+            </div>
+
+            {orden.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                Aún no hay recetas en el plan.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-28">Orden</TableHead>
+                    <TableHead>Receta</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Calorías por porción</TableHead>
+                    <TableHead className="w-px text-right">Quitar</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orden.map((id, i) => {
+                    const r = recetaPorId.get(id);
+                    if (!r) return null;
+                    return (
+                      <TableRow key={id}>
+                        <TableCell>
+                          <input type="hidden" name="receta_id" value={id} />
+                          <Select
+                            aria-label={`Orden de ${r.nombre}`}
+                            value={i}
+                            onChange={(e) => mover(id, Number(e.target.value))}
+                            className="h-9 w-24"
+                          >
+                            {orden.map((_, pos) => (
+                              <option key={pos} value={pos}>
+                                {pos + 1}º
+                              </option>
+                            ))}
+                          </Select>
+                        </TableCell>
+                        <TableCell className="font-medium text-foreground">{r.nombre}</TableCell>
+                        <TableCell>{labelTipoReceta(r.tipo)}</TableCell>
+                        <TableCell>{fmt1(r.porPorcion.calorias)} kcal</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end">
+                            <IconAction
+                              icon={Trash2}
+                              label="Quitar del plan"
+                              tooltipDerecha
+                              onClick={() => quitar(id)}
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </>
         )}
       </div>
 

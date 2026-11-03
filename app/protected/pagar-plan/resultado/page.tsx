@@ -5,6 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 // Retorno del checkout de Mercado Pago (suscripción). Muestra el estado real de la base.
 export default async function ResultadoSuscripcionPage({
   searchParams,

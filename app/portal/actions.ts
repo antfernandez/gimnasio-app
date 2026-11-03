@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { getAlumnoActual } from "@/lib/alumno-portal";
 import { buildFilasRegistroRutina } from "@/lib/bitacora";
+import { validarEmail, validarTelefono } from "@/lib/contacto";
 import { createClient } from "@/lib/supabase/server";
 import type { GuardarEjercicioInput, GuardarEjercicioResult } from "@/app/protected/bitacora/actions";
 import { hoyIso, inicioDeSemana, sumarDias } from "@/lib/turnos";
@@ -21,6 +22,9 @@ export async function updateContactoAlumno(
 ): Promise<ContactoFormState> {
   const email = String(formData.get("email") ?? "").trim() || null;
   const telefono = String(formData.get("telefono") ?? "").trim() || null;
+
+  const errorValidacion = validarTelefono(telefono ?? "") ?? validarEmail(email ?? "");
+  if (errorValidacion) return { error: errorValidacion };
 
   const alumno = await getAlumnoActual();
   if (!alumno) redirect("/auth/login");

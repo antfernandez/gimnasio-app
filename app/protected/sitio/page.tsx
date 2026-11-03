@@ -2,6 +2,9 @@ import { EditorSitio } from "@/components/sitio/editor-sitio";
 import { getPerfilActual } from "@/lib/perfil";
 import { getSitioActual } from "@/lib/sitio-actual";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 export default async function SitioPage() {
   const [perfilData, sitioData] = await Promise.all([
     getPerfilActual(),

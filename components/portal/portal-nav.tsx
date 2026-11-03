@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, CreditCard, Dumbbell, LayoutDashboard, Ruler, Salad } from "lucide-react";
+import { CalendarDays, CreditCard, Dumbbell, LayoutDashboard, Salad, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -8,21 +8,20 @@ import { cn } from "@/lib/utils";
 
 const items = [
   { href: "/portal", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/portal/turnos", label: "Mis turnos", icon: CalendarDays },
+  { href: "/portal/turnos", label: "Turnos", icon: CalendarDays },
   { href: "/portal/bitacora", label: "Bitácora", icon: Dumbbell },
+  { href: "/portal/progreso", label: "Progreso", icon: TrendingUp },
   { href: "/portal/nutricion", label: "Nutrición", icon: Salad },
-  { href: "/portal/medicion-corporal", label: "Medición corporal", icon: Ruler },
-  { href: "/portal/pagar-plan", label: "Plan", icon: CreditCard },
+  { href: "/portal/pagar-plan", label: "Suscripción", icon: CreditCard },
 ];
 
-export function PortalNav({ nutricion, medicionCorporal }: { nutricion: boolean; medicionCorporal: boolean }) {
+export function PortalNav({ nutricion }: { nutricion: boolean }) {
   const pathname = usePathname();
 
   return (
     <nav className="flex flex-col gap-1">
       {items
         .filter((item) => nutricion || item.href !== "/portal/nutricion")
-        .filter((item) => medicionCorporal || item.href !== "/portal/medicion-corporal")
         .map((item) => {
         const active = item.exact
           ? pathname === item.href

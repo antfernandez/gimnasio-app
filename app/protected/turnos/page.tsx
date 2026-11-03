@@ -20,6 +20,9 @@ import { createClient } from "@/lib/supabase/server";
 import { construirSlots, diasDeLaSemana, grillaMes, hoyIso } from "@/lib/turnos";
 import type { Alumno, HorarioDisponible, ReservaConAlumno } from "@/lib/types";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 function rangoDeFechas(vista: Vista, fecha: string): string[] {
   if (vista === "mes") return grillaMes(fecha);
   if (vista === "semana") return diasDeLaSemana(fecha);

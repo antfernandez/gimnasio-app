@@ -5,6 +5,9 @@ import { createPlan } from "@/app/protected/planes/actions";
 import { PlanForm } from "@/components/planes/plan-form";
 import { Card, CardContent } from "@/components/ui/card";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 export default function NuevoPlanPage() {
   return (
     <div className="flex flex-col gap-6">

@@ -10,6 +10,9 @@ import { cargarRecetasConMacros } from "@/lib/nutricion-server";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 export default async function EditarPlanNutricionalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const perfilData = await getPerfilActual();
@@ -18,7 +21,7 @@ export default async function EditarPlanNutricionalPage({ params }: { params: Pr
   const supabase = await createClient();
   const [{ data: plan }, { data: vinculos }] = await Promise.all([
     supabase.from("planes_nutricionales").select("*").eq("id", id).maybeSingle(),
-    supabase.from("plan_nutricional_recetas").select("receta_id").eq("plan_id", id),
+    supabase.from("plan_nutricional_recetas").select("receta_id, orden").eq("plan_id", id).order("orden"),
   ]);
   if (!plan) notFound();
   const p = plan as PlanNutricional;

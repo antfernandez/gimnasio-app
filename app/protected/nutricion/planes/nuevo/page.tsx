@@ -7,6 +7,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cargarRecetasConMacros } from "@/lib/nutricion-server";
 import { getPerfilActual } from "@/lib/perfil";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 export default async function NuevoPlanNutricionalPage() {
   const perfilData = await getPerfilActual();
   if (!perfilData) return null;

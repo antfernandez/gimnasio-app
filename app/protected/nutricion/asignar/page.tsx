@@ -26,6 +26,9 @@ import { cortarPagina, leerPagina } from "@/lib/paginacion";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 const VARIANTE_ESTADO: Record<EstadoAsignacion, "success" | "default" | "secondary" | "destructive"> = {
   activo: "success",
   pausado: "default",

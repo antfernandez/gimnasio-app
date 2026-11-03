@@ -31,6 +31,9 @@ import type {
   SolicitudPago,
 } from "@/lib/types";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 const VARIANTE = {
   pendiente: "secondary",
   confirmado: "success",
@@ -112,7 +115,7 @@ export default async function PagarPlanPage({
         <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
           Portal del alumno
         </div>
-        <h2 className="text-2xl">Plan</h2>
+        <h2 className="text-2xl">Suscripción</h2>
       </div>
 
       {enviado && (

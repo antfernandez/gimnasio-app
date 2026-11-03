@@ -6,6 +6,9 @@ import { EjercicioForm } from "@/components/ejercicios/ejercicio-form";
 import { Card, CardContent } from "@/components/ui/card";
 import { exigirDueno, fetchZonas } from "@/lib/ejercicios";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 export default async function NuevoEjercicioPage({
   searchParams,
 }: {

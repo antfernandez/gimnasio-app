@@ -9,6 +9,9 @@ import { exigirDueno } from "@/lib/ejercicios";
 import { createClient } from "@/lib/supabase/server";
 import type { Ejercicio } from "@/lib/types";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 function EtiquetaFicha({ children }: { children: React.ReactNode }) {
   return (
     <div className="text-xs uppercase tracking-wider text-muted-foreground">

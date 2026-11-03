@@ -1,5 +1,8 @@
 import { NutricionSubnav } from "@/components/nutricion/nutricion-subnav";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 export default function NutricionLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-6">

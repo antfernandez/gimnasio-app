@@ -16,6 +16,9 @@ import { createClient } from "@/lib/supabase/server";
 import { construirSlots, diasDeLaSemana, grillaMes, hoyIso } from "@/lib/turnos";
 import type { DisponibilidadTurno, HorarioDisponible, Reserva } from "@/lib/types";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 function rangoDeFechas(vista: Vista, fecha: string): string[] {
   if (vista === "mes") return grillaMes(fecha);
   if (vista === "semana") return diasDeLaSemana(fecha);
@@ -152,7 +155,7 @@ function Encabezado() {
         <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
           Portal del alumno
         </div>
-        <h2 className="text-2xl">Mis turnos</h2>
+        <h2 className="text-2xl">Turnos</h2>
       </div>
       <Link href="/portal" className="text-xs text-muted-foreground hover:text-primary hover:underline">
         ← Volver a mi perfil

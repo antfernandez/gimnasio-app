@@ -21,19 +21,22 @@ type Props = {
   submitLabel: string;
   /** Acciones adicionales junto al botón de guardar (p. ej. dar de baja / activar). */
   acciones?: React.ReactNode;
+  /** Acción a la derecha del título "Datos personales" (p. ej. dar de baja, spec 62). */
+  accionTitulo?: React.ReactNode;
 };
 
-export function AlumnoForm({ action, alumno, submitLabel, acciones }: Props) {
+export function AlumnoForm({ action, alumno, submitLabel, acciones, accionTitulo }: Props) {
   const [state, formAction, isPending] = useActionState(action, {});
   const hoy = new Date().toISOString().slice(0, 10);
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-        <div className="sm:col-span-2 xl:col-span-3">
+        <div className="flex items-center justify-between gap-3 sm:col-span-2 xl:col-span-3">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Datos personales
           </h3>
+          {accionTitulo}
         </div>
         <div className="grid gap-2">
           <Label htmlFor="rut">RUT</Label>

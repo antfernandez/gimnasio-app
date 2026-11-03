@@ -95,7 +95,7 @@ export function TablaAvances({ avances }: { avances: Avance[] }) {
                       icon={Eye}
                       label="Ver detalle"
                       tooltipDerecha
-                      href={`/portal/medicion-corporal/${avance.id}`}
+                      href={`/portal/progreso/medicion/${avance.id}`}
                     />
                   </TableCell>
                 </TableRow>

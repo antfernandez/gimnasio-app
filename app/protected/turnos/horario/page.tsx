@@ -21,6 +21,9 @@ import { formatHora, NOMBRES_DIA, NOMBRES_DIA_CORTO, ORDEN_DIAS } from "@/lib/tu
 import type { DiaSemana, HorarioDisponible } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 export default async function HorarioPage({
   searchParams,
 }: {

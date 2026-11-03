@@ -49,6 +49,9 @@ import type {
   RutinaPlantilla,
 } from "@/lib/types";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 type Vista = "datos" | "membresia" | "progreso";
 
 const VISTAS: { value: Vista; label: string }[] = [
@@ -83,10 +86,10 @@ export default async function FichaAlumnoPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ vista?: string; tab?: string; ok?: string; ajuste?: string; avance?: string; desde?: string; hasta?: string; pagina?: string }>;
+  searchParams: Promise<{ vista?: string; tab?: string; ok?: string; ajuste?: string; avance?: string; anio?: string; mes?: string; desde?: string; hasta?: string; pagina?: string }>;
 }) {
   const { id } = await params;
-  const { vista: vistaParam, tab, ok, ajuste, avance: avanceOk, ...filtrosPagos } = await searchParams;
+  const { vista: vistaParam, tab, ok, ajuste, avance: avanceOk, anio: anioParam, mes: mesParam, ...filtrosPagos } = await searchParams;
   const vista: Vista = VISTAS.some((v) => v.value === vistaParam)
     ? (vistaParam as Vista)
     : "datos";
@@ -160,15 +163,19 @@ export default async function FichaAlumnoPage({
         <>
           <Card>
             <CardContent className="pt-6">
-              {/* Spec 52: Dar de baja arriba a la derecha del cuadro, con confirmación. */}
-              <div className="mb-4 flex justify-end">
-                <ToggleActivoButton
-                  id={a.id}
-                  activo={a.activo}
-                  nombreCompleto={`${a.nombres} ${a.apellidos}`}
-                />
-              </div>
-              <AlumnoForm action={updateAlumnoConId} alumno={a} submitLabel="Guardar cambios" />
+              {/* Spec 62: Dar de baja al nivel del título "Datos personales", a la derecha. */}
+              <AlumnoForm
+                action={updateAlumnoConId}
+                alumno={a}
+                submitLabel="Guardar cambios"
+                accionTitulo={
+                  <ToggleActivoButton
+                    id={a.id}
+                    activo={a.activo}
+                    nombreCompleto={`${a.nombres} ${a.apellidos}`}
+                  />
+                }
+              />
             </CardContent>
           </Card>
         </>
@@ -195,6 +202,8 @@ export default async function FichaAlumnoPage({
           hoy={hoy}
           tab={tab === "medidas" ? "medidas" : "ejercicios"}
           pagina={leerPagina(filtrosPagos.pagina)}
+          anioFiltro={/^\d{4}$/.test(anioParam ?? "") ? anioParam : undefined}
+          mesFiltro={/^([1-9]|1[0-2])$/.test(mesParam ?? "") ? mesParam : undefined}
         />
       )}
     </div>
@@ -315,6 +324,8 @@ async function ProgresoVista({
   hoy,
   tab,
   pagina,
+  anioFiltro,
+  mesFiltro,
 }: {
   alumno: Alumno;
   rutinas: Rutina[];
@@ -322,6 +333,8 @@ async function ProgresoVista({
   hoy: string;
   tab: "ejercicios" | "medidas";
   pagina: number;
+  anioFiltro?: string;
+  mesFiltro?: string;
 }) {
   const supabase = await createClient();
   const [{ data: registros }, { data: avances }] = await Promise.all([
@@ -336,7 +349,12 @@ async function ProgresoVista({
   ]);
   const listaRegistros = (registros ?? []) as RegistroRutina[];
   const historialAvances = (avances ?? []) as Avance[];
-  const sesiones = agruparSesiones(listaRegistros, rutinas);
+  // Spec 62: año y período filtran la grilla de sesiones.
+  const sesiones = agruparSesiones(listaRegistros, rutinas).filter(
+    (s) =>
+      (!anioFiltro || s.fecha.slice(0, 4) === anioFiltro) &&
+      (!mesFiltro || Number(s.fecha.slice(5, 7)) === Number(mesFiltro)),
+  );
   const rutinaPorId = new Map(rutinas.map((r) => [r.id, r]));
 
   const anioActual = Number(hoy.slice(0, 4));
@@ -375,7 +393,13 @@ async function ProgresoVista({
       <>
       <Seccion titulo="Progreso">
         <div className="mb-6">
-          <ProgresoPdfSelector alumnoId={a.id} anios={anios} anioInicial={anioActual} />
+          <ProgresoPdfSelector
+            alumnoId={a.id}
+            anios={anios}
+            anioInicial={anioActual}
+            anioFiltro={anioFiltro}
+            mesFiltro={mesFiltro}
+          />
         </div>
         {sesiones.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">

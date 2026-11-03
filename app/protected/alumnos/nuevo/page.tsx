@@ -6,6 +6,9 @@ import { AlumnoForm } from "@/components/alumnos/alumno-form";
 import { Card, CardContent } from "@/components/ui/card";
 import { getPerfilActual } from "@/lib/perfil";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 export default async function NuevoAlumnoPage() {
   const perfilData = await getPerfilActual();
   if (!perfilData) return null; // el layout ya redirige a /auth/login

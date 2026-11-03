@@ -1,8 +1,9 @@
 import Link from "next/link";
 
 import { guardarRegistroEjercicio, marcarAsistencia } from "@/app/protected/bitacora/actions";
-import { AsistenciaAlumno } from "@/components/bitacora/lista-alumnos-bloque";
-import { SesionTabla, type RegistroGuardado } from "@/components/bitacora/sesion-tabla";
+import { RegistroSesionPanel } from "@/components/bitacora/registro-sesion-panel";
+import type { RegistroGuardado } from "@/components/bitacora/sesion-tabla";
+import { Badge } from "@/components/ui/badge";
 import { ExportMenu } from "@/components/export/export-menu";
 import { Acordeon } from "@/components/ui/acordeon";
 import { RutinaCard } from "@/components/rutinas/rutina-card";
@@ -18,6 +19,9 @@ import type {
   ReservaConAlumno,
   Rutina,
 } from "@/lib/types";
+
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
 
 /** Spec 27: bitácora del dueño por horario. Por defecto muestra el día actual; cada
  * horario es un acordeón con los alumnos citados (reservas) y cada alumno, a su vez,
@@ -172,12 +176,26 @@ export default async function BitacoraPage({
                               }
                             >
                               <div className="flex flex-col gap-4 pb-3">
-                                <AsistenciaAlumno
-                                  reservaId={r.id}
-                                  estado={r.estado}
-                                  asistencia={r.asistencia}
-                                  marcarAsistencia={marcarAsistencia}
-                                />
+                                <div className="flex flex-wrap items-center gap-2 text-sm">
+                                  <span className="text-muted-foreground">Asistencia:</span>
+                                  <Badge
+                                    variant={
+                                      r.asistencia === "ausente"
+                                        ? "destructive"
+                                        : r.asistencia === "presente"
+                                          ? "success"
+                                          : "secondary"
+                                    }
+                                  >
+                                    {r.asistencia === "ausente"
+                                      ? "Ausente"
+                                      : r.asistencia === "justificado"
+                                        ? "Justificado"
+                                        : r.asistencia === "presente"
+                                          ? "Presente"
+                                          : "Pendiente"}
+                                  </Badge>
+                                </div>
 
                                 {!rutina ? (
                                   <div className="flex flex-col items-start gap-2">
@@ -204,9 +222,9 @@ export default async function BitacoraPage({
                                     </Acordeon>
 
                                     <div className="border-t border-border pt-4">
-                                      <div className="mb-3 flex items-center justify-between gap-3">
+                                      <div className="mb-2 flex items-center justify-between gap-3">
                                         <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                          Registrar sesión de bitácora
+                                          Registrado en la sesión
                                         </h4>
                                         <Link
                                           href={`/protected/alumnos/${r.alumno_id}?vista=progreso`}
@@ -215,18 +233,31 @@ export default async function BitacoraPage({
                                           Historial →
                                         </Link>
                                       </div>
-                                      <SesionTabla
-                                        key={`${r.alumno_id}-${fecha}`}
-                                        rutina={rutina}
-                                        guardar={guardarRegistroEjercicio.bind(
-                                          null,
-                                          r.alumno_id,
-                                          rutina.id,
-                                          fecha,
-                                        )}
-                                        guardados={guardados}
-                                        fechaFutura={fechaFutura}
-                                      />
+                                      {registrado ? (
+                                        <ul className="flex flex-col gap-1.5 text-sm">
+                                          {rutina.contenido.map((ej, idx) => {
+                                            const g = guardados[idx];
+                                            if (!g) return null;
+                                            return (
+                                              <li
+                                                key={idx}
+                                                className="flex flex-wrap gap-x-3 gap-y-0.5 rounded-[9px] bg-secondary/40 px-3.5 py-2"
+                                              >
+                                                <span className="font-medium">{ej.ejercicio}</span>
+                                                <span className="text-muted-foreground">
+                                                  {g.series} series · {g.reps} reps
+                                                  {g.peso ? ` · ${g.peso} kg` : ""}
+                                                  {g.notas ? ` — ${g.notas}` : ""}
+                                                </span>
+                                              </li>
+                                            );
+                                          })}
+                                        </ul>
+                                      ) : (
+                                        <p className="text-sm text-muted-foreground">
+                                          Aún no hay registro para esta fecha.
+                                        </p>
+                                      )}
                                     </div>
                                   </>
                                 )}
@@ -242,6 +273,30 @@ export default async function BitacoraPage({
             );
           })}
         </div>
+      )}
+
+      {reservas.length > 0 && (
+        <RegistroSesionPanel
+          items={reservas.map((r) => ({
+            reservaId: r.id,
+            alumnoId: r.alumno_id,
+            nombre: `${r.alumno?.nombres ?? ""} ${r.alumno?.apellidos ?? ""}`.trim(),
+            hora: formatHora(r.hora_inicio),
+            estado: r.estado,
+            asistencia: r.asistencia,
+            rutina: rutinaPorAlumno.get(r.alumno_id) ?? null,
+            guardados: guardadosPorAlumno.get(r.alumno_id) ?? {},
+            guardar: guardarRegistroEjercicio.bind(
+              null,
+              r.alumno_id,
+              rutinaPorAlumno.get(r.alumno_id)?.id ?? "",
+              fecha,
+            ),
+          }))}
+          fecha={fecha}
+          fechaFutura={fechaFutura}
+          marcarAsistencia={marcarAsistencia}
+        />
       )}
     </div>
   );

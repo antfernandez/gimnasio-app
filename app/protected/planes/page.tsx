@@ -24,6 +24,9 @@ import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import type { Plan } from "@/lib/types";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 const NIVEL_LABEL: Record<string, string> = {
   basico: "Básico",
   intermedio: "Intermedio",

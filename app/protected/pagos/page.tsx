@@ -26,6 +26,9 @@ import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import type { EstadoCobranzaAlumno, EstadoPago } from "@/lib/types";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 const FILTRO_ESTADO: { value: EstadoPago; label: string }[] = [
   { value: "al_dia", label: "Al día" },
   { value: "por_vencer", label: "Por vencer" },

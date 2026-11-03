@@ -8,6 +8,9 @@ import type { Alimento } from "@/lib/nutricion";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 export default async function NuevaRecetaPage() {
   const perfilData = await getPerfilActual();
   if (!perfilData) return null;

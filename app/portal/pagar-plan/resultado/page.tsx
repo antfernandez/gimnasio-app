@@ -5,6 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { getAlumnoActual } from "@/lib/alumno-portal";
 import { createClient } from "@/lib/supabase/server";
 
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
+
 // Retorno del checkout de Mercado Pago. Informa el estado real de la solicitud leído de
 // la base (lo que confirma el webhook), no los parámetros de la URL.
 export default async function ResultadoPagoPage({

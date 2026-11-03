@@ -360,6 +360,7 @@ export async function guardarPlanNutricional(
     return { error: "La duración debe ser un número entero de días mayor que 0." };
   }
 
+  // El orden de los `receta_id` del formulario es el orden de las recetas en el plan (spec 63).
   const recetaIds = Array.from(new Set(formData.getAll("receta_id").map(String).filter(Boolean)));
 
   const supabase = await createClient();
@@ -424,7 +425,7 @@ export async function guardarPlanNutricional(
 
   if (recetaIds.length > 0) {
     const { error: insError } = await supabase.from("plan_nutricional_recetas").insert(
-      recetaIds.map((receta_id) => ({ plan_id: planId!, receta_id, gimnasio_id: gimnasioId })),
+      recetaIds.map((receta_id, orden) => ({ plan_id: planId!, receta_id, gimnasio_id: gimnasioId, orden })),
     );
     if (insError) return { error: "No se pudieron guardar las recetas del plan." };
   }

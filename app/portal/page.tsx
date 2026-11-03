@@ -1,22 +1,25 @@
 import Link from "next/link";
 
+import { BarChart } from "@/components/charts/bar-chart";
 import { EstadoPagoBadge } from "@/components/pagos/estado-pago-badge";
-import { ContactoForm } from "@/components/portal/contacto-form";
+import { AvanceRutinaChart, type PuntoMensual } from "@/components/portal/avance-rutina-chart";
+import { ContactoDialog } from "@/components/portal/contacto-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { getAlumnoActual } from "@/lib/alumno-portal";
-import { formatFecha } from "@/lib/format";
-import { formatRut } from "@/lib/rut";
+import { etiquetaMes, formatFecha } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import { hoyIso, inicioDeSemana, sumarDias } from "@/lib/turnos";
+import { NOMBRES_DIA, diaSemanaDeFecha, formatHora, hoyIso, sumarDias } from "@/lib/turnos";
 import type {
   Avance,
   EstadoPagoAlumno,
   EstadoPaqueteAlumno,
   Plan,
   RegistroRutina,
-  Rutina,
 } from "@/lib/types";
+
+// Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
+export const instant = false;
 
 export default async function PortalPage() {
   const alumno = await getAlumnoActual();
@@ -61,7 +64,15 @@ export default async function PortalPage() {
     );
   }
 
-  const inicioSemana = inicioDeSemana(hoyIso());
+  const hoy = hoyIso();
+  // Spec 58: ventana de 12 meses (mes actual incluido) para los dos gráficos.
+  const [anioHoy, mesHoy] = hoy.split("-").map(Number);
+  const meses: string[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(Date.UTC(anioHoy, mesHoy - 1 - i, 1));
+    meses.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
+  }
+  const desdeVentana = `${meses[0]}-01`;
 
   const supabase = await createClient();
   const [
@@ -69,8 +80,8 @@ export default async function PortalPage() {
     { data: paqueteRow },
     { data: avances },
     { data: planRow },
-    { data: rutinaRow },
-    { data: registrosSemana },
+    { data: registrosRows },
+    { data: proximasRows },
   ] = await Promise.all([
     supabase
       .from("v_estado_pago_alumnos")
@@ -87,40 +98,72 @@ export default async function PortalPage() {
           .from("avances")
           .select("*")
           .eq("alumno_id", alumno.id)
-          .order("fecha", { ascending: false })
+          .gte("fecha", desdeVentana)
+          .order("fecha", { ascending: true })
       : Promise.resolve({ data: [] }),
     alumno.plan_id
       ? supabase.from("planes").select("*").eq("id", alumno.plan_id).maybeSingle()
       : Promise.resolve({ data: null }),
     supabase
-      .from("rutinas")
-      .select("*")
-      .eq("alumno_id", alumno.id)
-      .eq("activa", true)
-      .maybeSingle(),
-    supabase
       .from("registros_rutina")
-      .select("fecha")
+      .select("fecha, reps_realizadas, peso_kg")
       .eq("alumno_id", alumno.id)
-      .gte("fecha", inicioSemana)
-      .lte("fecha", sumarDias(inicioSemana, 6)),
+      .gte("fecha", desdeVentana),
+    supabase
+      .from("reservas")
+      .select("fecha, hora_inicio")
+      .eq("alumno_id", alumno.id)
+      .eq("estado", "reservada")
+      .gte("fecha", hoy)
+      .lte("fecha", sumarDias(hoy, 60))
+      .order("fecha", { ascending: true })
+      .order("hora_inicio", { ascending: true })
+      .limit(10),
   ]);
 
   const estado = estadoRow as EstadoPagoAlumno | null;
   const plan = planRow as Plan | null;
   const paquete = paqueteRow as EstadoPaqueteAlumno | null;
-  const rutinaActiva = rutinaRow as Rutina | null;
+
+  const contactoAlDia = Boolean(alumno.email?.trim() && alumno.telefono?.trim());
 
   const tienePaqueteVigente =
     paquete?.estado_paquete === "vigente" || paquete?.estado_paquete === "por_vencer";
-  const lunes = inicioDeSemana(hoyIso());
-  const sesionesSemana = new Set(
-    ((registrosSemana ?? []) as Pick<RegistroRutina, "fecha">[])
-      .map((r) => r.fecha)
-      .filter((f) => f >= lunes && f <= sumarDias(lunes, 6)),
-  ).size;
 
-  const historialAvances = (avances ?? []) as Avance[];
+  // Próximo entrenamiento: la primera reserva que todavía no empezó.
+  const ahora = new Date();
+  const horaAhora = `${String(ahora.getHours()).padStart(2, "0")}:${String(ahora.getMinutes()).padStart(2, "0")}`;
+  const proximo =
+    ((proximasRows ?? []) as { fecha: string; hora_inicio: string }[]).find(
+      (r) => r.fecha > hoy || formatHora(r.hora_inicio) >= horaAhora,
+    ) ?? null;
+
+  // Avance corporal: último peso medido de cada mes.
+  const pesoPorMes = new Map<string, number>();
+  for (const av of (avances ?? []) as Avance[]) {
+    if (av.peso_kg != null) pesoPorMes.set(av.fecha.slice(0, 7), Number(av.peso_kg));
+  }
+  const puntosCuerpo: PuntoMensual[] = meses
+    .filter((m) => pesoPorMes.has(m))
+    .map((m) => ({ x: m, y: pesoPorMes.get(m)! }));
+
+  // Avance en rutina: promedio mensual de repeticiones y de peso registrados.
+  const repsPorMes = new Map<string, number[]>();
+  const pesoRutinaPorMes = new Map<string, number[]>();
+  for (const r of (registrosRows ?? []) as Pick<RegistroRutina, "fecha" | "reps_realizadas" | "peso_kg">[]) {
+    const m = r.fecha.slice(0, 7);
+    if (r.reps_realizadas != null) repsPorMes.set(m, [...(repsPorMes.get(m) ?? []), r.reps_realizadas]);
+    if (r.peso_kg != null && Number(r.peso_kg) > 0) {
+      pesoRutinaPorMes.set(m, [...(pesoRutinaPorMes.get(m) ?? []), Number(r.peso_kg)]);
+    }
+  }
+  const promedios = (mapa: Map<string, number[]>): PuntoMensual[] =>
+    meses
+      .filter((m) => mapa.has(m))
+      .map((m) => {
+        const v = mapa.get(m)!;
+        return { x: m, y: Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10 };
+      });
 
   return (
     <div className="flex flex-col gap-6">
@@ -133,7 +176,8 @@ export default async function PortalPage() {
         </h2>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      {/* Spec 58: cuatro indicadores arriba. */}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
             <div className="mb-4 flex items-center justify-between gap-3">
@@ -144,7 +188,7 @@ export default async function PortalPage() {
                 href="/portal/pagar-plan"
                 className="text-xs text-muted-foreground hover:text-primary hover:underline"
               >
-                Ver plan
+                Ver suscripción
               </Link>
             </div>
             {estado ? (
@@ -168,7 +212,7 @@ export default async function PortalPage() {
           <CardContent className="pt-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Mi suscripción
+                Estado de suscripción
               </h3>
               {paquete && (
                 <Badge variant={tienePaqueteVigente ? "success" : "secondary"}>
@@ -180,11 +224,6 @@ export default async function PortalPage() {
               {plan ? plan.nombre : "Sin plan asignado"}
             </p>
             <div className="flex flex-col gap-1 text-sm">
-              {plan && (
-                <span className="text-foreground">
-                  {plan.dias_por_semana} {plan.dias_por_semana === 1 ? "clase" : "clases"} por semana
-                </span>
-              )}
               {tienePaqueteVigente && paquete.vencimiento_actual ? (
                 <span className="text-muted-foreground">
                   Vigente hasta el {formatFecha(paquete.vencimiento_actual)}
@@ -202,77 +241,95 @@ export default async function PortalPage() {
           <CardContent className="pt-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Avance en rutinas
+                Próximo entrenamiento
               </h3>
               <Link
-                href="/portal/bitacora"
+                href="/portal/turnos"
                 className="text-xs text-muted-foreground hover:text-primary hover:underline"
               >
-                Ver Bitácora
+                Ver turnos
               </Link>
             </div>
-            {rutinaActiva ? (
+            {proximo ? (
               <div className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-foreground">{rutinaActiva.nombre}</span>
-                <span className="text-muted-foreground">
-                  {sesionesSemana}
-                  {plan ? ` de ${plan.dias_por_semana}` : ""}{" "}
-                  {sesionesSemana === 1 ? "sesión registrada" : "sesiones registradas"} esta semana
+                <span className="text-base font-semibold text-foreground">
+                  {NOMBRES_DIA[diaSemanaDeFecha(proximo.fecha)]} {formatFecha(proximo.fecha)}
                 </span>
+                <span className="text-muted-foreground">{formatHora(proximo.hora_inicio)} h</span>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                Tu entrenador aún no te asignó una rutina vigente.
-              </p>
+              <p className="text-sm text-muted-foreground">No tienes turnos agendados.</p>
             )}
           </CardContent>
         </Card>
 
-        {alumno.medicion_corporal_habilitada && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Progreso corporal
-                </h3>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Datos de contacto
+              </h3>
+              <ContactoDialog email={alumno.email} telefono={alumno.telefono} />
+            </div>
+            <div className="flex flex-col gap-2 text-sm">
+              <div>
+                <Badge variant={contactoAlDia ? "success" : "secondary"}>
+                  {contactoAlDia ? "Al día" : "Por completar"}
+                </Badge>
               </div>
-              <div className="flex flex-col gap-1 text-sm">
-                {historialAvances.length === 0 ? (
-                  <span className="text-muted-foreground">Sin avances corporales registrados.</span>
-                ) : (
-                  <span className="text-foreground">
-                    Último avance: {formatFecha(historialAvances[0].fecha)}
-                    {historialAvances[0].peso_kg != null && ` · ${historialAvances[0].peso_kg} kg`}
-                    {historialAvances[0].peso_kg != null &&
-                      historialAvances[1]?.peso_kg != null &&
-                      ` (${
-                        historialAvances[0].peso_kg - historialAvances[1].peso_kg >= 0 ? "+" : ""
-                      }${(historialAvances[0].peso_kg - historialAvances[1].peso_kg).toFixed(1)} kg)`}
-                  </span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              <span className="text-muted-foreground">
+                {contactoAlDia
+                  ? "Teléfono y correo registrados."
+                  : "Falta registrar tu teléfono o correo."}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="grid items-start gap-4 sm:grid-cols-2">
-      <Card>
-        <CardContent className="pt-6">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap gap-x-8 gap-y-1 text-xs text-muted-foreground">
-              <span>RUT {formatRut(alumno.rut, alumno.dig_ver)}</span>
-              <span>Alumno desde {formatFecha(alumno.fecha_inicio)}</span>
-              <span>Plan {plan ? plan.nombre : "Sin plan asignado"}</span>
+      {/* Spec 58: dos secciones con un gráfico cada una (últimos 12 meses). */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="h-full">
+          <CardContent className="pt-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Avance corporal por meses
+              </h3>
+              {alumno.medicion_corporal_habilitada && (
+                <Link
+                  href="/portal/progreso?tab=medicion"
+                  className="text-xs text-muted-foreground hover:text-primary hover:underline"
+                >
+                  Ver medición
+                </Link>
+              )}
             </div>
-            {estado && <EstadoPagoBadge estado={estado.estado_pago} />}
-          </div>
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Mis datos de contacto
-          </h3>
-          <ContactoForm alumno={alumno} />
-        </CardContent>
-      </Card>
+            {alumno.medicion_corporal_habilitada ? (
+              <BarChart data={puntosCuerpo} unidad=" kg" medida="peso" formatoX={etiquetaMes} />
+            ) : (
+              <div className="flex h-[200px] items-center justify-center rounded-[9px] border border-dashed border-border text-center text-sm text-muted-foreground">
+                La medición corporal no está habilitada en tu plan.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="h-full">
+          <CardContent className="pt-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Avance en rutina
+              </h3>
+              <Link
+                href="/portal/progreso"
+                className="text-xs text-muted-foreground hover:text-primary hover:underline"
+              >
+                Ver progreso
+              </Link>
+            </div>
+            <AvanceRutinaChart reps={promedios(repsPorMes)} peso={promedios(pesoRutinaPorMes)} />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
