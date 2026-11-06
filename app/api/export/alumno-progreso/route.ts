@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 
 import { buildProgresoPdf } from "@/lib/export/progreso-pdf";
-import { getPerfilActual } from "@/lib/perfil";
+import { registrarEvento } from "@/lib/seguridad-eventos";
+import { getPerfilExistente, requerirRol } from "@/lib/perfil";
 import { agruparSesiones } from "@/lib/progreso";
 import { createClient } from "@/lib/supabase/server";
 import { NOMBRES_MES } from "@/lib/turnos";
@@ -23,8 +24,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Mes inválido" }, { status: 400 });
   }
 
-  const perfilData = await getPerfilActual();
-  if (!perfilData) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  const acceso = requerirRol(await getPerfilExistente(), ["dueño", "entrenador"]);
+  if (acceso instanceof Response) return acceso;
+  const perfilData = acceso;
+  after(() =>
+    registrarEvento("export_descargado", {
+      gimnasioId: perfilData.perfil.gimnasio_id,
+      usuarioId: perfilData.perfil.id,
+      detalle: { export: "alumno-progreso" },
+    }),
+  );
 
   const supabase = await createClient();
   const { data: alumno } = await supabase

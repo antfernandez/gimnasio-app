@@ -8,7 +8,7 @@ import {
   type FilaResultado,
 } from "@/lib/carga-alumnos";
 import { planesVigentes } from "@/lib/carga-alumnos-server";
-import { getPerfilActual } from "@/lib/perfil";
+import { getPerfilExistente, requerirRol } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import { hoyIso } from "@/lib/turnos";
 
@@ -16,11 +16,9 @@ import { hoyIso } from "@/lib/turnos";
  * de alumnos desde el template. Ambas revalidan el archivo completo en el servidor; el
  * gimnasio sale siempre del perfil del usuario. */
 export async function POST(request: NextRequest) {
-  const perfilData = await getPerfilActual();
-  if (!perfilData) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  if (perfilData.perfil.rol !== "dueño") {
-    return NextResponse.json({ error: "Solo el dueño puede cargar alumnos" }, { status: 403 });
-  }
+  const acceso = requerirRol(await getPerfilExistente(), ["dueño"]);
+  if (acceso instanceof Response) return acceso;
+  const perfilData = acceso;
 
   const form = await request.formData();
   const archivo = form.get("archivo");

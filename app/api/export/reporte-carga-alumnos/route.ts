@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 
 import { buildReporteErroresBuffer, type ErrorCarga } from "@/lib/carga-alumnos";
-import { getPerfilActual } from "@/lib/perfil";
+import { registrarEvento } from "@/lib/seguridad-eventos";
+import { getPerfilExistente, requerirRol } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 
 /** Spec 34: Excel con las filas fallidas de una carga, para corregirlas y reintentar. */
@@ -11,11 +12,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Carga inválida" }, { status: 400 });
   }
 
-  const perfilData = await getPerfilActual();
-  if (!perfilData) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  if (perfilData.perfil.rol !== "dueño") {
-    return NextResponse.json({ error: "Solo el dueño puede ver este reporte" }, { status: 403 });
-  }
+  const acceso = requerirRol(await getPerfilExistente(), ["dueño"]);
+  if (acceso instanceof Response) return acceso;
+  const perfilData = acceso;
+  after(() =>
+    registrarEvento("export_descargado", {
+      gimnasioId: perfilData.perfil.gimnasio_id,
+      usuarioId: perfilData.perfil.id,
+      detalle: { export: "reporte-carga-alumnos" },
+    }),
+  );
 
   const supabase = await createClient();
   const { data } = await supabase

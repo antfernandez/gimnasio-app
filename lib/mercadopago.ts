@@ -81,6 +81,9 @@ export async function obtenerPago(token: string, paymentId: string): Promise<Pag
   return (await res.json()) as PagoMp;
 }
 
+/** Antigüedad máxima aceptada de una firma del webhook (spec 66). */
+const VENTANA_FIRMA_MS = 5 * 60 * 1000;
+
 /** Valida `x-signature` según la guía de webhooks de Mercado Pago:
  * HMAC-SHA256 de `id:<data.id>;request-id:<x-request-id>;ts:<ts>;` con el secreto. */
 export function firmaValida(opts: {
@@ -88,6 +91,8 @@ export function firmaValida(opts: {
   xSignature: string | null;
   xRequestId: string | null;
   dataId: string | null;
+  /** Sólo para pruebas. */
+  ahoraMs?: number;
 }): boolean {
   if (!opts.xSignature || !opts.dataId) return false;
   const partes = Object.fromEntries(
@@ -100,6 +105,13 @@ export function firmaValida(opts: {
   const v1 = partes["v1"];
   if (!ts || !v1) return false;
 
+  // Spec 66: rechaza firmas viejas (replay). `ts` viene en milisegundos (o segundos).
+  const tsNum = Number(ts);
+  if (!Number.isFinite(tsNum)) return false;
+  const tsMs = tsNum < 1e11 ? tsNum * 1000 : tsNum;
+  const ahora = opts.ahoraMs ?? Date.now();
+  if (Math.abs(ahora - tsMs) > VENTANA_FIRMA_MS) return false;
+
   const id = /^[a-z0-9]+$/i.test(opts.dataId) ? opts.dataId.toLowerCase() : opts.dataId;
   const manifest = `id:${id};request-id:${opts.xRequestId ?? ""};ts:${ts};`;
   const esperada = createHmac("sha256", opts.secret).update(manifest).digest("hex");
@@ -109,10 +121,14 @@ export function firmaValida(opts: {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-/** Mercado Pago simulado (spec 54): sin credenciales reales, la opción se habilita con un
- * checkout falso y datos ficticios. Solo fuera de producción, o con `MP_MODO_PRUEBA=1`
- * explícito; en producción sin esa variable la opción sigue desactivada. */
+/** Mercado Pago simulado (spec 54/66): sin credenciales reales, la opción se habilita con un
+ * checkout falso y datos ficticios. Activo fuera de producción, o con `MP_MODO_PRUEBA=1`.
+ * Con `VERCEL_ENV=production` además se exige `MP_MODO_PRUEBA_PRODUCCION=1` (doble
+ * confirmación para una demo en producción); sin ella el modo prueba queda apagado. */
 export function mpModoPrueba(): boolean {
   if (tokenAntonio()) return false;
+  if (process.env.VERCEL_ENV === "production") {
+    return process.env.MP_MODO_PRUEBA === "1" && process.env.MP_MODO_PRUEBA_PRODUCCION === "1";
+  }
   return process.env.NODE_ENV !== "production" || process.env.MP_MODO_PRUEBA === "1";
 }

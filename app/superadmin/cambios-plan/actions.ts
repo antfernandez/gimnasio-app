@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { registrarEvento } from "@/lib/seguridad-eventos";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSuperadminActual } from "@/lib/superadmin";
 
@@ -45,6 +46,11 @@ export async function aprobarCambioPlanSistema(id: string): Promise<void> {
     .eq("id", id)
     .eq("estado", "pendiente");
   if (error) throw new Error("No se pudo aprobar la solicitud.");
+  await registrarEvento("cambio_plan_aprobado", {
+    gimnasioId: solicitud.gimnasio_id,
+    usuarioId: superadmin.id,
+    detalle: { solicitud: id, tipo: "sistema" },
+  });
   revalidar();
 }
 

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { registrarEvento } from "@/lib/seguridad-eventos";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSuperadminActual } from "@/lib/superadmin";
 
@@ -34,6 +35,10 @@ export async function validarSuscripcion(id: string): Promise<void> {
     p_validador: superadmin.id,
   });
   if (error) throw new Error("No se pudo validar el pago.");
+  await registrarEvento("solicitud_pago_confirmada", {
+    usuarioId: superadmin.id,
+    detalle: { solicitud: id, flujo: "suscripcion" },
+  });
   revalidatePath("/superadmin/suscripciones");
   revalidatePath("/superadmin", "layout");
 }
@@ -56,6 +61,10 @@ export async function rechazarSuscripcion(id: string, formData: FormData): Promi
     .eq("flujo", "suscripcion")
     .eq("estado", "pendiente");
   if (error) throw new Error("No se pudo rechazar el pago.");
+  await registrarEvento("solicitud_pago_rechazada", {
+    usuarioId: superadmin.id,
+    detalle: { solicitud: id, flujo: "suscripcion" },
+  });
   revalidatePath("/superadmin/suscripciones");
   revalidatePath("/superadmin", "layout");
 }

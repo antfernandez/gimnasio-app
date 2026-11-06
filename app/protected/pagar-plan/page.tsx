@@ -125,6 +125,15 @@ export default async function SuscripcionPage({
         <h2 className="text-2xl">Suscripción al sistema</h2>
       </div>
 
+      {mpModoPrueba() && (
+        <div
+          role="status"
+          className="rounded-md border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200"
+        >
+          Pagos simulados: no se cobra dinero real.
+        </div>
+      )}
+
       {enviado && (
         <Card>
           <CardContent className="py-4 text-sm">

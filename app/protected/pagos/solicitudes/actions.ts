@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getPerfilActual } from "@/lib/perfil";
+import { registrarEvento } from "@/lib/seguridad-eventos";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -33,6 +34,10 @@ export async function validarTransferencia(id: string): Promise<void> {
     p_validador: ctx.userId,
   });
   if (error) throw new Error("No se pudo validar el pago.");
+  await registrarEvento("solicitud_pago_confirmada", {
+    usuarioId: ctx.userId,
+    detalle: { solicitud: id, flujo: "alumno" },
+  });
 
   revalidatePath("/protected/pagos/solicitudes");
   revalidatePath("/protected/pagos");
@@ -56,6 +61,10 @@ export async function rechazarTransferencia(id: string, formData: FormData): Pro
     .eq("id", id)
     .eq("estado", "pendiente");
   if (error) throw new Error("No se pudo rechazar el pago.");
+  await registrarEvento("solicitud_pago_rechazada", {
+    usuarioId: ctx.userId,
+    detalle: { solicitud: id, flujo: "alumno" },
+  });
 
   revalidatePath("/protected/pagos/solicitudes");
 }

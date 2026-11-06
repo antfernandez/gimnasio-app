@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { calcularAplicaDesde } from "@/lib/cambio-plan";
 import { getPerfilActual } from "@/lib/perfil";
+import { registrarEvento } from "@/lib/seguridad-eventos";
 import { createClient } from "@/lib/supabase/server";
 import { hoyIso } from "@/lib/turnos";
 
@@ -40,6 +41,11 @@ export async function aprobarCambioPlan(id: string): Promise<void> {
     .eq("id", id)
     .eq("estado", "pendiente");
   if (error) throw new Error("No se pudo aprobar la solicitud.");
+  await registrarEvento("cambio_plan_aprobado", {
+    gimnasioId: perfilData.perfil.gimnasio_id,
+    usuarioId: perfilData.perfil.id,
+    detalle: { solicitud: id, tipo: "alumno" },
+  });
 
   // Si no hay periodo en curso rige hoy mismo.
   await supabase.rpc("aplicar_cambios_plan_vencidos");

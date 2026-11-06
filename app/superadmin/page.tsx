@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { UMBRALES_ALERTA, VENTANA_ALERTA_MIN } from "@/lib/seguridad-eventos";
 import { hoyIso } from "@/lib/turnos";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listarGimnasiosAdmin } from "@/lib/superadmin-datos";
@@ -10,6 +11,10 @@ import { estadoSuscripcion } from "@/lib/superadmin-metricas";
 import { getSuperadminActual } from "@/lib/superadmin";
 
 export const instant = false;
+
+function desdeVentanaAlerta(): string {
+  return new Date(Date.now() - VENTANA_ALERTA_MIN * 60_000).toISOString();
+}
 
 function Tarjeta({
   titulo,
@@ -54,6 +59,21 @@ export default async function SuperadminDashboardPage() {
     admin.from("planes_sistema").select("id, nombre"),
   ]);
 
+  // Spec 69: alerta si hay demasiados eventos sospechosos en la ventana.
+  const desdeAlerta = desdeVentanaAlerta();
+  const { data: recientes } = await admin
+    .from("eventos_seguridad")
+    .select("tipo")
+    .in("tipo", Object.keys(UMBRALES_ALERTA))
+    .gte("created_at", desdeAlerta);
+  const alertas = (Object.entries(UMBRALES_ALERTA) as [keyof typeof UMBRALES_ALERTA, number][])
+    .map(([tipo, umbral]) => ({
+      tipo,
+      umbral,
+      n: (recientes ?? []).filter((r) => r.tipo === tipo).length,
+    }))
+    .filter((a) => a.n >= a.umbral);
+
   const conteo = { activo: 0, moroso: 0, congelado: 0, cancelado: 0, sin_plan: 0 };
   const porPlan = new Map<string, number>();
   for (const g of gimnasios) {
@@ -85,6 +105,17 @@ export default async function SuperadminDashboardPage() {
         </div>
         <h2 className="text-2xl">Dashboard</h2>
       </div>
+
+      {alertas.length > 0 && (
+        <Link
+          href="/superadmin/seguridad"
+          role="alert"
+          className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          Alerta de seguridad (últimos {VENTANA_ALERTA_MIN} min):{" "}
+          {alertas.map((a) => `${a.n} × ${a.tipo}`).join(", ")}. Ver eventos.
+        </Link>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <Tarjeta titulo="Gimnasios suscritos" valor={suscritos} href="/superadmin/gimnasios" />

@@ -15,6 +15,7 @@ import {
 } from "@/lib/pagar-plan";
 import { calcularMontoSuscripcion, planSistemaPorId, planesSistemaVigentes } from "@/lib/planes-sistema";
 import { getPerfilActual } from "@/lib/perfil";
+import { registrarEvento } from "@/lib/seguridad-eventos";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { hoyIso } from "@/lib/turnos";
@@ -178,6 +179,12 @@ export async function resolverPagoMpPrueba(solicitudId: string, aprobar: boolean
       .eq("id", solicitud.id);
     const { error } = await admin.rpc("aplicar_solicitud_pago", { p_id: solicitud.id });
     if (error) console.error("MP prueba: no se pudo aplicar la solicitud", error);
+    else
+      await registrarEvento("solicitud_pago_confirmada", {
+        gimnasioId: perfilData.perfil.gimnasio_id,
+        usuarioId: perfilData.perfil.id,
+        detalle: { solicitud: solicitud.id, flujo: "suscripcion", via: "modo_prueba" },
+      });
   } else {
     await admin
       .from("solicitudes_pago")

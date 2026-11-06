@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { esMesesValido } from "@/lib/pagar-plan";
+import { registrarEvento } from "@/lib/seguridad-eventos";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSuperadminActual } from "@/lib/superadmin";
 
@@ -110,11 +111,16 @@ export async function editarGimnasio(
 
 /** Baja = `estado = 'cancelado'` (no se borra nada, ver `darDeBajaAdmin`). */
 export async function cambiarEstadoGimnasio(gimnasioId: string, activo: boolean): Promise<void> {
-  await requireSuperadmin();
+  const superadmin = await requireSuperadmin();
   await createAdminClient()
     .from("gimnasios")
     .update({ estado: activo ? "activo" : "cancelado" })
     .eq("id", gimnasioId);
+  await registrarEvento("cuenta_admin_baja", {
+    gimnasioId,
+    usuarioId: superadmin.id,
+    detalle: { estado: activo ? "activo" : "cancelado" },
+  });
   revalidar(gimnasioId);
 }
 

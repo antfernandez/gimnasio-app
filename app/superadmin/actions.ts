@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { slugify, withRandomSuffix } from "@/lib/slug";
+import { registrarEvento } from "@/lib/seguridad-eventos";
+import { errorContrasena } from "@/lib/password";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSuperadminActual } from "@/lib/superadmin";
 
@@ -39,7 +41,7 @@ export async function crearAdmin(
   _prevState: CrearAdminFormState,
   formData: FormData,
 ): Promise<CrearAdminFormState> {
-  await requireSuperadmin();
+  const superadmin = await requireSuperadmin();
 
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
@@ -49,9 +51,8 @@ export async function crearAdmin(
   if (!email || !password || !nombreCompleto || !nombreGimnasio) {
     return { error: "Todos los campos son obligatorios." };
   }
-  if (password.length < 6) {
-    return { error: "La contraseña debe tener al menos 6 caracteres." };
-  }
+  const errorPassword = errorContrasena(password);
+  if (errorPassword) return { error: errorPassword };
 
   const admin = createAdminClient();
 
@@ -98,6 +99,11 @@ export async function crearAdmin(
     };
   }
 
+  await registrarEvento("cuenta_admin_creada", {
+    gimnasioId,
+    usuarioId: superadmin.id,
+    detalle: { admin: userData.user.id },
+  });
   revalidarSuperadmin();
   return { ok: true };
 }

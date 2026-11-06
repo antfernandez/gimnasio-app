@@ -1,5 +1,6 @@
 "use client";
 
+import { errorContrasena } from "@/lib/password";
 import { ArrowLeft, Check, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -94,6 +95,11 @@ export function SignUpAlumnoForm({
     }
     if (password !== repeatPassword) {
       setError("Las contraseñas no coinciden");
+      return;
+    }
+    const errorPassword = errorContrasena(password);
+    if (errorPassword) {
+      setError(errorPassword);
       return;
     }
 
