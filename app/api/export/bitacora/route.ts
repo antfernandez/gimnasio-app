@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 
 import { formatFecha } from "@/lib/format";
 import type { PdfColumn } from "@/lib/export/pdf";
 import { buildExportResponse, parseExportFormat } from "@/lib/export/response";
 import type { XlsxColumn } from "@/lib/export/xlsx";
-import { getPerfilActual } from "@/lib/perfil";
+import { registrarEvento } from "@/lib/seguridad-eventos";
+import { getPerfilExistente, requerirRol } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import type { RegistroRutina } from "@/lib/types";
 
@@ -44,10 +45,16 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const perfilData = await getPerfilActual();
-  if (!perfilData) {
-    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  }
+  const acceso = requerirRol(await getPerfilExistente(), ["dueño", "entrenador"]);
+  if (acceso instanceof Response) return acceso;
+  const perfilData = acceso;
+  after(() =>
+    registrarEvento("export_descargado", {
+      gimnasioId: perfilData.perfil.gimnasio_id,
+      usuarioId: perfilData.perfil.id,
+      detalle: { export: "bitacora" },
+    }),
+  );
 
   const supabase = await createClient();
   const { data } = await supabase

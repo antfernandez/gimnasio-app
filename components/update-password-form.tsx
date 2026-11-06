@@ -1,5 +1,6 @@
 "use client";
 
+import { errorContrasena } from "@/lib/password";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { BrandMark } from "@/components/brand-mark";
@@ -28,6 +29,11 @@ export function UpdatePasswordForm({
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     const supabase = createClient();
+    const errorPassword = errorContrasena(password);
+    if (errorPassword) {
+      setError(errorPassword);
+      return;
+    }
     setIsLoading(true);
     setError(null);
 

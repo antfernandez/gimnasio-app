@@ -1,9 +1,12 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { after } from "next/server";
 import { cache } from "react";
+
+import { registrarEvento } from "@/lib/seguridad-eventos";
 
 import { createClient } from "@/lib/supabase/server";
 import { slugify, withRandomSuffix } from "@/lib/slug";
-import type { Gimnasio, Perfil } from "@/lib/types";
+import type { Gimnasio, Perfil, RolPerfil } from "@/lib/types";
 
 const UNIQUE_VIOLATION = "23505";
 const MAX_SLUG_ATTEMPTS = 5;
@@ -78,6 +81,59 @@ async function ensureGymProfile(
   }
 
   return perfil as Perfil;
+}
+
+/** Spec 67: lee el perfil SIN crear gimnasio (para rutas de API como `/api/export/*`, donde un
+ * usuario sin perfil —p. ej. un alumno— no debe disparar el onboarding). */
+export const getPerfilExistente = cache(async (): Promise<{
+  perfil: Perfil;
+  gimnasio: Gimnasio;
+} | null> => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: perfil } = await supabase
+    .from("perfiles")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!perfil) return null;
+
+  const { data: gimnasio } = await supabase
+    .from("gimnasios")
+    .select("*")
+    .eq("id", (perfil as Perfil).gimnasio_id)
+    .single();
+  if (!gimnasio) return null;
+
+  return { perfil: perfil as Perfil, gimnasio: gimnasio as Gimnasio };
+});
+
+type PerfilData = { perfil: Perfil; gimnasio: Gimnasio };
+
+/** Spec 67: 401 sin sesión/perfil, 403 si el rol no está permitido; si pasa, devuelve el perfil.
+ * Uso: `const r = requerirRol(await getPerfilExistente(), ["dueño"]); if (r instanceof Response) return r;` */
+export function requerirRol(
+  perfilData: PerfilData | null,
+  roles: readonly RolPerfil[],
+): PerfilData | Response {
+  if (!perfilData) {
+    return Response.json({ error: "No autenticado" }, { status: 401 });
+  }
+  if (!roles.includes(perfilData.perfil.rol)) {
+    after(() =>
+      registrarEvento("acceso_denegado", {
+        gimnasioId: perfilData.perfil.gimnasio_id,
+        usuarioId: perfilData.perfil.id,
+        detalle: { rol: perfilData.perfil.rol },
+      }),
+    );
+    return Response.json({ error: "No tienes permiso para esta exportación" }, { status: 403 });
+  }
+  return perfilData;
 }
 
 export const getPerfilActual = cache(async (): Promise<{

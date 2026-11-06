@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { credencialesMp, firmaValida, obtenerPago } from "@/lib/mercadopago";
+import { registrarEvento } from "@/lib/seguridad-eventos";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Webhook de Mercado Pago (flujos A y B; `?flujo=` elige la cuenta, el token y el secreto). Verifica la firma, consulta el pago a la API (no
@@ -20,7 +21,10 @@ export async function POST(request: NextRequest) {
     xRequestId: request.headers.get("x-request-id"),
     dataId,
   });
-  if (!ok) return NextResponse.json({ error: "firma inválida" }, { status: 401 });
+  if (!ok) {
+    await registrarEvento("webhook_firma_invalida", { detalle: { flujo } });
+    return NextResponse.json({ error: "firma inválida" }, { status: 401 });
+  }
 
   const body = (await request.json().catch(() => null)) as { type?: string } | null;
   if (body?.type !== "payment" || !dataId) return NextResponse.json({ ok: true });
@@ -62,5 +66,8 @@ export async function POST(request: NextRequest) {
     // 500 para que Mercado Pago reintente.
     return NextResponse.json({ error: "reintentar" }, { status: 500 });
   }
+  await registrarEvento("solicitud_pago_confirmada", {
+    detalle: { solicitud: solicitud.id, flujo, via: "webhook" },
+  });
   return NextResponse.json({ ok: true });
 }

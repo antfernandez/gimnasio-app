@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { getPerfilActual } from "@/lib/perfil";
 import { estadoPlan } from "@/lib/planes";
 import { parseRut } from "@/lib/rut";
+import { registrarEvento } from "@/lib/seguridad-eventos";
 import { createClient } from "@/lib/supabase/server";
 import { hoyIso } from "@/lib/turnos";
 import type { MedidasAvance } from "@/lib/types";
@@ -150,6 +151,14 @@ export async function setAlumnoActivo(id: string, activo: boolean) {
 
   if (error) {
     throw new Error("No se pudo actualizar el estado del alumno.");
+  }
+  if (!activo) {
+    const perfilData = await getPerfilActual();
+    await registrarEvento("alumno_dado_de_baja", {
+      gimnasioId: perfilData?.perfil.gimnasio_id ?? null,
+      usuarioId: perfilData?.perfil.id ?? null,
+      detalle: { alumno: id },
+    });
   }
 
   revalidatePath("/protected/alumnos");
