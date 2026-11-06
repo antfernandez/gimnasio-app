@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
-import { SitioPublicoView } from "@/components/sitio/sitio-publico-view";
+import { SitioTemplate } from "@/components/sitio/sitio-template";
+import { normalizarAcento } from "@/lib/sitio";
 import { getSitioActual } from "@/lib/sitio-actual";
 
 // Contenido 100% dinámico por sesión (borrador del dueño actual) — mismo motivo que
@@ -28,10 +29,9 @@ export default async function VistaPreviaSitioPage() {
           Volver al editor
         </Link>
       </div>
-      <SitioPublicoView
+      <SitioTemplate
         nombreGimnasio={sitioData.gimnasioNombre}
-        tema={sitioData.sitio.tema}
-        colorAcento={sitioData.sitio.color_acento}
+        acento={normalizarAcento(sitioData.sitio.color_acento)}
         contenido={sitioData.sitio.contenido_borrador}
       />
     </div>

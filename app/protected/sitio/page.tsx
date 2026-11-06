@@ -1,5 +1,6 @@
 import { EditorSitio } from "@/components/sitio/editor-sitio";
 import { getPerfilActual } from "@/lib/perfil";
+import { normalizarAcento } from "@/lib/sitio";
 import { getSitioActual } from "@/lib/sitio-actual";
 
 // Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
@@ -30,7 +31,7 @@ export default async function SitioPage() {
         gimnasioId={perfilData.perfil.gimnasio_id}
         slug={perfilData.gimnasio.slug}
         contenidoInicial={sitioData.sitio.contenido_borrador}
-        colorAcentoInicial={sitioData.sitio.color_acento}
+        colorAcentoInicial={normalizarAcento(sitioData.sitio.color_acento)}
         publicadoAtInicial={sitioData.sitio.publicado_at}
       />
     </div>

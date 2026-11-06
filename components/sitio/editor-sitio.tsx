@@ -11,6 +11,7 @@ import {
   restaurarVersion,
   type VersionSitio,
 } from "@/app/protected/sitio/actions";
+import { ICONOS } from "@/components/sitio/iconos-servicio";
 import { BotonSubirAGaleria, ImageUploader } from "@/components/sitio/image-uploader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +21,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ACENTOS,
+  ICONOS_SERVICIO,
+  MEDIDAS_PORTADA,
+  MAX_DESCRIPCION_EQUIPO,
+  TITULOS_SECCION as T,
+  normalizarAcento,
+  type AcentoSitio,
   type ContenidoSitio,
   type ItemEquipo,
   type ItemHorario,
@@ -27,8 +34,8 @@ import {
   type ItemServicio,
   type ItemTarifa,
   type ItemTestimonio,
-  type TemaSitio,
 } from "@/lib/sitio";
+import { IMAGEN_PORTADA_POR_DEFECTO } from "@/lib/sitio-template";
 import { cn } from "@/lib/utils";
 
 const AUTOGUARDADO_MS = 1200;
@@ -38,12 +45,14 @@ function ListaEditable<T>({
   onChange,
   nuevoItem,
   addLabel,
+  max,
   children,
 }: {
   items: T[];
   onChange: (items: T[]) => void;
   nuevoItem: () => T;
   addLabel: string;
+  max?: number;
   children: (item: T, update: (patch: Partial<T>) => void) => React.ReactNode;
 }) {
   const actualizar = (i: number, patch: Partial<T>) => {
@@ -68,16 +77,20 @@ function ListaEditable<T>({
           {children(item, (patch) => actualizar(i, patch))}
         </div>
       ))}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="self-start"
-        onClick={() => onChange([...items, nuevoItem()])}
-      >
-        <Plus className="h-4 w-4" />
-        {addLabel}
-      </Button>
+      {max !== undefined && items.length >= max ? (
+        <p className="text-xs text-muted-foreground">Máximo {max}.</p>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="self-start"
+          onClick={() => onChange([...items, nuevoItem()])}
+        >
+          <Plus className="h-4 w-4" />
+          {addLabel}
+        </Button>
+      )}
     </div>
   );
 }
@@ -120,12 +133,11 @@ export function EditorSitio({
   gimnasioId: string;
   slug: string | null;
   contenidoInicial: ContenidoSitio;
-  colorAcentoInicial: string;
+  colorAcentoInicial: AcentoSitio;
   publicadoAtInicial: string | null;
 }) {
   const [contenido, setContenido] = useState(contenidoInicial);
-  const [tema, setTema] = useState<TemaSitio>("claro");
-  const [colorAcento, setColorAcento] = useState(colorAcentoInicial);
+  const [colorAcento, setColorAcento] = useState<AcentoSitio>(colorAcentoInicial);
   const [guardando, setGuardando] = useState(false);
   const [guardadoEn, setGuardadoEn] = useState<Date | null>(null);
   const [publicando, setPublicando] = useState(false);
@@ -143,20 +155,18 @@ export function EditorSitio({
   // dispara un autoguardado fantasma sin cambios reales). Comparar contra esto en vez
   // de contra un booleano es inmune a eso: `contenido`/`tema`/`colorAcento` solo dejan
   // de ser referencia-igual a lo inicial cuando el usuario edita algo de verdad.
-  const inicialRef = useRef({ contenido: contenidoInicial, tema: "claro" as TemaSitio, colorAcento: colorAcentoInicial });
+  const inicialRef = useRef({ contenido: contenidoInicial, colorAcento: colorAcentoInicial });
 
   useEffect(() => {
     const sinCambios =
       contenido === inicialRef.current.contenido &&
-      tema === inicialRef.current.tema &&
       colorAcento === inicialRef.current.colorAcento;
     if (sinCambios) return;
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(async () => {
       setGuardando(true);
       setErrorGuardado(null);
-      const acentoGuardado = ACENTOS.some((a) => a.valor === colorAcento) ? colorAcento : ACENTOS[0].valor;
-      const res = await guardarBorrador(tema, acentoGuardado, contenido);
+      const res = await guardarBorrador(colorAcento, contenido);
       setGuardando(false);
       if (res.ok) setGuardadoEn(new Date());
       else setErrorGuardado(res.error);
@@ -164,7 +174,7 @@ export function EditorSitio({
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [contenido, tema, colorAcento]);
+  }, [contenido, colorAcento]);
 
   const handlePublicar = async () => {
     setPublicando(true);
@@ -189,8 +199,7 @@ export function EditorSitio({
     setRestaurando(null);
     if (res.ok) {
       setContenido(version.contenido);
-      setTema("claro");
-      setColorAcento(version.color_acento);
+      setColorAcento(normalizarAcento(version.color_acento));
       setGuardadoEn(new Date());
       setVersiones(null);
     }
@@ -293,21 +302,21 @@ export function EditorSitio({
             <div className="flex flex-wrap gap-2">
               {ACENTOS.map((a) => (
                 <button
-                  key={a.valor}
+                  key={a.id}
                   type="button"
                   title={a.nombre}
-                  onClick={() => setColorAcento(a.valor)}
+                  aria-label={a.nombre}
+                  aria-pressed={colorAcento === a.id}
+                  onClick={() => setColorAcento(a.id)}
                   className={cn(
                     "flex h-9 w-9 items-center justify-center rounded-full border-2 transition-transform",
-                    colorAcento === a.valor
+                    colorAcento === a.id
                       ? "border-secondary-foreground scale-110"
                       : "border-transparent hover:scale-105",
                   )}
-                  style={{ backgroundColor: a.valor }}
+                  style={{ backgroundColor: a.color }}
                 >
-                  {colorAcento === a.valor && (
-                    <Check className="h-4 w-4" style={{ color: a.ink }} />
-                  )}
+                  {colorAcento === a.id && <Check className="h-4 w-4 text-white" />}
                 </button>
               ))}
             </div>
@@ -315,24 +324,31 @@ export function EditorSitio({
         </div>
       </Seccion>
 
-      <Seccion titulo="Portada" abiertaPorDefecto>
+      <Seccion titulo={T.portada} abiertaPorDefecto>
         <div className="flex flex-col gap-5">
           <div className="grid gap-2">
             <Label>Imagen de portada</Label>
-            <p className="text-xs text-muted-foreground">
-              Se ve mejor una foto vertical, idealmente 1080 x 1350 px (relación de
-              aspecto 4:5), pero puedes subir cualquier tamaño y luego arrastrarla para
-              ajustar qué parte queda visible.
-            </p>
-            <div className="w-full max-w-[260px]">
+            <div className="rounded-[9px] border border-border bg-secondary/40 px-4 py-3 text-xs text-muted-foreground">
+              <p className="font-semibold text-foreground">Medidas a considerar</p>
+              <ul className="mt-1 list-disc pl-4">
+                <li>
+                  Tamaño recomendado: <strong>{MEDIDAS_PORTADA.ancho} x {MEDIDAS_PORTADA.alto} px</strong>, formato{" "}
+                  {MEDIDAS_PORTADA.formato}. Se muestra a todo el ancho de la página.
+                </li>
+                <li>Formatos PNG, JPG o WebP; hasta {MEDIDAS_PORTADA.pesoMaxMb} MB.</li>
+                <li>{MEDIDAS_PORTADA.zonaSegura}</li>
+                <li>Puedes arrastrar la foto para elegir qué parte queda visible.</li>
+              </ul>
+            </div>
+            <div className="w-full max-w-[560px]">
             <ImageUploader
               gimnasioId={gimnasioId}
               value={contenido.hero.imagen_url}
               onChange={(url) =>
                 setContenido({ ...contenido, hero: { ...contenido.hero, imagen_url: url } })
               }
-              aspecto="aspect-[4/5]"
-              dimensionesRecomendadas={{ ancho: 1080, alto: 1350 }}
+              aspecto="aspect-[11/4]"
+              dimensionesRecomendadas={{ ancho: MEDIDAS_PORTADA.ancho, alto: MEDIDAS_PORTADA.alto }}
               posicion={{ x: contenido.hero.imagen_pos_x, y: contenido.hero.imagen_pos_y }}
               onPosicionChange={(pos) =>
                 setContenido({
@@ -342,6 +358,17 @@ export function EditorSitio({
               }
             />
             </div>
+            {!contenido.hero.imagen_url && (
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                {/* eslint-disable-next-line @next/next/no-img-element -- imagen estática local */}
+                <img
+                  src={IMAGEN_PORTADA_POR_DEFECTO}
+                  alt="Foto por defecto"
+                  className="h-12 w-32 rounded-[6px] border border-input object-cover"
+                />
+                <span>Mientras no subas una foto, el sitio muestra esta foto por defecto.</span>
+              </div>
+            )}
           </div>
           <div className="grid gap-2">
             <Label>Título</Label>
@@ -351,6 +378,17 @@ export function EditorSitio({
                 setContenido({ ...contenido, hero: { ...contenido.hero, titulo: e.target.value } })
               }
             />
+          </div>
+          <div className="grid gap-2">
+            <Label>Firma bajo el nombre (opcional)</Label>
+            <Input
+              placeholder="by Flavia Reyes"
+              value={contenido.hero.firma}
+              onChange={(e) =>
+                setContenido({ ...contenido, hero: { ...contenido.hero, firma: e.target.value } })
+              }
+            />
+            <p className="text-xs text-muted-foreground">Se muestra en cursiva bajo el nombre, arriba a la izquierda.</p>
           </div>
           <div className="grid gap-2">
             <Label>Subtítulo</Label>
@@ -380,6 +418,7 @@ export function EditorSitio({
             </div>
             <div className="grid gap-2">
               <Label>WhatsApp del botón</Label>
+              <p className="text-xs text-muted-foreground">Si lo dejas vacío se usa el WhatsApp de contacto y, si tampoco existe, el teléfono.</p>
               <Input
                 placeholder="+56 9 0000 0000"
                 value={contenido.hero.cta_whatsapp}
@@ -395,28 +434,64 @@ export function EditorSitio({
         </div>
       </Seccion>
 
-      <Seccion titulo="Sobre nosotros" descripcion="Texto de presentación del gimnasio/estudio.">
-        <div className="grid gap-2">
-          <Label>Texto</Label>
-          <Textarea
-            className="min-h-[140px]"
-            value={contenido.sobre_nosotros ?? ""}
-            onChange={(e) =>
-              setContenido({ ...contenido, sobre_nosotros: e.target.value })
-            }
-          />
-        </div>
-      </Seccion>
-
-      <Seccion titulo="Servicios" descripcion="Ej. Musculación, spinning, box.">
+      <Seccion titulo={T.servicios} descripcion="Ej. Musculación, spinning, box. Cada servicio puede llevar imagen arriba, icono junto al título y un párrafo.">
         <ListaEditable<ItemServicio>
           items={contenido.servicios}
           onChange={(servicios) => setContenido({ ...contenido, servicios })}
-          nuevoItem={() => ({ nombre: "", descripcion: "" })}
+          nuevoItem={() => ({ nombre: "", descripcion: "", icono: "", imagen_url: null })}
           addLabel="Agregar servicio"
         >
           {(item, update) => (
             <div className="grid gap-3">
+              <div className="grid gap-1.5">
+                <Label className="text-xs text-muted-foreground">
+                  Imagen (opcional, va arriba · recomendado 800 x 450 px, 16:9, hasta 5 MB)
+                </Label>
+                <div className="w-full max-w-[320px]">
+                  <ImageUploader
+                    gimnasioId={gimnasioId}
+                    value={item.imagen_url}
+                    onChange={(url) => update({ imagen_url: url })}
+                    aspecto="aspect-video"
+                    dimensionesRecomendadas={{ ancho: 800, alto: 450 }}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-1.5">
+                <Label className="text-xs text-muted-foreground">Icono junto al título (opcional)</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => update({ icono: "" })}
+                    aria-pressed={item.icono === ""}
+                    className={cn(
+                      "rounded-[9px] border px-2.5 py-1.5 text-xs",
+                      item.icono === "" ? "border-secondary-foreground bg-secondary" : "border-input hover:bg-secondary",
+                    )}
+                  >
+                    Sin icono
+                  </button>
+                  {ICONOS_SERVICIO.map((id) => {
+                    const { Icono, nombre } = ICONOS[id];
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        title={nombre}
+                        aria-label={nombre}
+                        aria-pressed={item.icono === id}
+                        onClick={() => update({ icono: id })}
+                        className={cn(
+                          "flex h-9 w-9 items-center justify-center rounded-[9px] border",
+                          item.icono === id ? "border-secondary-foreground bg-secondary" : "border-input hover:bg-secondary",
+                        )}
+                      >
+                        <Icono className="h-4 w-4" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <Input
                 placeholder="Nombre del servicio"
                 value={item.nombre}
@@ -433,32 +508,8 @@ export function EditorSitio({
         </ListaEditable>
       </Seccion>
 
-      <Seccion titulo="Horarios">
-        <ListaEditable<ItemHorario>
-          items={contenido.horarios}
-          onChange={(horarios) => setContenido({ ...contenido, horarios })}
-          nuevoItem={() => ({ dia: "", horario: "" })}
-          addLabel="Agregar horario"
-        >
-          {(item, update) => (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Input
-                placeholder="Ej. Lunes a viernes"
-                value={item.dia}
-                onChange={(e) => update({ dia: e.target.value })}
-              />
-              <Input
-                placeholder="Ej. 07:00 - 22:00"
-                value={item.horario}
-                onChange={(e) => update({ horario: e.target.value })}
-              />
-            </div>
-          )}
-        </ListaEditable>
-      </Seccion>
-
       <Seccion
-        titulo="Planes y tarifas"
+        titulo={T.planes}
         descripcion="En “Qué incluye” puedes escribir una línea (se muestra como descripción) o varias (se muestran como lista de beneficios con check)."
       >
         <ListaEditable<ItemTarifa>
@@ -497,12 +548,26 @@ export function EditorSitio({
         </ListaEditable>
       </Seccion>
 
-      <Seccion titulo="Por qué elegirnos" descripcion="3 razones cortas que aparecen junto a “Sobre nosotros”.">
+      <Seccion titulo={T.nosotros} descripcion="Texto de presentación del gimnasio/estudio.">
+        <div className="grid gap-2">
+          <Label>Texto</Label>
+          <Textarea
+            className="min-h-[140px]"
+            value={contenido.sobre_nosotros ?? ""}
+            onChange={(e) =>
+              setContenido({ ...contenido, sobre_nosotros: e.target.value })
+            }
+          />
+        </div>
+      </Seccion>
+
+      <Seccion titulo={T.razones} descripcion="Hasta 3 razones, cada una con título y una frase, que aparecen bajo “Sobre nosotros”.">
         <ListaEditable<ItemPorQueElegirnos>
           items={contenido.por_que_elegirnos}
           onChange={(por_que_elegirnos) => setContenido({ ...contenido, por_que_elegirnos })}
           nuevoItem={() => ({ titulo: "", texto: "" })}
           addLabel="Agregar razón"
+          max={3}
         >
           {(item, update) => (
             <div className="grid gap-3">
@@ -512,7 +577,7 @@ export function EditorSitio({
                 onChange={(e) => update({ titulo: e.target.value })}
               />
               <Textarea
-                placeholder="Texto breve"
+                placeholder="Frase breve"
                 className="min-h-[60px]"
                 value={item.texto}
                 onChange={(e) => update({ texto: e.target.value })}
@@ -522,7 +587,7 @@ export function EditorSitio({
         </ListaEditable>
       </Seccion>
 
-      <Seccion titulo="Galería de fotos" descripcion="El texto (caption) aparece sobre la foto en el carrusel del sitio.">
+      <Seccion titulo={T.galeria} descripcion="El texto (caption) aparece sobre la foto en el carrusel. Si no hay fotos, la sección no se muestra en el sitio.">
         <div className="flex flex-col gap-4">
           {contenido.galeria.length > 0 && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -567,32 +632,21 @@ export function EditorSitio({
         </div>
       </Seccion>
 
-      <Seccion titulo="Testimonios">
-        <ListaEditable<ItemTestimonio>
-          items={contenido.testimonios}
-          onChange={(testimonios) => setContenido({ ...contenido, testimonios })}
-          nuevoItem={() => ({ nombre: "", texto: "" })}
-          addLabel="Agregar testimonio"
-        >
-          {(item, update) => (
-            <div className="grid gap-3">
-              <Input
-                placeholder="Nombre del alumno"
-                value={item.nombre}
-                onChange={(e) => update({ nombre: e.target.value })}
-              />
-              <Textarea
-                placeholder="Qué dijo"
-                className="min-h-[60px]"
-                value={item.texto}
-                onChange={(e) => update({ texto: e.target.value })}
-              />
-            </div>
-          )}
-        </ListaEditable>
-      </Seccion>
-
-      <Seccion titulo="Equipo / instructores">
+      <Seccion titulo={T.equipo} descripcion="La descripción se muestra bajo el título, antes de las tarjetas.">
+        <div className="mb-5 grid gap-2">
+          <Label>Descripción del equipo</Label>
+          <Textarea
+            className="min-h-[90px]"
+            maxLength={MAX_DESCRIPCION_EQUIPO}
+            value={contenido.equipo_descripcion}
+            onChange={(e) =>
+              setContenido({ ...contenido, equipo_descripcion: e.target.value.slice(0, MAX_DESCRIPCION_EQUIPO) })
+            }
+          />
+          <p className="text-right text-xs text-muted-foreground">
+            {contenido.equipo_descripcion.length}/{MAX_DESCRIPCION_EQUIPO}
+          </p>
+        </div>
         <ListaEditable<ItemEquipo>
           items={contenido.equipo}
           onChange={(equipo) => setContenido({ ...contenido, equipo })}
@@ -624,7 +678,33 @@ export function EditorSitio({
         </ListaEditable>
       </Seccion>
 
-      <Seccion titulo="Ubicación y contacto">
+      <Seccion titulo={T.testimonios}>
+        <ListaEditable<ItemTestimonio>
+          items={contenido.testimonios}
+          onChange={(testimonios) => setContenido({ ...contenido, testimonios })}
+          nuevoItem={() => ({ nombre: "", texto: "" })}
+          addLabel="Agregar testimonio"
+        >
+          {(item, update) => (
+            <div className="grid gap-3">
+              <Input
+                placeholder="Nombre del alumno"
+                value={item.nombre}
+                onChange={(e) => update({ nombre: e.target.value })}
+              />
+              <Textarea
+                placeholder="Qué dijo"
+                className="min-h-[60px]"
+                value={item.texto}
+                onChange={(e) => update({ texto: e.target.value })}
+              />
+            </div>
+          )}
+        </ListaEditable>
+      </Seccion>
+
+      <Seccion titulo={T.pie}
+        descripcion="Todo el pie del sitio sale de acá; el contacto ya no tiene una sección aparte. Los horarios del pie son los del bloque Horarios.">
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="grid gap-2 sm:col-span-2">
             <Label>Dirección</Label>
@@ -689,6 +769,35 @@ export function EditorSitio({
               }
             />
           </div>
+          <div className="grid gap-2 sm:col-span-2">
+            <Label>Título de la columna izquierda</Label>
+            <Input
+              value={contenido.pie.titulo_visita}
+              onChange={(e) => setContenido({ ...contenido, pie: { ...contenido.pie, titulo_visita: e.target.value } })}
+            />
+          </div>
+          <div className="grid gap-2 sm:col-span-2">
+            <Label>Título de la columna derecha</Label>
+            <Input
+              value={contenido.pie.titulo_contacto}
+              onChange={(e) => setContenido({ ...contenido, pie: { ...contenido.pie, titulo_contacto: e.target.value } })}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label>Texto del botón de WhatsApp</Label>
+            <Input
+              value={contenido.pie.texto_boton}
+              onChange={(e) => setContenido({ ...contenido, pie: { ...contenido.pie, texto_boton: e.target.value } })}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label>Texto legal</Label>
+            <Input
+              value={contenido.pie.texto_legal}
+              onChange={(e) => setContenido({ ...contenido, pie: { ...contenido.pie, texto_legal: e.target.value } })}
+            />
+            <p className="text-xs text-muted-foreground">Puedes usar {"{anio}"} y {"{titulo}"}.</p>
+          </div>
           <div className="grid gap-2">
             <Label>WhatsApp</Label>
             <Input
@@ -702,6 +811,30 @@ export function EditorSitio({
               }
             />
           </div>
+        </div>
+        <div className="mt-6 grid gap-2">
+          <Label>Horarios (se muestran en la columna izquierda del pie)</Label>
+          <ListaEditable<ItemHorario>
+            items={contenido.horarios}
+            onChange={(horarios) => setContenido({ ...contenido, horarios })}
+            nuevoItem={() => ({ dia: "", horario: "" })}
+            addLabel="Agregar horario"
+          >
+            {(item, update) => (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input
+                  placeholder="Ej. Lunes a viernes"
+                  value={item.dia}
+                  onChange={(e) => update({ dia: e.target.value })}
+                />
+                <Input
+                  placeholder="Ej. 07:00 - 22:00"
+                  value={item.horario}
+                  onChange={(e) => update({ horario: e.target.value })}
+                />
+              </div>
+            )}
+          </ListaEditable>
         </div>
       </Seccion>
     </div>

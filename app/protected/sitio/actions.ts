@@ -4,7 +4,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getPerfilActual } from "@/lib/perfil";
-import { normalizarContenido, type ContenidoSitio, type TemaSitio } from "@/lib/sitio";
+import { normalizarAcento, normalizarContenido, type AcentoSitio, type ContenidoSitio } from "@/lib/sitio";
 import { createClient } from "@/lib/supabase/server";
 
 const MAX_VERSIONES = 10;
@@ -14,7 +14,6 @@ export type GuardarBorradorResult = { ok: true } | { ok: false; error: string };
 /** Autoguardado: se llama directo (no vía `<form action>`) desde el editor, con
  * debounce en el cliente — ver components/sitio/editor-sitio.tsx. */
 export async function guardarBorrador(
-  tema: TemaSitio,
   colorAcento: string,
   contenido: ContenidoSitio,
 ): Promise<GuardarBorradorResult> {
@@ -24,7 +23,7 @@ export async function guardarBorrador(
   const supabase = await createClient();
   const { error } = await supabase
     .from("sitios")
-    .update({ tema, color_acento: colorAcento, contenido_borrador: contenido })
+    .update({ color_acento: normalizarAcento(colorAcento), contenido_borrador: contenido })
     .eq("gimnasio_id", perfilData.perfil.gimnasio_id);
 
   if (error) {
@@ -96,8 +95,7 @@ export async function publicarSitio(): Promise<PublicarResult> {
 
 export interface VersionSitio {
   id: string;
-  tema: TemaSitio;
-  color_acento: string;
+  color_acento: AcentoSitio;
   contenido: ContenidoSitio;
   created_at: string;
 }
@@ -119,6 +117,7 @@ export async function listarVersiones(): Promise<VersionSitio[]> {
   // que hace el editor al restaurar (ver `handleRestaurar` en editor-sitio.tsx).
   return ((data ?? []) as VersionSitio[]).map((v) => ({
     ...v,
+    color_acento: normalizarAcento(v.color_acento),
     contenido: normalizarContenido(v.contenido),
   }));
 }
@@ -146,8 +145,7 @@ export async function restaurarVersion(
   const { error } = await supabase
     .from("sitios")
     .update({
-      tema: version.tema,
-      color_acento: version.color_acento,
+      color_acento: normalizarAcento(version.color_acento),
       contenido_borrador: normalizarContenido(version.contenido),
     })
     .eq("gimnasio_id", perfilData.perfil.gimnasio_id);

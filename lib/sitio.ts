@@ -1,144 +1,71 @@
-import type { CSSProperties } from "react";
-
 // Este módulo es intencionalmente "puro" (sin `next/headers` ni el cliente de
 // servidor de Supabase) porque `components/sitio/editor-sitio.tsx` (Client Component)
-// importa `ACENTOS`/`temaCssVars`/los tipos de acá — si este archivo arrastrara
+// importa `ACENTOS`/los tipos de acá — si este archivo arrastrara
 // `lib/supabase/server.ts`, Turbopack rompe el build con "You're importing a module
 // that depends on next/headers ... in the Pages Router". El bootstrap del sitio del
 // dueño (`getSitioActual`, que sí necesita servidor) vive aparte en `lib/sitio-actual.ts`.
 
-export type TemaSitio = "oscuro" | "claro";
+/** Spec 71: el sitio usa el template Valinor (un solo tema claro). El acento se guarda por
+ * nombre en `sitios.color_acento` y se aplica con `data-acento` (ver sitio-template.css). */
+export type AcentoSitio = "turquesa" | "dorado" | "verde" | "morado" | "rosado";
 
 export interface Acento {
+  id: AcentoSitio;
   nombre: string;
-  valor: string;
-  /** Color de texto legible sobre este acento (botones, badges). */
-  ink: string;
+  /** Color de la muestra en el editor (el CSS del sitio define el real). */
+  color: string;
 }
 
 export const ACENTOS: Acento[] = [
-  { nombre: "Dorado", valor: "#c9a24d", ink: "#1a1207" },
-  { nombre: "Verde", valor: "#4d9f6c", ink: "#ffffff" },
-  { nombre: "Morado", valor: "#8b5cf6", ink: "#ffffff" },
-  { nombre: "Rosado", valor: "#ec4899", ink: "#ffffff" },
+  { id: "turquesa", nombre: "Turquesa", color: "#2899a5" },
+  { id: "dorado", nombre: "Dorado", color: "#a8815b" },
+  { id: "verde", nombre: "Verde", color: "#4f8a5b" },
+  { id: "morado", nombre: "Morado", color: "#7a5bb5" },
+  { id: "rosado", nombre: "Rosado", color: "#d6638a" },
 ];
 
-export function acentoInk(colorAcento: string): string {
-  return ACENTOS.find((a) => a.valor === colorAcento)?.ink ?? "#ffffff";
-}
+export const ACENTO_POR_DEFECTO: AcentoSitio = "turquesa";
 
-// ---------- utilidades de color: derivar la familia "gold" del template a partir
-// del acento elegido por el tenant (ver `derivarAcento` más abajo). ----------
-function hexARgb(hex: string): [number, number, number] {
-  const limpio = hex.replace("#", "");
-  const entero = parseInt(limpio, 16);
-  return [(entero >> 16) & 255, (entero >> 8) & 255, entero & 255];
-}
-
-function rgbAHex(r: number, g: number, b: number): string {
-  const canal = (v: number) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, "0");
-  return `#${canal(r)}${canal(g)}${canal(b)}`;
-}
-
-function mezclarColor(hex: string, hacia: [number, number, number], peso: number): string {
-  const [r, g, b] = hexARgb(hex);
-  const [tr, tg, tb] = hacia;
-  return rgbAHex(r + (tr - r) * peso, g + (tg - g) * peso, b + (tb - b) * peso);
-}
-
-const BLANCO: [number, number, number] = [255, 255, 255];
-const NEGRO: [number, number, number] = [0, 0, 0];
-
-/** El template `valinor-sistema-web-claro-v2.html` define `--gold-light`/`--gold-deep`/
- * `--ink-gold` como tonos fijos derivados a mano de su `--gold` (#c9a24d). Acá se
- * recalculan a partir del `color_acento` de cada tenant con los mismos pesos de mezcla
- * (medidos comparando los hex del template) para que el gradiente dorado de
- * `.btn-solid`/`.plan-card.featured`/precios/bordes destacados "tiña" con el acento
- * elegido en vez de quedar dorado fijo para gimnasios que no usan ese acento —
- * ver Sprint 21 Parte E. */
-function derivarAcento(colorAcento: string) {
-  return {
-    light: mezclarColor(colorAcento, BLANCO, 0.5),
-    deep: mezclarColor(colorAcento, NEGRO, 0.2),
-    ink: mezclarColor(colorAcento, NEGRO, 0.35),
-  };
-}
-
-interface PaletaTema {
-  bg: string;
-  bgAlt: string;
-  card: string;
-  card2: string;
-  text: string;
-  muted: string;
-  muted2: string;
-  line: string;
-  shadow: string;
-}
-
-// bg/bgAlt/card/text/muted/line del tema "claro" vienen del Sprint 11 (ya en producción,
-// no se tocan). card2/muted2/shadow son nuevos (Sprint 21 Parte A) tomados tal cual del
-// template (sección 3 del documento de referencia) — son ambiente fijo "boutique" de la
-// paleta clara, no dependen del tenant.
-const TEMAS: Record<TemaSitio, PaletaTema> = {
-  oscuro: {
-    bg: "#0a0a0b",
-    bgAlt: "#141416",
-    card: "#1c1c1f",
-    card2: "#202024",
-    text: "#f5f5f4",
-    muted: "#a3a3a0",
-    muted2: "#78786f",
-    line: "rgba(245,245,244,.14)",
-    shadow: "0 16px 40px -18px rgba(0,0,0,.55)",
-  },
-  // Valores del template v5 (valinor-boutique-hojas-v5.html), 00_spec_estilo_marca_valinor §7.2.
-  claro: {
-    bg: "#f6f0e1",
-    bgAlt: "#efe4c9",
-    card: "#fffdf6",
-    card2: "#faf3e0",
-    text: "#2e3a21",
-    muted: "#5d6650",
-    muted2: "#8b8c72",
-    line: "rgba(46,58,33,.15)",
-    shadow: "0 22px 48px -24px rgba(58,48,20,.38)",
-  },
+// Valores hex del diseño anterior (migración 0043 los convierte; esto cubre filas sin migrar).
+const ACENTO_LEGADO: Record<string, AcentoSitio> = {
+  "#c9a24d": "dorado",
+  "#4d9f6c": "verde",
+  "#8b5cf6": "morado",
+  "#ec4899": "rosado",
 };
 
-/** Variables CSS del sitio público de un tenant, aisladas de los tokens de la app
- * (`app/globals.css`, que son la marca fija de Valinor Estudio como SaaS) — se aplican
- * como `style` en el contenedor raíz del sitio, nunca en `:root`. */
-export function temaCssVars(tema: TemaSitio, colorAcento: string): CSSProperties {
-  const t = TEMAS[tema] ?? TEMAS.claro;
-  const acento = derivarAcento(colorAcento);
-  return {
-    "--sitio-bg": t.bg,
-    "--sitio-bg-alt": t.bgAlt,
-    "--sitio-card": t.card,
-    "--sitio-card-2": t.card2,
-    "--sitio-text": t.text,
-    "--sitio-muted": t.muted,
-    "--sitio-muted-2": t.muted2,
-    "--sitio-line": t.line,
-    "--sitio-radius": tema === "claro" ? "18px" : "14px",
-    "--sitio-shadow": t.shadow,
-    "--sitio-accent": colorAcento,
-    "--sitio-accent-ink": acentoInk(colorAcento),
-    "--sitio-gold-light": acento.light,
-    "--sitio-gold-deep": acento.deep,
-    "--sitio-ink-gold": acento.ink,
-    // Color de títulos: oliva en el tema claro (v5), dorado oscuro en el oscuro.
-    "--sitio-title": tema === "claro" ? "#3a4b2a" : acento.ink,
-    // Ambiente oliva fijo de la marca (v5): no depende del acento del tenant.
-    "--sitio-olive-900": "#1f2816",
-    "--sitio-olive-800": "#2b3720",
-    "--sitio-olive-700": "#3a4b2a",
-    "--sitio-olive-600": "#4f6335",
-    "--sitio-leaf": "#62783f",
-    "--sitio-gold-grad": `linear-gradient(135deg, ${acento.light}, ${colorAcento} 55%, ${acento.deep})`,
-  } as CSSProperties;
+/** Cualquier valor leído de la BD → un acento válido del template. */
+export function normalizarAcento(valor: unknown): AcentoSitio {
+  if (typeof valor !== "string") return ACENTO_POR_DEFECTO;
+  if (ACENTOS.some((a) => a.id === valor)) return valor as AcentoSitio;
+  return ACENTO_LEGADO[valor.toLowerCase()] ?? ACENTO_POR_DEFECTO;
 }
+
+/** Títulos de sección: los mismos nombres de los bloques del mantenedor (editor-sitio.tsx) y
+ * del sitio público (sitio-template.tsx) — una sola fuente para que no se desincronicen. */
+export const TITULOS_SECCION = {
+  portada: "Portada",
+  nosotros: "Sobre nosotros",
+  servicios: "Servicios",
+  horarios: "Horarios",
+  planes: "Planes y tarifas",
+  razones: "Por qué elegirnos",
+  galeria: "Galería de fotos",
+  testimonios: "Testimonios",
+  equipo: "Equipo",
+  pie: "Pie de página y contacto",
+} as const;
+
+/** Medidas de la imagen de portada según el hero del template (alto fluido 300–490 px,
+ * ancho completo, recortada con `object-fit: cover`). Se muestran en el mantenedor. */
+export const MEDIDAS_PORTADA = {
+  ancho: 1920,
+  alto: 700,
+  formato: "horizontal (≈ 11:4)",
+  pesoMaxMb: 5,
+  zonaSegura:
+    "Deja lo importante en el centro: en celulares se recorta a los lados y sobre la foto va un velo oscuro con el título y los botones.",
+} as const;
 
 export interface BloqueHero {
   titulo: string;
@@ -151,11 +78,29 @@ export interface BloqueHero {
   imagen_pos_y: number;
   cta_texto: string;
   cta_whatsapp: string;
+  /** Firma bajo el nombre en el encabezado (ej. "by Flavia Reyes"); vacía = no se muestra. */
+  firma: string;
+}
+
+/** Iconos disponibles para un servicio (id → componente en components/sitio/iconos-servicio.tsx). */
+export const ICONOS_SERVICIO = [
+  "mancuerna", "fuego", "corazon", "trofeo", "destello", "usuarios", "bicicleta", "huellas",
+  "actividad", "cronometro", "objetivo", "rayo", "manzana", "ensalada", "medalla", "olas",
+  "montana", "musica", "persona", "hoja",
+] as const;
+export type IconoServicio = (typeof ICONOS_SERVICIO)[number];
+
+export function iconoServicioValido(valor: unknown): IconoServicio | "" {
+  return (ICONOS_SERVICIO as readonly string[]).includes(valor as string) ? (valor as IconoServicio) : "";
 }
 
 export interface ItemServicio {
   nombre: string;
   descripcion: string;
+  /** Spec 71 §12.3: icono junto al título ("" = sin icono). */
+  icono: IconoServicio | "";
+  /** Spec 71 §12.3: imagen sobre el título. */
+  imagen_url: string | null;
 }
 
 export interface ItemHorario {
@@ -212,6 +157,23 @@ export interface BloqueContacto {
   whatsapp: string;
 }
 
+export const MAX_DESCRIPCION_EQUIPO = 500;
+
+/** Textos editables del pie de página (Spec 71 §10.4). `texto_legal` admite `{anio}` y `{titulo}`. */
+export interface BloquePie {
+  titulo_visita: string;
+  titulo_contacto: string;
+  texto_boton: string;
+  texto_legal: string;
+}
+
+export const PIE_POR_DEFECTO: BloquePie = {
+  titulo_visita: "Visítanos y conoce nuestros horarios:",
+  titulo_contacto: "Conversemos sobre tus objetivos:",
+  texto_boton: "Escríbenos por WhatsApp",
+  texto_legal: "© {anio} {titulo}. Todos los derechos reservados.",
+};
+
 export interface ContenidoSitio {
   hero: BloqueHero;
   sobre_nosotros: string;
@@ -221,9 +183,12 @@ export interface ContenidoSitio {
   galeria: ItemGaleria[];
   testimonios: ItemTestimonio[];
   equipo: ItemEquipo[];
+  /** Descripción del equipo (máx. `MAX_DESCRIPCION_EQUIPO` caracteres). */
+  equipo_descripcion: string;
   por_que_elegirnos: ItemPorQueElegirnos[];
   ubicacion: BloqueUbicacion;
   contacto: BloqueContacto;
+  pie: BloquePie;
 }
 
 export function contenidoVacio(nombreGimnasio: string): ContenidoSitio {
@@ -236,6 +201,7 @@ export function contenidoVacio(nombreGimnasio: string): ContenidoSitio {
       imagen_pos_y: 50,
       cta_texto: "Escríbenos",
       cta_whatsapp: "",
+      firma: "",
     },
     sobre_nosotros: "",
     servicios: [],
@@ -244,9 +210,11 @@ export function contenidoVacio(nombreGimnasio: string): ContenidoSitio {
     galeria: [],
     testimonios: [],
     equipo: [],
+    equipo_descripcion: "",
     por_que_elegirnos: [],
     ubicacion: { direccion: "", mapa_url: "" },
     contacto: { telefono: "", email: "", instagram: "", whatsapp: "" },
+    pie: { ...PIE_POR_DEFECTO },
   };
 }
 
@@ -256,15 +224,17 @@ export function contenidoVacio(nombreGimnasio: string): ContenidoSitio {
 interface ContenidoSitioCrudo {
   hero?: Partial<BloqueHero> | null;
   sobre_nosotros?: string | null;
-  servicios?: ItemServicio[] | null;
+  servicios?: Array<Partial<ItemServicio>> | null;
   horarios?: ItemHorario[] | null;
   tarifas?: Array<Partial<ItemTarifa>> | null;
   galeria?: Array<string | Partial<ItemGaleria>> | null;
   testimonios?: ItemTestimonio[] | null;
   equipo?: ItemEquipo[] | null;
+  equipo_descripcion?: string | null;
   por_que_elegirnos?: ItemPorQueElegirnos[] | null;
   ubicacion?: Partial<BloqueUbicacion> | null;
   contacto?: Partial<BloqueContacto> | null;
+  pie?: Partial<BloquePie> | null;
 }
 
 /** Normaliza contenido leído de Supabase (`contenido_borrador`/`contenido_publicado`/
@@ -286,9 +256,16 @@ export function normalizarContenido(raw: unknown): ContenidoSitio {
       imagen_pos_y: r.hero?.imagen_pos_y ?? 50,
       cta_texto: r.hero?.cta_texto ?? "Escríbenos",
       cta_whatsapp: r.hero?.cta_whatsapp ?? "",
+      // Contenido guardado antes de este campo (undefined) conserva la firma de Valinor.
+      firma: r.hero?.firma ?? "by Flavia Reyes",
     },
     sobre_nosotros: r.sobre_nosotros ?? "",
-    servicios: r.servicios ?? [],
+    servicios: (r.servicios ?? []).map((sv) => ({
+      nombre: sv.nombre ?? "",
+      descripcion: sv.descripcion ?? "",
+      icono: iconoServicioValido(sv.icono),
+      imagen_url: sv.imagen_url ?? null,
+    })),
     horarios: r.horarios ?? [],
     tarifas: (r.tarifas ?? []).map((t) => ({
       plan: t.plan ?? "",
@@ -303,6 +280,7 @@ export function normalizarContenido(raw: unknown): ContenidoSitio {
     ),
     testimonios: r.testimonios ?? [],
     equipo: r.equipo ?? [],
+    equipo_descripcion: (r.equipo_descripcion ?? "").slice(0, MAX_DESCRIPCION_EQUIPO),
     por_que_elegirnos: r.por_que_elegirnos ?? [],
     ubicacion: {
       direccion: r.ubicacion?.direccion ?? "",
@@ -314,13 +292,18 @@ export function normalizarContenido(raw: unknown): ContenidoSitio {
       instagram: r.contacto?.instagram ?? "",
       whatsapp: r.contacto?.whatsapp ?? "",
     },
+    pie: {
+      titulo_visita: r.pie?.titulo_visita?.trim() || PIE_POR_DEFECTO.titulo_visita,
+      titulo_contacto: r.pie?.titulo_contacto?.trim() || PIE_POR_DEFECTO.titulo_contacto,
+      texto_boton: r.pie?.texto_boton?.trim() || PIE_POR_DEFECTO.texto_boton,
+      texto_legal: r.pie?.texto_legal?.trim() || PIE_POR_DEFECTO.texto_legal,
+    },
   };
 }
 
 export interface Sitio {
   gimnasio_id: string;
-  tema: TemaSitio;
-  color_acento: string;
+  color_acento: AcentoSitio;
   contenido_borrador: ContenidoSitio;
   contenido_publicado: ContenidoSitio | null;
   publicado_at: string | null;
