@@ -18,7 +18,7 @@ import {
 import { formatFecha, formatMonto } from "@/lib/format";
 import { leerPagina, rangoPagina } from "@/lib/paginacion";
 import { mpModoPrueba, tokenAntonio } from "@/lib/mercadopago";
-import { ESTADO_SOLICITUD_LABEL, inicioPeriodoSuscripcion } from "@/lib/pagar-plan";
+import { ESTADO_SOLICITUD_LABEL, filtroSinMpAbandonado, inicioPeriodoSuscripcion } from "@/lib/pagar-plan";
 import { planSistemaPorId, planesSistemaVigentes } from "@/lib/planes-sistema";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
@@ -85,6 +85,7 @@ export default async function SuscripcionPage({
         .gte("created_at", desde ?? "1900-01-01")
         .lte("created_at", hasta ? `${hasta}T23:59:59.999Z` : "9999-12-31")
         .in("estado", estadoFiltro ? [estadoFiltro] : Object.keys(VARIANTE))
+        .or(filtroSinMpAbandonado())
         .order("created_at", { ascending: false })
         .range(...rangoPagina(pagina)),
     ]);

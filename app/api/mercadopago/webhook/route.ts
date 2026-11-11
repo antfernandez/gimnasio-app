@@ -31,7 +31,16 @@ export async function POST(request: NextRequest) {
 
   const pago = await obtenerPago(token, dataId);
   if (!pago?.external_reference) return NextResponse.json({ ok: true });
-  if (pago.status !== "approved") return NextResponse.json({ ok: true });
+  if (pago.status !== "approved") {
+    // Pendiente o rechazado: no se cambia la solicitud (el comprador puede reintentar con
+    // otro medio y el pago aprobado llegará con el mismo external_reference).
+    if (pago.status === "rejected" || pago.status === "cancelled") {
+      await registrarEvento("solicitud_pago_rechazada", {
+        detalle: { solicitud: pago.external_reference, flujo, payment_id: String(pago.id), estado_mp: pago.status },
+      });
+    }
+    return NextResponse.json({ ok: true });
+  }
 
   const admin = createAdminClient();
   const { data: solicitud } = await admin
@@ -67,7 +76,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "reintentar" }, { status: 500 });
   }
   await registrarEvento("solicitud_pago_confirmada", {
-    detalle: { solicitud: solicitud.id, flujo, via: "webhook" },
+    detalle: { solicitud: solicitud.id, flujo, via: "webhook", payment_id: String(pago.id) },
   });
   return NextResponse.json({ ok: true });
 }

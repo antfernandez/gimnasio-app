@@ -47,3 +47,21 @@ export function rangoPeriodo(inicio: string, meses: number): { desde: string; ha
   const finExclusivo = sumarMeses(inicio, meses);
   return { desde: inicio, hasta: aIso(new Date(Date.parse(`${finExclusivo}T00:00:00Z`) - 86_400_000)) };
 }
+
+/** Un checkout de Mercado Pago abandonado queda `pendiente` para siempre (MP no avisa). Se
+ * oculta de los historiales pasado este plazo; las transferencias pendientes sí se muestran. */
+export const MP_PENDIENTE_VISIBLE_MS = 2 * 60 * 60 * 1000;
+
+/** Filtro PostgREST: todo menos los checkouts de MP pendientes y vencidos. */
+export function filtroSinMpAbandonado(): string {
+  const limite = new Date(Date.now() - MP_PENDIENTE_VISIBLE_MS).toISOString();
+  return `metodo.eq.transferencia,estado.neq.pendiente,created_at.gte.${limite}`;
+}
+
+export function esMpAbandonado(s: { metodo: string; estado: string; created_at: string }): boolean {
+  return (
+    s.metodo === "mercado_pago" &&
+    s.estado === "pendiente" &&
+    Date.now() - new Date(s.created_at).getTime() > MP_PENDIENTE_VISIBLE_MS
+  );
+}

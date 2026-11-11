@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { BotonFormulario } from "@/components/superadmin/boton-formulario";
+import { esMpAbandonado } from "@/lib/pagar-plan";
 import { PagoManualForm } from "@/components/superadmin/pago-manual-form";
 import { Badge } from "@/components/ui/badge";
 import { BotonLimpiar } from "@/components/ui/boton-limpiar";
@@ -67,6 +68,7 @@ export default async function PagosPage({
 
   const coincidentes = (pagos ?? []).filter(
     (s) =>
+      !esMpAbandonado(s) &&
       (!estado || s.estado === estado) &&
       (!metodo || s.metodo === metodo) &&
       (!q || (s.gimnasios?.nombre ?? "").toLowerCase().includes(q)),

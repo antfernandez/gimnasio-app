@@ -45,7 +45,7 @@ export async function crearPreferencia(opts: {
         {
           title: opts.titulo,
           quantity: 1,
-          unit_price: opts.monto,
+          unit_price: Math.round(opts.monto), // CLP no admite decimales
           currency_id: "CLP",
         },
       ],

@@ -17,7 +17,7 @@ import {
 import { getAlumnoActual } from "@/lib/alumno-portal";
 import { formatFecha, formatMonto } from "@/lib/format";
 import { leerPagina, rangoPagina } from "@/lib/paginacion";
-import { ESTADO_SOLICITUD_LABEL } from "@/lib/pagar-plan";
+import { ESTADO_SOLICITUD_LABEL, filtroSinMpAbandonado } from "@/lib/pagar-plan";
 import { estadoPlan } from "@/lib/planes";
 import { tokenValinor } from "@/lib/mercadopago";
 import { createClient } from "@/lib/supabase/server";
@@ -81,6 +81,7 @@ export default async function PagarPlanPage({
         .gte("created_at", desde ?? "1900-01-01")
         .lte("created_at", hasta ? `${hasta}T23:59:59.999Z` : "9999-12-31")
         .in("estado", estadoFiltro ? [estadoFiltro] : Object.keys(VARIANTE))
+        .or(filtroSinMpAbandonado())
         .order("created_at", { ascending: false })
         .range(...rangoPagina(pagina)),
       supabase

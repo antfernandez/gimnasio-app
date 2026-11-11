@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 // Spec 65: CSP en modo enforce (recorridas sitio público, panel, portal y superadmin sin violaciones).
-// Al integrar Mercado Pago hay que añadir sus orígenes aquí. Next inyecta scripts inline
+// Mercado Pago: el checkout es una redirección de página completa; solo `form-action` lo menciona. Next inyecta scripts inline
 // (hidratación), por eso `script-src` lleva 'unsafe-inline' (sin nonce no se puede evitar con
 // páginas cacheadas); en desarrollo hace falta además 'unsafe-eval'.
 const supabaseOrigen = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -18,7 +18,7 @@ const csp = [
   `connect-src 'self' ${supabaseOrigen} ${supabaseWs}`.trim(),
   "frame-ancestors 'none'",
   "base-uri 'self'",
-  "form-action 'self'",
+  "form-action 'self' https://*.mercadopago.cl https://*.mercadopago.com",
   "object-src 'none'",
 ].join("; ");
 
