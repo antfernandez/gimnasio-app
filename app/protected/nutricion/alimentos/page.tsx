@@ -7,7 +7,6 @@ import {
 } from "@/app/protected/nutricion/actions";
 import { AlimentoForm } from "@/components/nutricion/alimento-form";
 import { EliminarButton } from "@/components/nutricion/eliminar-button";
-import { Badge } from "@/components/ui/badge";
 import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -77,7 +76,6 @@ export default async function AlimentosPage({
       .from("alimentos")
       .select("*")
       .eq("id", params.editar)
-      .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
       .maybeSingle();
     enEdicion = (fila ?? undefined) as Alimento | undefined;
   }
@@ -175,18 +173,11 @@ export default async function AlimentosPage({
               </TableHeader>
               <TableBody>
                 {visibles.map((a) => {
-                  const propio =
-                    a.gimnasio_id === perfilData.perfil.gimnasio_id;
                   const enUso = recetasPorAlimento.get(a.id)?.size ?? 0;
                   return (
                     <TableRow key={a.id}>
                       <TableCell className="font-medium text-foreground">
                         {a.nombre}
-                        {!propio && (
-                          <Badge variant="secondary" className="ml-2">
-                            Base
-                          </Badge>
-                        )}
                       </TableCell>
                       <TableCell>{labelCategoria(a.categoria)}</TableCell>
                       <TableCell>{fmt1(Number(a.calorias))}</TableCell>
@@ -199,29 +190,23 @@ export default async function AlimentosPage({
                           : "—"}
                       </TableCell>
                       <TableCell className="w-px whitespace-nowrap text-right">
-                        {propio ? (
-                          <div className="flex justify-end gap-1">
-                            <IconAction
-                              icon={Pencil}
-                              label="Editar"
-                              href={`/protected/nutricion/alimentos?editar=${a.id}`}
-                            />
-                            <EliminarButton
-                              entidad="alimento"
-                              nombre={a.nombre}
-                              accion={eliminarAlimento.bind(null, a.id)}
-                              bloqueadoPor={
-                                enUso
-                                  ? `Está en uso en ${enUso} ${enUso === 1 ? "receta" : "recetas"}`
-                                  : undefined
-                              }
-                            />
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            Solo lectura
-                          </span>
-                        )}
+                        <div className="flex justify-end gap-1">
+                          <IconAction
+                            icon={Pencil}
+                            label="Editar"
+                            href={`/protected/nutricion/alimentos?editar=${a.id}`}
+                          />
+                          <EliminarButton
+                            entidad="alimento"
+                            nombre={a.nombre}
+                            accion={eliminarAlimento.bind(null, a.id)}
+                            bloqueadoPor={
+                              enUso
+                                ? `Está en uso en ${enUso} ${enUso === 1 ? "receta" : "recetas"}`
+                                : undefined
+                            }
+                          />
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

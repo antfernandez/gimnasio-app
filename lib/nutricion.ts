@@ -23,6 +23,7 @@ export interface Alimento {
   grasas: number;
   unidad_porcion: string | null;
   gramos_porcion: number | null;
+  alimento_base_id?: string | null;
 }
 
 export interface Receta {

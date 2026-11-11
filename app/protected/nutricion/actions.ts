@@ -91,17 +91,56 @@ export async function guardarAlimento(
   };
 
   const supabase = await createClient();
-  const { error } = id
-    ? await supabase
-        .from("alimentos")
-        .update(datos)
-        .eq("id", id)
-        .eq("gimnasio_id", perfilData.perfil.gimnasio_id)
-    : await supabase.from("alimentos").insert({
+  const gimnasioId = perfilData.perfil.gimnasio_id;
+
+  // ¿Es un alimento base (global)? Se edita creando una copia propia del gimnasio.
+  let baseId: string | null = null;
+  if (id) {
+    const { data: actual } = await supabase
+      .from("alimentos")
+      .select("id, gimnasio_id")
+      .eq("id", id)
+      .maybeSingle();
+    if (!actual) return { error: "El alimento ya no existe." };
+    if (actual.gimnasio_id === null) baseId = actual.id as string;
+  }
+
+  let error;
+  if (id && !baseId) {
+    ({ error } = await supabase
+      .from("alimentos")
+      .update(datos)
+      .eq("id", id)
+      .eq("gimnasio_id", gimnasioId));
+  } else {
+    const { data: copia, error: errCopia } = await supabase
+      .from("alimentos")
+      .insert({
         ...datos,
-        gimnasio_id: perfilData.perfil.gimnasio_id,
+        gimnasio_id: gimnasioId,
         creado_por: perfilData.perfil.id,
-      });
+        alimento_base_id: baseId,
+      })
+      .select("id")
+      .single();
+    error = errCopia;
+    if (!error && baseId && copia) {
+      // Oculta el base para este gimnasio y reapunta las recetas a la copia.
+      const { error: errOculto } = await supabase
+        .from("alimentos_ocultos")
+        .insert({ gimnasio_id: gimnasioId, alimento_id: baseId });
+      if (errOculto) {
+        await supabase.from("alimentos").delete().eq("id", copia.id);
+        return { error: "No se pudo guardar el alimento. Intenta de nuevo." };
+      }
+      await supabase
+        .from("receta_ingredientes")
+        .update({ alimento_id: copia.id })
+        .eq("alimento_id", baseId)
+        .eq("gimnasio_id", gimnasioId);
+      revalidatePath("/protected/nutricion/recetas");
+    }
+  }
 
   if (error) {
     if (error.code === UNIQUE_VIOLATION) return { error: "Ya existe un alimento con ese nombre." };
@@ -126,11 +165,24 @@ export async function eliminarAlimento(id: string): Promise<NutricionFormState> 
     return { error: `Está en uso en ${enRecetas} ${enRecetas === 1 ? "receta" : "recetas"}.` };
   }
 
-  const { error } = await supabase
+  const { data: actual } = await supabase
     .from("alimentos")
-    .delete()
+    .select("gimnasio_id")
     .eq("id", id)
-    .eq("gimnasio_id", perfilData.perfil.gimnasio_id);
+    .maybeSingle();
+  if (!actual) return { error: "El alimento ya no existe." };
+
+  // Alimento base: se oculta solo para este gimnasio.
+  const { error } =
+    actual.gimnasio_id === null
+      ? await supabase
+          .from("alimentos_ocultos")
+          .insert({ gimnasio_id: perfilData.perfil.gimnasio_id, alimento_id: id })
+      : await supabase
+          .from("alimentos")
+          .delete()
+          .eq("id", id)
+          .eq("gimnasio_id", perfilData.perfil.gimnasio_id);
   if (error) {
     if (error.code === FK_VIOLATION) {
       return { error: "No se puede eliminar: el alimento se usa en alguna receta." };
