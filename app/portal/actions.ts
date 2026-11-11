@@ -4,11 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getAlumnoActual } from "@/lib/alumno-portal";
-import { buildFilasRegistroRutina } from "@/lib/bitacora";
 import { validarEmail, validarTelefono } from "@/lib/contacto";
 import { createClient } from "@/lib/supabase/server";
 import type { GuardarEjercicioInput, GuardarEjercicioResult } from "@/app/protected/bitacora/actions";
-import { hoyIso, inicioDeSemana, sumarDias } from "@/lib/turnos";
+import { hoyIso } from "@/lib/turnos";
 import type { Rutina } from "@/lib/types";
 
 export type ContactoFormState = {
@@ -41,89 +40,6 @@ export async function updateContactoAlumno(
 
   revalidatePath("/portal");
   return { ok: true };
-}
-
-export type BitacoraFormState = {
-  error?: string;
-};
-
-/** Sprint 13, Parte E: registro propio de sesión de bitácora — la fecha se fuerza a
- * hoy en el servidor (defensa en profundidad junto con la política RLS de
- * `registros_rutina`, no solo el formulario que ya no muestra selector de fecha). */
-export async function createRegistroRutinaPropio(
-  _prevState: BitacoraFormState,
-  formData: FormData,
-): Promise<BitacoraFormState> {
-  const rutinaId = String(formData.get("rutina_id") ?? "").trim();
-  if (!rutinaId) {
-    return { error: "No se encontró la rutina." };
-  }
-
-  const alumno = await getAlumnoActual();
-  if (!alumno) redirect("/auth/login");
-  if (!alumno.puede_registrar_bitacora) {
-    return { error: "Tu entrenador aún no habilitó el registro de bitácora propio." };
-  }
-
-  const supabase = await createClient();
-  const { data: rutina } = await supabase
-    .from("rutinas")
-    .select("*")
-    .eq("id", rutinaId)
-    .eq("alumno_id", alumno.id)
-    .maybeSingle();
-
-  if (!rutina) {
-    return { error: "No se encontró la rutina." };
-  }
-
-  const filas = buildFilasRegistroRutina((rutina as Rutina).contenido, formData);
-  if (filas.length === 0) {
-    return { error: "Registra al menos un ejercicio de la sesión." };
-  }
-
-  // Spec 31: una sesión por día y no más sesiones por semana que los días del plan.
-  const hoy = hoyIso();
-  const lunes = inicioDeSemana(hoy);
-  const [{ data: planAlumno }, { data: semana }] = await Promise.all([
-    alumno.plan_id
-      ? supabase.from("planes").select("dias_por_semana").eq("id", alumno.plan_id).maybeSingle()
-      : Promise.resolve({ data: null }),
-    supabase
-      .from("registros_rutina")
-      .select("fecha")
-      .eq("alumno_id", alumno.id)
-      .gte("fecha", lunes)
-      .lte("fecha", sumarDias(lunes, 6)),
-  ]);
-  const fechasSemana = new Set((semana ?? []).map((r) => r.fecha as string));
-  if (fechasSemana.has(hoy)) {
-    return { error: "Ya registraste la sesión de hoy." };
-  }
-  const limiteSemanal = (planAlumno as { dias_por_semana: number } | null)?.dias_por_semana;
-  if (limiteSemanal && fechasSemana.size >= limiteSemanal) {
-    return {
-      error: `Tu plan incluye ${limiteSemanal} sesiones por semana y ya las registraste.`,
-    };
-  }
-
-  const { error } = await supabase.from("registros_rutina").insert(
-    filas.map((f) => ({
-      gimnasio_id: alumno.gimnasio_id,
-      alumno_id: alumno.id,
-      rutina_id: rutinaId,
-      fecha: hoyIso(),
-      origen: "alumno",
-      ...f,
-    })),
-  );
-
-  if (error) {
-    return { error: "No se pudo registrar la sesión. Intenta de nuevo." };
-  }
-
-  revalidatePath("/portal/bitacora");
-  return {};
 }
 
 function numeroPropio(v: string): number | null {
