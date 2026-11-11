@@ -1,4 +1,4 @@
-import { Pencil, Plus } from "lucide-react";
+import { Pencil } from "lucide-react";
 import Link from "next/link";
 
 import { archivarPlanNutricional } from "@/app/protected/nutricion/actions";
@@ -63,15 +63,6 @@ export default async function PlanesNutricionalesPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex justify-end">
-        <Button asChild size="lg">
-          <Link href="/protected/nutricion/planes/nuevo">
-            <Plus className="h-4 w-4" />
-            Nuevo plan nutricional
-          </Link>
-        </Button>
-      </div>
-
       {params.guardado === "1" && (
         <div className="rounded-[9px] border border-success/35 bg-success/10 px-4 py-3 text-sm text-success">
           Plan guardado correctamente.
@@ -95,7 +86,7 @@ export default async function PlanesNutricionalesPage({
               <option value="borrador">Borrador</option>
               <option value="archivado">Archivado</option>
             </Select>
-            <Button type="submit" variant="outline">
+            <Button size="sm" type="submit" variant="outline">
               Filtrar
             </Button>
             <BotonLimpiar href="/protected/nutricion/planes" activo={Boolean(q || estado)} />

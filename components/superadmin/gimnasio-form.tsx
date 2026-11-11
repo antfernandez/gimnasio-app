@@ -82,7 +82,7 @@ export function GimnasioForm({
       </div>
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
       {state.ok && <p className="text-sm text-primary">{state.ok}</p>}
-      <Button type="submit" size="lg" className="w-fit" disabled={isPending}>
+      <Button type="submit" size="sm" className="w-fit" disabled={isPending}>
         {isPending ? "Guardando…" : "Guardar cambios"}
       </Button>
     </form>

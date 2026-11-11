@@ -17,20 +17,20 @@ export function BotonLimpiar({
 }) {
   if (!activo) {
     return (
-      <Button type="button" variant="ghost" disabled>
+      <Button size="sm" type="button" variant="ghost" disabled>
         Limpiar
       </Button>
     );
   }
   if (href) {
     return (
-      <Button asChild variant="ghost">
+      <Button size="sm" asChild variant="ghost">
         <Link href={href}>Limpiar</Link>
       </Button>
     );
   }
   return (
-    <Button type="button" variant="ghost" onClick={onClick}>
+    <Button size="sm" type="button" variant="ghost" onClick={onClick}>
       Limpiar
     </Button>
   );

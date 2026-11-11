@@ -1,31 +1,20 @@
-"use client";
-
-import { Plus } from "lucide-react";
-import { useState } from "react";
+import Link from "next/link";
 
 import { AsignarForm } from "@/components/nutricion/asignar-form";
 import { Button } from "@/components/ui/button";
 
-type Props = React.ComponentProps<typeof AsignarForm>;
+type Props = React.ComponentProps<typeof AsignarForm> & { abierto: boolean };
 
-/** Botón "Asignar alumno" sobre la grilla (spec 51): abre/cierra el formulario de asignación. */
-export function AsignarPanel(props: Props) {
-  const [abierto, setAbierto] = useState(false);
-
+/** Formulario de asignación (spec 51/80): se abre con `?nuevo=1` desde el botón de las pestañas. */
+export function AsignarPanel({ abierto, ...props }: Props) {
+  if (!abierto) return null;
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <Button type="button" size="lg" onClick={() => setAbierto((v) => !v)} aria-expanded={abierto}>
-          <Plus className="h-4 w-4" />
-          Asignar alumno
-        </Button>
-      </div>
-      {abierto && (
-        <div className="rounded-[9px] border border-border bg-card p-5">
-          <h3 className="mb-4 text-base">Asignar alumno</h3>
-          <AsignarForm {...props} />
-        </div>
-      )}
+    <div className="rounded-[9px] border border-border bg-card p-5">
+      <h3 className="mb-4 text-base">Asignar alumno</h3>
+      <AsignarForm {...props} />
+      <Button asChild size="sm" variant="ghost" className="mt-3">
+        <Link href="/protected/nutricion/asignar">Cancelar</Link>
+      </Button>
     </div>
   );
 }

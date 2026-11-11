@@ -206,7 +206,7 @@ export function PagoSuscripcionForm({
                 <Label htmlFor="nota">Nota (opcional)</Label>
                 <Textarea id="nota" name="nota" rows={1} className="min-h-[44px]" placeholder="Ej: Transferencia a nombre de..." />
               </div>
-              <Button type="submit" disabled={pending || !cuenta}>
+              <Button size="sm" type="submit" disabled={pending || !cuenta}>
                 {pending ? "Procesando…" : "Enviar comprobante"}
               </Button>
             </CardContent>
@@ -227,7 +227,7 @@ export function PagoSuscripcionForm({
             <div className="text-3xl font-bold text-primary">{formatMonto(total)}</div>
             {conIva && <div className="text-xs text-muted-foreground">IVA incluido</div>}
           </div>
-          <Button type="submit" disabled={pending}>
+          <Button size="sm" type="submit" disabled={pending}>
             <Lock />
             {pending ? "Procesando…" : "Pagar con Mercado Pago"}
           </Button>

@@ -106,7 +106,7 @@ export function PlanForm({ action, plan, submitLabel }: Props) {
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
       <div className="flex gap-3">
-        <Button type="submit" size="lg" disabled={isPending}>
+        <Button type="submit" size="sm" disabled={isPending}>
           {isPending ? "Guardando…" : submitLabel}
         </Button>
       </div>

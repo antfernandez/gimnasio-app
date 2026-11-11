@@ -86,7 +86,7 @@ export default async function SuscripcionesPage({
           defaultValue={q}
           className="min-w-[220px] max-w-xs flex-1"
         />
-        <Button type="submit" variant="outline">
+        <Button size="sm" type="submit" variant="outline">
           Filtrar
         </Button>
         <BotonLimpiar href="/superadmin/suscripciones" activo={Boolean(q)} />

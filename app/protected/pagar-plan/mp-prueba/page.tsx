@@ -64,12 +64,12 @@ export default async function MpPruebaPage({
             </div>
           </dl>
           <form action={resolverPagoMpPrueba.bind(null, solicitud.id, true)}>
-            <Button type="submit" className="w-full">
+            <Button size="sm" type="submit" className="w-full">
               Pagar (simulado)
             </Button>
           </form>
           <form action={resolverPagoMpPrueba.bind(null, solicitud.id, false)}>
-            <Button type="submit" variant="outline" className="w-full">
+            <Button size="sm" type="submit" variant="outline" className="w-full">
               Rechazar pago (simulado)
             </Button>
           </form>

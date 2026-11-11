@@ -94,7 +94,7 @@ export function BitacoraHistorialPortal({ registros, rutinas }: Props) {
         </label>
       </div>
       <div className="flex gap-3">
-        <Button
+        <Button size="sm"
           type="button"
           variant="outline"
           onClick={() => {

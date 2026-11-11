@@ -226,7 +226,7 @@ export function AlumnoForm({ action, alumno, submitLabel, acciones, accionTitulo
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" size="lg" disabled={isPending}>
+        <Button type="submit" size="sm" disabled={isPending}>
           {isPending ? "Guardando…" : submitLabel}
         </Button>
         {acciones}

@@ -831,7 +831,7 @@ function ReservarAlumnoForm({
       <input type="hidden" name="fecha" value={slot.fecha} />
       <input type="hidden" name="hora_inicio" value={slot.horaInicio} />
       <input type="hidden" name="duracion_min" value={slot.duracionMin} />
-      <Button type="submit" disabled={isPending}>
+      <Button size="sm" type="submit" disabled={isPending}>
         {isPending ? "Reservando…" : "Reservar este turno"}
       </Button>
       {state.error && <span className="text-xs text-destructive">{state.error}</span>}

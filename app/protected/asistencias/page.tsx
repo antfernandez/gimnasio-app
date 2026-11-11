@@ -145,7 +145,7 @@ export default async function AsistenciasPage({
               className="col-span-2 w-full sm:col-span-1 sm:min-w-[200px] sm:max-w-xs sm:flex-1"
             />
             <div className="col-span-2 flex items-center gap-2 sm:col-span-1">
-              <Button type="submit" variant="outline">
+              <Button size="sm" type="submit" variant="outline">
                 Filtrar
               </Button>
               <BotonLimpiar href="/protected/asistencias" activo={Boolean(desde || hasta || estado || q)} />

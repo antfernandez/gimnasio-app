@@ -132,7 +132,7 @@ export function MembresiaForm({
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
       <div>
-        <Button type="submit" disabled={isPending}>
+        <Button size="sm" type="submit" disabled={isPending}>
           {isPending ? "Guardando…" : "Guardar membresía"}
         </Button>
       </div>

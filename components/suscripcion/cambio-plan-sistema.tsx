@@ -65,7 +65,7 @@ export function CambioPlanSistema({
               <Label htmlFor="nota_cambio">Nota (opcional)</Label>
               <Textarea id="nota_cambio" name="nota" rows={1} className="min-h-[44px]" />
             </div>
-            <Button type="submit" disabled={enviando}>
+            <Button size="sm" type="submit" disabled={enviando}>
               {enviando ? "Enviando…" : "Solicitar cambio"}
             </Button>
             <p className="text-xs text-muted-foreground sm:col-span-3">

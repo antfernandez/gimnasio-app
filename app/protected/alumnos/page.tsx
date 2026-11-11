@@ -178,7 +178,7 @@ export default async function AlumnosPage({
                 defaultValue={q}
                 className="max-w-xs"
               />
-              <Button type="submit" variant="outline">
+              <Button size="sm" type="submit" variant="outline">
                 Filtrar
               </Button>
               <BotonLimpiar

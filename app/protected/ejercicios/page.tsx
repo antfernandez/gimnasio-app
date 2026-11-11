@@ -30,13 +30,13 @@ export default async function EjerciciosPage({
           <h2 className="text-2xl">Ejercicios</h2>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button asChild variant="outline" size="lg">
+          <Button asChild variant="outline" size="sm">
             <Link href="/protected/ejercicios/zonas">
               <Shapes className="h-4 w-4" />
               Zonas
             </Link>
           </Button>
-          <Button asChild size="lg">
+          <Button asChild size="sm">
             <Link href="/protected/ejercicios/nuevo">
               <Plus className="h-4 w-4" />
               Nuevo ejercicio

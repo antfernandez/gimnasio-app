@@ -18,7 +18,7 @@ export function BotonFormulario({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-end">
-        <Button onClick={() => setAbierto((v) => !v)} variant={abierto ? "secondary" : "default"}>
+        <Button size="sm" onClick={() => setAbierto((v) => !v)} variant={abierto ? "secondary" : "default"}>
           {abierto ? "Cerrar" : etiqueta}
         </Button>
       </div>

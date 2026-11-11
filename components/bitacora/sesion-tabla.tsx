@@ -155,7 +155,7 @@ export function SesionTabla({ rutina, guardar, guardados, fechaFutura }: Props) 
               <div className="mt-3 flex min-h-11 items-center gap-3">
                 <Button
                   type="button"
-                  size="lg"
+                  size="sm"
                   disabled={fechaFutura || incompleta || guardando === i}
                   onClick={() => guardarFila(i)}
                 >

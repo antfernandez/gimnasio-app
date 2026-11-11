@@ -85,7 +85,7 @@ export default async function PermisosPage({
               <option value="inactivos">De baja</option>
               <option value="todos">Todos</option>
             </Select>
-            <Button type="submit" variant="outline">
+            <Button size="sm" type="submit" variant="outline">
               Filtrar
             </Button>
             <BotonLimpiar href="/protected/permisos" activo={Boolean(q || estado !== "activos")} />

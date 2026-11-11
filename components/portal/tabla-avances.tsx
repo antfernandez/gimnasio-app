@@ -39,7 +39,7 @@ export function TablaAvances({ avances }: { avances: Avance[] }) {
       <div className="flex flex-wrap items-center gap-3">
         <Input type="date" aria-label="Desde" className="w-auto" value={bDesde} onChange={(e) => setBDesde(e.target.value)} />
         <Input type="date" aria-label="Hasta" className="w-auto" value={bHasta} onChange={(e) => setBHasta(e.target.value)} />
-        <Button
+        <Button size="sm"
           type="button"
           variant="outline"
           onClick={() => {

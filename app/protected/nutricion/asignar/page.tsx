@@ -40,7 +40,7 @@ const VARIANTE_ESTADO: Record<EstadoAsignacion, "success" | "default" | "seconda
 export default async function AsignarAlumnoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ estado?: string; q?: string; asignado?: string; pagina?: string }>;
+  searchParams: Promise<{ estado?: string; q?: string; asignado?: string; nuevo?: string; pagina?: string }>;
 }) {
   const params = await searchParams;
   const perfilData = await getPerfilActual();
@@ -113,6 +113,7 @@ export default async function AsignarAlumnoPage({
       )}
 
       <AsignarPanel
+        abierto={params.nuevo === "1"}
         alumnos={(alumnosAsignables ?? []).map((a) => ({
           id: a.id as string,
           nombre: `${a.nombres} ${a.apellidos}`.trim(),
@@ -138,7 +139,7 @@ export default async function AsignarAlumnoPage({
               <option value="todos">Todos</option>
             </Select>
             <Input name="q" placeholder="Buscar alumno" defaultValue={params.q ?? ""} className="w-56" />
-            <Button type="submit" variant="outline">
+            <Button size="sm" type="submit" variant="outline">
               Filtrar
             </Button>
             <BotonLimpiar href="/protected/nutricion/asignar" activo={Boolean(params.q || params.estado)} />

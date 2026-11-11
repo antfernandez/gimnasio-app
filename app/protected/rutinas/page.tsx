@@ -82,7 +82,7 @@ export default async function RutinasPage({
           </div>
           <h2 className="text-2xl">Rutinas</h2>
         </div>
-        <Button asChild size="lg">
+        <Button asChild size="sm">
           <Link href="/protected/rutinas/nuevo">
             <Plus className="h-4 w-4" />
             Nueva rutina
@@ -123,7 +123,7 @@ export default async function RutinasPage({
                 <option value="activa">Activa</option>
                 <option value="baja">De baja</option>
               </Select>
-              <Button type="submit" variant="outline">
+              <Button size="sm" type="submit" variant="outline">
                 Filtrar
               </Button>
               <BotonLimpiar href="/protected/rutinas" activo={Boolean(q || (categoria || estado))} />

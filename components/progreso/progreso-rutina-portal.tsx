@@ -147,7 +147,7 @@ export function ProgresoRutinaPortal({ registros, hoy }: { registros: RegistroRu
                 className="w-auto"
               />
             </div>
-            <Button type="submit" variant="outline">
+            <Button size="sm" type="submit" variant="outline">
               Filtrar
             </Button>
             <BotonLimpiar

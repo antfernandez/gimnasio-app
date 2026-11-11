@@ -86,7 +86,7 @@ export function AsignarForm({ alumnos, planes, responsables, responsableActual, 
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
       <div className="flex gap-3">
-        <Button type="submit" size="lg" disabled={isPending}>
+        <Button type="submit" size="sm" disabled={isPending}>
           {isPending ? "Guardando…" : "Asignar alumno"}
         </Button>
       </div>

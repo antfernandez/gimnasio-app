@@ -88,7 +88,7 @@ export default async function PlanesPage({
           </div>
           <h2 className="text-2xl">Planes</h2>
         </div>
-        <Button asChild size="lg">
+        <Button asChild size="sm">
           <Link href="/protected/planes/nuevo">
             <Plus className="h-4 w-4" />
             Nuevo plan
@@ -124,7 +124,7 @@ export default async function PlanesPage({
               <option value="proximo">Próximo</option>
               <option value="vencido">Vencido</option>
             </Select>
-            <Button type="submit" variant="outline">
+            <Button size="sm" type="submit" variant="outline">
               Filtrar
             </Button>
             <BotonLimpiar href="/protected/planes" activo={Boolean(q || estado)} />

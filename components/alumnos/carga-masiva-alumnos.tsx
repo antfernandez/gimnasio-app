@@ -132,7 +132,7 @@ export function CargaMasivaAlumnos({ maxFilas }: { maxFilas: number }) {
             los planes vigentes de tu gimnasio, listas desplegables y una hoja de instrucciones.
           </p>
           <div>
-            <Button asChild variant="outline" size="lg">
+            <Button asChild variant="outline" size="sm">
               <a href="/api/export/template-alumnos">
                 <Download className="h-4 w-4" />
                 Descargar template
@@ -156,7 +156,7 @@ export function CargaMasivaAlumnos({ maxFilas }: { maxFilas: number }) {
           />
           <div className="flex flex-wrap items-center gap-3">
             <Button
-              size="lg"
+              size="sm"
               variant="outline"
               disabled={cargando !== null}
               onClick={() => inputRef.current?.click()}
@@ -248,7 +248,7 @@ export function CargaMasivaAlumnos({ maxFilas }: { maxFilas: number }) {
 
             <div>
               <Button
-                size="lg"
+                size="sm"
                 disabled={importables === 0 || !!validacion.bloqueo || cargando !== null}
                 onClick={importar}
               >
@@ -271,7 +271,7 @@ export function CargaMasivaAlumnos({ maxFilas }: { maxFilas: number }) {
             </p>
             {resultado.omitidos + resultado.con_error > 0 && (
               <div>
-                <Button asChild variant="outline" size="lg">
+                <Button asChild variant="outline" size="sm">
                   <a href={`/api/export/reporte-carga-alumnos?id=${resultado.carga_id}`}>
                     <Download className="h-4 w-4" />
                     Descargar filas con error

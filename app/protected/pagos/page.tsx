@@ -123,7 +123,7 @@ export default async function PagosPage({
               ))}
             </Select>
             <div className="col-span-2 flex items-center gap-2 sm:col-span-1">
-              <Button type="submit" variant="outline">
+              <Button size="sm" type="submit" variant="outline">
                 Filtrar
               </Button>
               <BotonLimpiar href="/protected/pagos" activo={Boolean(q || estado)} />

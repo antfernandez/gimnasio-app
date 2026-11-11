@@ -1,4 +1,4 @@
-import { Pencil, Plus } from "lucide-react";
+import { Pencil } from "lucide-react";
 import Link from "next/link";
 
 import { eliminarReceta } from "@/app/protected/nutricion/actions";
@@ -77,15 +77,6 @@ export default async function RecetasPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex justify-end">
-        <Button asChild size="lg">
-          <Link href="/protected/nutricion/recetas/nueva">
-            <Plus className="h-4 w-4" />
-            Nueva receta
-          </Link>
-        </Button>
-      </div>
-
       {params.guardado === "1" && (
         <div className="rounded-[9px] border border-success/35 bg-success/10 px-4 py-3 text-sm text-success">
           Receta guardada correctamente.
@@ -115,7 +106,7 @@ export default async function RecetasPage({
               <option value="activo">Activo</option>
               <option value="borrador">Borrador</option>
             </Select>
-            <Button type="submit" variant="outline">
+            <Button size="sm" type="submit" variant="outline">
               Filtrar
             </Button>
             <BotonLimpiar href="/protected/nutricion/recetas" activo={Boolean(q || tipo || estado)} />

@@ -119,7 +119,7 @@ export default async function PlanesPage({
             </option>
           ))}
         </Select>
-        <Button type="submit" variant="outline">
+        <Button size="sm" type="submit" variant="outline">
           Filtrar
         </Button>
         <BotonLimpiar href="/superadmin/planes" activo={Boolean(hayFiltros)} />

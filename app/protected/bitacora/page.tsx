@@ -90,7 +90,7 @@ export default async function BitacoraPage({
               <Label htmlFor="fecha">Fecha</Label>
               <Input id="fecha" name="fecha" type="date" defaultValue={fecha} required className="h-11" />
             </div>
-            <Button type="submit" size="lg">
+            <Button type="submit" size="sm">
               Filtrar
             </Button>
           </form>

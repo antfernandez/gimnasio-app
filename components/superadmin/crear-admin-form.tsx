@@ -40,7 +40,7 @@ export function CrearAdminForm() {
           canal seguro (no se envía correo automático).
         </p>
       )}
-      <Button type="submit" size="lg" className="w-fit" disabled={isPending}>
+      <Button type="submit" size="sm" className="w-fit" disabled={isPending}>
         {isPending ? "Creando…" : "Crear cuenta de Admin"}
       </Button>
     </form>

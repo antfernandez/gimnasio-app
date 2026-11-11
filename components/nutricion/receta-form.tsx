@@ -285,7 +285,7 @@ export function RecetaForm({ action, alimentos, receta, fotoUrl = null, gimnasio
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
       <div className="flex gap-3">
-        <Button type="submit" size="lg" disabled={isPending}>
+        <Button type="submit" size="sm" disabled={isPending}>
           {isPending ? "Guardando…" : submitLabel}
         </Button>
       </div>

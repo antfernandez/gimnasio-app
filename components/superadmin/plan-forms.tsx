@@ -91,7 +91,7 @@ export function NuevoPlanForm() {
         </div>
       </div>
       <Mensajes state={state} />
-      <Button type="submit" className="w-fit" disabled={isPending}>
+      <Button size="sm" type="submit" className="w-fit" disabled={isPending}>
         {isPending ? "Creando…" : "Crear plan"}
       </Button>
     </form>
@@ -111,7 +111,7 @@ export function EditarPlanForm({ plan }: { plan: PlanEditable }) {
         Plan activo (se ofrece mientras esté vigente)
       </label>
       <Mensajes state={state} />
-      <Button type="submit" className="w-fit" disabled={isPending}>
+      <Button size="sm" type="submit" className="w-fit" disabled={isPending}>
         {isPending ? "Guardando…" : "Guardar plan"}
       </Button>
     </form>
@@ -148,7 +148,7 @@ export function CambiarPrecioForm({
         </div>
       </div>
       <Mensajes state={state} />
-      <Button type="submit" className="w-fit" disabled={isPending}>
+      <Button size="sm" type="submit" className="w-fit" disabled={isPending}>
         {isPending ? "Guardando…" : "Registrar nuevo precio"}
       </Button>
     </form>

@@ -1,4 +1,4 @@
-import { Pencil, Plus } from "lucide-react";
+import { Pencil } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -103,15 +103,6 @@ export default async function AlimentosPage({
         </div>
       )}
 
-      <div className="flex justify-end">
-        <Button asChild size="lg">
-          <Link href="/protected/nutricion/alimentos?nuevo=1">
-            <Plus className="h-4 w-4" />
-            Nuevo alimento
-          </Link>
-        </Button>
-      </div>
-
       {(enEdicion || params.nuevo === "1") && (
         <Card>
           <CardContent className="pt-6">
@@ -124,7 +115,7 @@ export default async function AlimentosPage({
               alimento={enEdicion}
               submitLabel={enEdicion ? "Guardar cambios" : "Crear alimento"}
             />
-            <Button asChild variant="ghost" className="mt-3">
+            <Button size="sm" asChild variant="ghost" className="mt-3">
               <Link href="/protected/nutricion/alimentos">Cancelar</Link>
             </Button>
           </CardContent>
@@ -156,7 +147,7 @@ export default async function AlimentosPage({
                   </option>
                 ))}
               </Select>
-              <Button type="submit" variant="outline">
+              <Button size="sm" type="submit" variant="outline">
                 Filtrar
               </Button>
               <BotonLimpiar href="/protected/nutricion/alimentos" activo={Boolean(q || categoria)} />

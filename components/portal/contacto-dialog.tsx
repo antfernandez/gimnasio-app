@@ -88,10 +88,10 @@ export function ContactoDialog({ email, telefono }: Props) {
           </div>
           {state.error && <p className="text-sm text-destructive">{state.error}</p>}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => ref.current?.close()}>
+            <Button size="sm" type="button" variant="ghost" onClick={() => ref.current?.close()}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isPending || Boolean(errorTel) || Boolean(errorMail)}>
+            <Button size="sm" type="submit" disabled={isPending || Boolean(errorTel) || Boolean(errorMail)}>
               {isPending ? "Guardando…" : "Guardar"}
             </Button>
           </div>

@@ -164,7 +164,7 @@ export default async function SuperadminDashboardPage() {
                 <dt className="text-xs text-muted-foreground">Rechazados del mes</dt>
               </div>
             </dl>
-            <Button asChild variant="outline" className="mt-5">
+            <Button size="sm" asChild variant="outline" className="mt-5">
               <Link href="/superadmin/suscripciones">Suscripciones por validar</Link>
             </Button>
             {conteo.sin_plan > 0 && (

@@ -171,7 +171,7 @@ export function PagoManualForm({
       </div>
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
       {state.ok && <p className="text-sm text-primary">{state.ok}</p>}
-      <Button type="submit" className="w-fit" disabled={isPending || planes.length === 0}>
+      <Button size="sm" type="submit" className="w-fit" disabled={isPending || planes.length === 0}>
         {isPending ? "Registrando…" : "Registrar pago manual"}
       </Button>
     </form>

@@ -44,7 +44,7 @@ export default async function ResultadoSuscripcionPage({
       <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
         <p className="text-base font-semibold">{mensaje.titulo}</p>
         <p className="text-sm text-muted-foreground">{mensaje.detalle}</p>
-        <Button asChild variant="outline">
+        <Button size="sm" asChild variant="outline">
           <Link href="/protected/pagar-plan">Volver a Suscripción</Link>
         </Button>
       </CardContent>

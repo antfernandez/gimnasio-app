@@ -133,7 +133,7 @@ export function ProgresoRutina({ registros }: { registros: RegistroRutina[] }) {
             ))}
           </Select>
         </div>
-        <Button type="submit" variant="outline">
+        <Button size="sm" type="submit" variant="outline">
           Filtrar
         </Button>
         <BotonLimpiar

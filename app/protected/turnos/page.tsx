@@ -96,7 +96,7 @@ export default async function TurnosPage({
               Todavía no configuras ningún horario disponible, así que no hay nada que
               reservar. Empieza por definir tus días y horas de atención.
             </p>
-            <Button asChild>
+            <Button size="sm" asChild>
               <Link href="/protected/turnos/horario">Configurar horario</Link>
             </Button>
           </CardContent>

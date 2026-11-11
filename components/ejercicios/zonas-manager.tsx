@@ -147,7 +147,7 @@ export function ZonasManager({
     <div className="flex flex-col gap-5">
       <form key={state.ok ? zonas.length : "form"} action={crearAction} className="flex gap-2">
         <Input name="nombre" placeholder="Nueva zona (ej. Funcional)" required />
-        <Button type="submit" disabled={creando}>
+        <Button size="sm" type="submit" disabled={creando}>
           Crear zona
         </Button>
       </form>

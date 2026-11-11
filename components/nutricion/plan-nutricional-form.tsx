@@ -204,7 +204,7 @@ export function PlanNutricionalForm({ action, recetas, plan, seleccion = [], sub
                   ))}
                 </Select>
               </div>
-              <Button type="button" variant="outline" onClick={agregar} disabled={!porAgregar}>
+              <Button size="sm" type="button" variant="outline" onClick={agregar} disabled={!porAgregar}>
                 Agregar
               </Button>
             </div>
@@ -271,7 +271,7 @@ export function PlanNutricionalForm({ action, recetas, plan, seleccion = [], sub
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
       <div className="flex gap-3">
-        <Button type="submit" size="lg" disabled={isPending}>
+        <Button type="submit" size="sm" disabled={isPending}>
           {isPending ? "Guardando…" : submitLabel}
         </Button>
       </div>

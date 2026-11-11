@@ -103,7 +103,7 @@ export function ListadoEjercicios({
           <option value="inactivo">Solo inactivos</option>
         </Select>
         <div className="flex gap-3 sm:col-span-2 lg:col-span-4">
-          <Button
+          <Button size="sm"
             type="button"
             variant="outline"
             onClick={() => {

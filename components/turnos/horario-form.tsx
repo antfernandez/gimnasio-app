@@ -44,7 +44,7 @@ export function HorarioForm() {
         <Label htmlFor="cupos">Cupos</Label>
         <Input id="cupos" name="cupos" type="number" min={1} defaultValue={2} required />
       </div>
-      <Button type="submit" disabled={isPending}>
+      <Button size="sm" type="submit" disabled={isPending}>
         {isPending ? "Agregando…" : "Agregar"}
       </Button>
       {state.error && (

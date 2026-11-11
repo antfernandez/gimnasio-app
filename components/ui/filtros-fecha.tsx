@@ -40,7 +40,7 @@ export function FiltrosFecha({
       <Input type="date" name="desde" defaultValue={desde} aria-label="Desde" className="w-auto" />
       <Input type="date" name="hasta" defaultValue={hasta} aria-label="Hasta" className="w-auto" />
       {children}
-      <Button type="submit" variant="outline">
+      <Button size="sm" type="submit" variant="outline">
         Filtrar
       </Button>
       <BotonLimpiar
