@@ -7,6 +7,7 @@ import { BrandMark } from "@/components/brand-mark";
 // Cache Components en node_modules/next/dist/docs/01-app/02-guides/migrating-to-cache-components.md.
 export const instant = false;
 import { LogoutButton } from "@/components/logout-button";
+import { SidebarMobileToggle } from "@/components/protected/sidebar-mobile-toggle";
 import { PortalNav } from "@/components/portal/portal-nav";
 import { getAlumnoActual } from "@/lib/alumno-portal";
 import { createClient } from "@/lib/supabase/server";
@@ -40,10 +41,9 @@ export default async function PortalLayout({
   const inicial = alumno.nombres.trim().charAt(0).toUpperCase() || "?";
 
   return (
-    <div className="grid min-h-svh grid-cols-1 md:grid-cols-[260px_1fr]">
-      <aside className="flex flex-col border-b border-border bg-secondary/40 px-5 py-7 md:border-b-0 md:border-r">
-        <div>
-          <BrandMark fijo className="mb-8 px-1" />
+    <div className="min-h-svh md:grid md:grid-cols-[260px_1fr]">
+      <aside className="sticky top-0 z-40 border-b border-border bg-[hsl(33_50%_86%)] px-5 md:static md:flex md:flex-col md:border-b-0 md:border-r md:py-7">
+        <SidebarMobileToggle brand={<BrandMark fijo className="px-1" />}>
           <div className="mb-6 border-b border-border pb-6 text-center">
             <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary font-display text-xl text-primary-foreground">
               {inicial}
@@ -59,7 +59,7 @@ export default async function PortalLayout({
             </div>
           </div>
           <PortalNav nutricion={alumno.plan_nutricional_habilitado} />
-        </div>
+        </SidebarMobileToggle>
       </aside>
 
       <main className="px-6 py-8 md:px-10 md:py-10">
