@@ -13,46 +13,52 @@ import { cn } from "@/lib/utils";
  * menú solo para ver la Bitácora. Colapsado por defecto en `md:hidden`, con un
  * botón para abrirlo cuando sí hace falta cambiar de sección; en escritorio
  * (`md:`) se ignora el estado y siempre queda visible, sin cambios. */
-export function SidebarMobileToggle({ children }: { children: React.ReactNode }) {
+export function SidebarMobileToggle({
+  brand,
+  children,
+}: {
+  brand: React.ReactNode;
+  children: React.ReactNode;
+}) {
   const [abierto, setAbierto] = useState(false);
   const pathname = usePathname();
 
-  // Cierra el menú al navegar a otra pantalla — el layout no se remonta entre
-  // rutas de `/protected/*`, así que sin esto el menú quedaba abierto tapando la
-  // pantalla después de tocar un ítem. Se mantiene como red de seguridad, pero
-  // el cierre real ahora lo dispara el click (ver más abajo).
   useEffect(() => {
     setAbierto(false);
   }, [pathname]);
 
-  // Sprint 22, Parte C: en "Sitio público" el menú quedaba visible tras hacer
-  // scroll porque esa pantalla hace dos consultas a Supabase en paralelo antes de
-  // poder renderizar — la navegación tarda más y da tiempo a scrollear mientras
-  // `pathname` todavía no cambia. Cerrar de forma optimista al tocar cualquier
-  // link del menú, sin esperar a que la transición de ruta termine.
   const cerrarAlHacerClickEnLink = (e: React.MouseEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest("a")) {
       setAbierto(false);
     }
   };
 
+  /* Spec 73: en mobile el header es una fila de alto fijo (logo + "Menú"), sticky; el
+   * menú se despliega como panel superpuesto bajo el header, sin empujar el contenido
+   * ni cambiar el alto del header. En `md:` el aside es la barra lateral de siempre. */
   return (
     <>
-      <div className="flex items-center justify-end md:hidden">
+      <div className="flex h-[72px] items-center justify-between gap-3 md:mb-8 md:h-auto">
+        {brand}
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={() => setAbierto((v) => !v)}
-          className="gap-2"
+          aria-expanded={abierto}
+          className="shrink-0 gap-2 md:hidden"
         >
           {abierto ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-          {abierto ? "Cerrar menú" : "Menú"}
+          Menú
         </Button>
       </div>
       <div
         onClick={cerrarAlHacerClickEnLink}
-        className={cn(abierto ? "block" : "hidden", "md:block")}
+        className={cn(
+          abierto ? "block" : "hidden",
+          "absolute inset-x-0 top-full max-h-[calc(100svh-72px)] overflow-y-auto border-b border-border bg-[hsl(33_50%_86%)] px-5 pb-5 pt-4 shadow-lg",
+          "md:static md:block md:max-h-none md:overflow-visible md:border-0 md:p-0 md:shadow-none",
+        )}
       >
         {children}
       </div>

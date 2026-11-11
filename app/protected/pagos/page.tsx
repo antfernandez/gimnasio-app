@@ -87,8 +87,8 @@ export default async function PagosPage({
           </div>
           <h2 className="text-2xl">Pagos</h2>
         </div>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="outline">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline" size="sm">
             <Link href="/protected/pagos/solicitudes">Transferencias por validar</Link>
           </Button>
           <ExportMenu resource="pagos" filtros={{ q, estado }} />
@@ -99,7 +99,7 @@ export default async function PagosPage({
         <CardContent className="pt-6">
           {/* Sin `pagina` en el form: cambiar un filtro reinicia a la página 1. */}
           <form
-            className="mb-5 flex flex-wrap items-center gap-3"
+            className="mb-5 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center"
             action="/protected/pagos"
           >
             <Input
@@ -107,13 +107,13 @@ export default async function PagosPage({
               name="q"
               placeholder="Buscar por nombre…"
               defaultValue={q}
-              className="min-w-[220px] max-w-xs flex-1"
+              className="col-span-2 w-full sm:min-w-[220px] sm:max-w-xs sm:flex-1"
             />
             <Select
               name="estado"
               defaultValue={estado ?? ""}
               aria-label="Filtrar por estado de pago"
-              className="w-auto"
+              className="col-span-2 w-full sm:col-span-1 sm:w-auto"
             >
               <option value="">Todos</option>
               {FILTRO_ESTADO.map((f) => (
@@ -122,10 +122,12 @@ export default async function PagosPage({
                 </option>
               ))}
             </Select>
-            <Button type="submit" variant="outline">
-              Filtrar
-            </Button>
-            <BotonLimpiar href="/protected/pagos" activo={Boolean(q || estado)} />
+            <div className="col-span-2 flex items-center gap-2 sm:col-span-1">
+              <Button type="submit" variant="outline">
+                Filtrar
+              </Button>
+              <BotonLimpiar href="/protected/pagos" activo={Boolean(q || estado)} />
+            </div>
           </form>
 
           {lista.length === 0 ? (

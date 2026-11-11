@@ -103,6 +103,15 @@ export default async function AlimentosPage({
         </div>
       )}
 
+      <div className="flex justify-end">
+        <Button asChild size="lg">
+          <Link href="/protected/nutricion/alimentos?nuevo=1">
+            <Plus className="h-4 w-4" />
+            Nuevo alimento
+          </Link>
+        </Button>
+      </div>
+
       {(enEdicion || params.nuevo === "1") && (
         <Card>
           <CardContent className="pt-6">
@@ -124,7 +133,7 @@ export default async function AlimentosPage({
 
       <Card>
         <CardContent className="pt-6">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="mb-4">
             <form
               className="flex flex-wrap items-center gap-2"
               action="/protected/nutricion/alimentos"
@@ -152,12 +161,6 @@ export default async function AlimentosPage({
               </Button>
               <BotonLimpiar href="/protected/nutricion/alimentos" activo={Boolean(q || categoria)} />
             </form>
-            <Button asChild>
-              <Link href="/protected/nutricion/alimentos?nuevo=1">
-                <Plus className="h-4 w-4" />
-                Nuevo alimento
-              </Link>
-            </Button>
           </div>
 
           {visibles.length === 0 ? (

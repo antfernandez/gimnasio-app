@@ -207,3 +207,23 @@
 /* Opción de menú activa (Spec 71 §14.2) */
 .sv .nav a.activo:not(.btn){color:var(--acento);box-shadow:inset 0 -2px 0 var(--acento);padding-bottom:4px}
 @media(max-width:1180px){.sv .nav a.activo:not(.btn){padding-bottom:12px}}
+
+/* Spec 72: portada en iPhone (Safari iOS). Altura del hero según el contenido y la
+ * pantalla (no según vw), sin recortar el texto; zona segura del notch; header sin desborde. */
+.sv{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+.sv .hero{height:auto;min-height:clamp(300px,34vw,490px)}
+.sv .hero-in{width:100%;padding-block:40px;padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right))}
+.sv .hero h1,.sv .hero-sub{overflow-wrap:anywhere}
+.sv .site-header{padding-top:env(safe-area-inset-top)}
+.sv .testimonios-fondo{transform:translateZ(0)}
+@media(max-width:700px){
+.sv .hero{min-height:min(440px,70svh)}
+.sv .hero-sub{font-size:16px}
+.sv .hero-cta{flex-direction:column;align-items:stretch;padding-inline:8px}
+.sv .brand{min-width:0;gap:8px}
+.sv .brand-texto{min-width:0}
+.sv .brand-nombre{font-size:18px;white-space:normal}
+.sv .brand-firma{font-size:12px;white-space:normal}
+.sv .header-in{gap:8px}
+.sv .menu-toggle{flex:none}
+}

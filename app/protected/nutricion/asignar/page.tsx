@@ -112,24 +112,22 @@ export default async function AsignarAlumnoPage({
         </div>
       )}
 
+      <AsignarPanel
+        alumnos={(alumnosAsignables ?? []).map((a) => ({
+          id: a.id as string,
+          nombre: `${a.nombres} ${a.apellidos}`.trim(),
+        }))}
+        planes={(planesAsignables ?? []).map((p) => ({ id: p.id as string, nombre: p.nombre as string }))}
+        responsables={(responsables ?? []).map((r) => ({
+          id: r.id as string,
+          nombre: r.nombre_completo as string,
+        }))}
+        responsableActual={perfilData.perfil.id}
+        hoy={new Date().toISOString().slice(0, 10)}
+      />
+
       <Card>
         <CardContent className="pt-6">
-          <div className="mb-4">
-            <AsignarPanel
-              alumnos={(alumnosAsignables ?? []).map((a) => ({
-                id: a.id as string,
-                nombre: `${a.nombres} ${a.apellidos}`.trim(),
-              }))}
-              planes={(planesAsignables ?? []).map((p) => ({ id: p.id as string, nombre: p.nombre as string }))}
-              responsables={(responsables ?? []).map((r) => ({
-                id: r.id as string,
-                nombre: r.nombre_completo as string,
-              }))}
-              responsableActual={perfilData.perfil.id}
-              hoy={new Date().toISOString().slice(0, 10)}
-            />
-          </div>
-
           <form className="mb-5 flex flex-wrap items-center gap-3" action="/protected/nutricion/asignar">
             <Select name="estado" defaultValue={filtroEstado ?? "todos"} className="w-40" aria-label="Estado">
               {ESTADOS_ASIGNACION.map((e) => (

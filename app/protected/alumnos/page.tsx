@@ -117,18 +117,18 @@ export default async function AlumnosPage({
           </div>
           <h2 className="text-2xl">Alumnos</h2>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {!!pendientesCount && (
             <Link
               href="/protected/alumnos/pendientes"
-              className="flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-secondary-foreground hover:bg-primary/20"
+              className="flex h-8 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-secondary-foreground hover:bg-primary/20"
             >
               {pendientesCount} pendiente{pendientesCount === 1 ? "" : "s"} de aprobación
             </Link>
           )}
           <Link
             href={`/protected/alumnos/cambios-plan${cambiosPlanCount ? "?estado=pendiente" : ""}`}
-            className="flex items-center gap-1.5 rounded-full border border-border px-3.5 py-1.5 text-xs font-semibold text-secondary-foreground hover:bg-primary/10"
+            className="flex h-8 items-center gap-1.5 rounded-full border border-border px-3.5 py-1.5 text-xs font-semibold text-secondary-foreground hover:bg-primary/10"
           >
             Cambios de plan
             {!!cambiosPlanCount && (
@@ -137,16 +137,16 @@ export default async function AlumnosPage({
           </Link>
           <ExportMenu resource="alumnos" />
           {perfilData.perfil.rol === "dueño" && (
-            <Button asChild variant="outline" size="lg">
+            <Button asChild variant="outline" size="sm">
               <Link href="/protected/alumnos/carga-masiva">
-                <Upload className="h-4 w-4" />
+                <Upload className="h-3.5 w-3.5" />
                 Carga masiva
               </Link>
             </Button>
           )}
-          <Button asChild size="lg">
+          <Button asChild size="sm">
             <Link href="/protected/alumnos/nuevo">
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3.5 w-3.5" />
               Nuevo alumno
             </Link>
           </Button>

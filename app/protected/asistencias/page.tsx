@@ -126,10 +126,10 @@ export default async function AsistenciasPage({
       <Card>
         <CardContent className="pt-6">
           {/* Sin `pagina` en el form: cambiar un filtro reinicia a la página 1. */}
-          <form className="mb-5 flex flex-wrap items-center gap-3" action="/protected/asistencias">
-            <Input type="date" name="desde" defaultValue={desde} aria-label="Desde" className="w-auto" />
-            <Input type="date" name="hasta" defaultValue={hasta} aria-label="Hasta" className="w-auto" />
-            <Select name="estado" defaultValue={estado ?? ""} aria-label="Filtrar por estado" className="w-auto">
+          <form className="mb-5 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center" action="/protected/asistencias">
+            <Input type="date" name="desde" defaultValue={desde} aria-label="Desde" className="w-full sm:w-auto" />
+            <Input type="date" name="hasta" defaultValue={hasta} aria-label="Hasta" className="w-full sm:w-auto" />
+            <Select name="estado" defaultValue={estado ?? ""} aria-label="Filtrar por estado" className="col-span-2 w-full sm:col-span-1 sm:w-auto">
               <option value="">Todos los estados</option>
               {ESTADOS.map((e) => (
                 <option key={e.value} value={e.value}>
@@ -142,12 +142,14 @@ export default async function AsistenciasPage({
               name="q"
               placeholder="Buscar alumno…"
               defaultValue={q}
-              className="min-w-[200px] max-w-xs flex-1"
+              className="col-span-2 w-full sm:col-span-1 sm:min-w-[200px] sm:max-w-xs sm:flex-1"
             />
-            <Button type="submit" variant="outline">
-              Filtrar
-            </Button>
-            <BotonLimpiar href="/protected/asistencias" activo={Boolean(desde || hasta || estado || q)} />
+            <div className="col-span-2 flex items-center gap-2 sm:col-span-1">
+              <Button type="submit" variant="outline">
+                Filtrar
+              </Button>
+              <BotonLimpiar href="/protected/asistencias" activo={Boolean(desde || hasta || estado || q)} />
+            </div>
           </form>
 
           {filas.length === 0 ? (

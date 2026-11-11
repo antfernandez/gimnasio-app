@@ -1,12 +1,7 @@
-import Link from "next/link";
-
 import { guardarRegistroEjercicio, marcarAsistencia } from "@/app/protected/bitacora/actions";
 import { RegistroSesionPanel } from "@/components/bitacora/registro-sesion-panel";
 import type { RegistroGuardado } from "@/components/bitacora/sesion-tabla";
-import { Badge } from "@/components/ui/badge";
 import { ExportMenu } from "@/components/export/export-menu";
-import { Acordeon } from "@/components/ui/acordeon";
-import { RutinaCard } from "@/components/rutinas/rutina-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,18 +9,13 @@ import { Label } from "@/components/ui/label";
 import { getPerfilActual } from "@/lib/perfil";
 import { createClient } from "@/lib/supabase/server";
 import { formatHora, hoyIso } from "@/lib/turnos";
-import type {
-  EstadoPaqueteAlumno,
-  ReservaConAlumno,
-  Rutina,
-} from "@/lib/types";
+import type { ReservaConAlumno, Rutina } from "@/lib/types";
 
 // Contenido dinámico por usuario (sesión y datos del gimnasio); mismo criterio que el layout.
 export const instant = false;
 
-/** Spec 27: bitácora del dueño por horario. Por defecto muestra el día actual; cada
- * horario es un acordeón con los alumnos citados (reservas) y cada alumno, a su vez,
- * un acordeón con la asistencia y el registro de sesión (Spec 13). Mobile first. */
+/** Spec 74: bitácora del dueño = filtro de fecha + alumnos agendados ese día + formulario
+ * de registro de sesión. Sin bloques de horarios. Mobile first. */
 export default async function BitacoraPage({
   searchParams,
 }: {
@@ -41,25 +31,13 @@ export default async function BitacoraPage({
 
   const supabase = await createClient();
 
-  const [{ data: reservasDelDia }, { data: estadoPaquetes }] = await Promise.all([
-    supabase
-      .from("reservas")
-      .select("*, alumno:alumnos(nombres, apellidos)")
-      .eq("gimnasio_id", gimnasioId)
-      .eq("fecha", fecha)
-      .neq("estado", "cancelada")
-      .order("hora_inicio", { ascending: true }),
-    supabase
-      .from("v_estado_paquetes_alumnos")
-      .select("alumno_id, clases_restantes")
-      .eq("gimnasio_id", gimnasioId),
-  ]);
-
-  const clasesRestantesPorAlumno = new Map(
-    (
-      (estadoPaquetes ?? []) as Pick<EstadoPaqueteAlumno, "alumno_id" | "clases_restantes">[]
-    ).map((e) => [e.alumno_id, e.clases_restantes]),
-  );
+  const { data: reservasDelDia } = await supabase
+    .from("reservas")
+    .select("*, alumno:alumnos(nombres, apellidos)")
+    .eq("gimnasio_id", gimnasioId)
+    .eq("fecha", fecha)
+    .neq("estado", "cancelada")
+    .order("hora_inicio", { ascending: true });
 
   const reservas = (reservasDelDia ?? []) as ReservaConAlumno[];
   const alumnoIds = [...new Set(reservas.map((r) => r.alumno_id))];
@@ -91,7 +69,6 @@ export default async function BitacoraPage({
     }
   }
 
-  const horarios = [...new Set(reservas.map((r) => r.hora_inicio))].sort();
   const fechaFutura = fecha > hoyIso();
 
   return (
@@ -120,159 +97,12 @@ export default async function BitacoraPage({
         </CardContent>
       </Card>
 
-      {horarios.length === 0 ? (
+      {reservas.length === 0 && (
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            No hay alumnos citados en esta fecha.
+            No hay alumnos agendados en esta fecha.
           </CardContent>
         </Card>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {horarios.map((hora) => {
-            const delBloque = reservas.filter((r) => r.hora_inicio === hora);
-            return (
-              <Card key={hora}>
-                <CardContent className="p-4">
-                  <Acordeon
-                    defaultOpen={horarios.length === 1}
-                    titulo={
-                      <div className="flex min-h-11 items-center gap-3">
-                        <span className="text-lg font-semibold">{formatHora(hora)} h</span>
-                        <span className="text-sm text-muted-foreground">
-                          {delBloque.length} {delBloque.length === 1 ? "alumno" : "alumnos"}
-                        </span>
-                      </div>
-                    }
-                  >
-                    <div className="flex flex-col gap-3">
-                      {delBloque.map((r) => {
-                        const rutina = rutinaPorAlumno.get(r.alumno_id) ?? null;
-                        const guardados = guardadosPorAlumno.get(r.alumno_id) ?? {};
-                        const registrado = Object.keys(guardados).length > 0;
-                        const restantes = clasesRestantesPorAlumno.get(r.alumno_id);
-                        return (
-                          <div
-                            key={r.id}
-                            className="rounded-[9px] border border-border px-3.5 py-1"
-                          >
-                            <Acordeon
-                              titulo={
-                                <div className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1">
-                                  <span className="font-medium">
-                                    {r.alumno?.nombres} {r.alumno?.apellidos}
-                                  </span>
-                                  {registrado && (
-                                    <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success">
-                                      Sesión registrada
-                                    </span>
-                                  )}
-                                  {restantes != null && (
-                                    <span className="text-xs text-muted-foreground">
-                                      {restantes} clase{restantes === 1 ? "" : "s"} restante
-                                      {restantes === 1 ? "" : "s"}
-                                    </span>
-                                  )}
-                                </div>
-                              }
-                            >
-                              <div className="flex flex-col gap-4 pb-3">
-                                <div className="flex flex-wrap items-center gap-2 text-sm">
-                                  <span className="text-muted-foreground">Asistencia:</span>
-                                  <Badge
-                                    variant={
-                                      r.asistencia === "ausente"
-                                        ? "destructive"
-                                        : r.asistencia === "presente"
-                                          ? "success"
-                                          : "secondary"
-                                    }
-                                  >
-                                    {r.asistencia === "ausente"
-                                      ? "Ausente"
-                                      : r.asistencia === "justificado"
-                                        ? "Justificado"
-                                        : r.asistencia === "presente"
-                                          ? "Presente"
-                                          : "Pendiente"}
-                                  </Badge>
-                                </div>
-
-                                {!rutina ? (
-                                  <div className="flex flex-col items-start gap-2">
-                                    <p className="text-sm text-muted-foreground">
-                                      Sin rutina vigente asignada.
-                                    </p>
-                                    <Link
-                                      href={`/protected/alumnos/${r.alumno_id}`}
-                                      className="flex min-h-11 items-center text-sm text-primary hover:underline"
-                                    >
-                                      Ir a su ficha para asignarle una →
-                                    </Link>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <Acordeon
-                                      titulo={
-                                        <p className="flex min-h-11 items-center text-base font-semibold">
-                                          {rutina.nombre}
-                                        </p>
-                                      }
-                                    >
-                                      <RutinaCard rutina={rutina} />
-                                    </Acordeon>
-
-                                    <div className="border-t border-border pt-4">
-                                      <div className="mb-2 flex items-center justify-between gap-3">
-                                        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                          Registrado en la sesión
-                                        </h4>
-                                        <Link
-                                          href={`/protected/alumnos/${r.alumno_id}?vista=progreso`}
-                                          className="flex min-h-11 shrink-0 items-center text-xs text-muted-foreground hover:text-primary hover:underline"
-                                        >
-                                          Historial →
-                                        </Link>
-                                      </div>
-                                      {registrado ? (
-                                        <ul className="flex flex-col gap-1.5 text-sm">
-                                          {rutina.contenido.map((ej, idx) => {
-                                            const g = guardados[idx];
-                                            if (!g) return null;
-                                            return (
-                                              <li
-                                                key={idx}
-                                                className="flex flex-wrap gap-x-3 gap-y-0.5 rounded-[9px] bg-secondary/40 px-3.5 py-2"
-                                              >
-                                                <span className="font-medium">{ej.ejercicio}</span>
-                                                <span className="text-muted-foreground">
-                                                  {g.series} series · {g.reps} reps
-                                                  {g.peso ? ` · ${g.peso} kg` : ""}
-                                                  {g.notas ? ` — ${g.notas}` : ""}
-                                                </span>
-                                              </li>
-                                            );
-                                          })}
-                                        </ul>
-                                      ) : (
-                                        <p className="text-sm text-muted-foreground">
-                                          Aún no hay registro para esta fecha.
-                                        </p>
-                                      )}
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            </Acordeon>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Acordeon>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
       )}
 
       {reservas.length > 0 && (

@@ -29,8 +29,8 @@ export function ExportMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="lg">
-          <Sheet className="h-4 w-4" />
+        <Button variant="outline" size="sm">
+          <Sheet className="h-3.5 w-3.5" />
           Exportar
         </Button>
       </DropdownMenuTrigger>
