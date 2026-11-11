@@ -3,11 +3,18 @@
 import { Info } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { ZonaImagen } from "@/components/ejercicios/zona-imagen";
 import type { EjercicioOpcion } from "@/components/ejercicios/ejercicio-combobox";
 
 /** Icono "i" con popover flotante (posición absoluta, no empuja el layout) con el
  * resumen del ejercicio. Abre con hover, foco o tap; Esc o clic fuera lo cierra. */
-export function EjercicioInfo({ ejercicio }: { ejercicio: EjercicioOpcion | undefined }) {
+export function EjercicioInfo({
+  ejercicio,
+  zona,
+}: {
+  ejercicio: EjercicioOpcion | undefined;
+  zona?: string;
+}) {
   const [abierto, setAbierto] = useState(false);
   const raiz = useRef<HTMLSpanElement>(null);
   const popoverId = useId();
@@ -65,18 +72,21 @@ export function EjercicioInfo({ ejercicio }: { ejercicio: EjercicioOpcion | unde
           role="tooltip"
           className="absolute right-0 top-full z-30 w-72 max-w-[80vw] rounded-[9px] border border-border bg-card p-3 text-xs shadow-lg"
         >
-          {datos.length === 0 ? (
-            <p className="text-muted-foreground">Sin información adicional.</p>
-          ) : (
-            <dl className="grid gap-1.5">
-              {datos.map(([k, v]) => (
-                <div key={k}>
-                  <dt className="uppercase tracking-wider text-muted-foreground">{k}</dt>
-                  <dd className="text-foreground">{v}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
+          <div className="flex gap-3">
+            <ZonaImagen zona={zona} className="w-16 shrink-0 self-start" />
+            {datos.length === 0 ? (
+              <p className="text-muted-foreground">Sin información adicional.</p>
+            ) : (
+              <dl className="grid min-w-0 flex-1 gap-1.5">
+                {datos.map(([k, v]) => (
+                  <div key={k}>
+                    <dt className="uppercase tracking-wider text-muted-foreground">{k}</dt>
+                    <dd className="text-foreground">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </div>
         </div>
       )}
     </span>

@@ -4,6 +4,7 @@ import { ChevronDown, Plus } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { ZonaImagen } from "@/components/ejercicios/zona-imagen";
 import { BotonLimpiar } from "@/components/ui/boton-limpiar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -148,6 +149,7 @@ export function ListadoEjercicios({
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
               <span className="flex items-center gap-3">
+                <ZonaImagen zona={z.nombre} className="w-8" />
                 <span className="font-medium text-foreground">{z.nombre}</span>
                 <Badge variant="secondary">
                   {filtrando ? `${lista.length} de ${total}` : total}

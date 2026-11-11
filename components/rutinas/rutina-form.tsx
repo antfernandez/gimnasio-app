@@ -183,6 +183,13 @@ export function RutinaForm({
                 </div>
                 <EjercicioInfo
                   ejercicio={ejercicios.find((o) => o.id === fila.ejercicio_id)}
+                  zona={
+                    zonas.find(
+                      (z) =>
+                        z.id ===
+                        ejercicios.find((o) => o.id === fila.ejercicio_id)?.zona_id,
+                    )?.nombre
+                  }
                 />
               </div>
               <input type="hidden" name="ejercicio_id" value={fila.ejercicio_id} />

@@ -2,6 +2,7 @@ import { ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ZonaImagen } from "@/components/ejercicios/zona-imagen";
 import { EjercicioAcciones } from "@/components/ejercicios/ejercicio-acciones";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -101,31 +102,40 @@ export default async function EjercicioPage({
       <EjercicioAcciones id={e.id} nombre={e.nombre} activo={e.activo} />
 
       <Card>
-        <CardContent className="flex flex-col gap-6 pt-6">
-          <dl className="grid gap-4 sm:grid-cols-3">
-            <Dato etiqueta="Equipo" valor={e.equipo} />
-            <Dato etiqueta="Músculo principal" valor={e.musculo_principal} />
-            <Dato etiqueta="Secundarios" valor={e.musculos_secundarios} />
-          </dl>
-          <Lineas titulo="Posición inicial" texto={e.posicion_inicial} />
-          <Lineas titulo="Ejecución" texto={e.ejecucion} />
-          <Lineas titulo="Notas" texto={e.notas} />
-          {e.url_referencia && (
-            <a
-              href={e.url_referencia}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-            >
-              Ver ficha de referencia
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-          )}
-          {!e.posicion_inicial && !e.ejecucion && !e.notas && !e.url_referencia && (
-            <p className="text-sm text-muted-foreground">
-              Este ejercicio no tiene ficha técnica.
-            </p>
-          )}
+        <CardContent className="grid gap-6 pt-6 sm:grid-cols-[1fr_14rem]">
+          <ZonaImagen
+            zona={zonas_cuerpo?.nombre}
+            className="mx-auto w-40 sm:order-2 sm:w-full"
+          />
+          <div className="flex flex-col gap-6 sm:order-1">
+            <dl className="grid gap-4 sm:grid-cols-3">
+              <Dato etiqueta="Equipo" valor={e.equipo} />
+              <Dato etiqueta="Músculo principal" valor={e.musculo_principal} />
+              <Dato etiqueta="Secundarios" valor={e.musculos_secundarios} />
+            </dl>
+            <Lineas titulo="Posición inicial" texto={e.posicion_inicial} />
+            <Lineas titulo="Ejecución" texto={e.ejecucion} />
+            <Lineas titulo="Notas" texto={e.notas} />
+            {e.url_referencia && (
+              <a
+                href={e.url_referencia}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+              >
+                Ver ficha de referencia
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            )}
+            {!e.posicion_inicial &&
+              !e.ejecucion &&
+              !e.notas &&
+              !e.url_referencia && (
+                <p className="text-sm text-muted-foreground">
+                  Este ejercicio no tiene ficha técnica.
+                </p>
+              )}
+          </div>
         </CardContent>
       </Card>
     </div>
